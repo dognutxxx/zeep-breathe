@@ -104,6 +104,12 @@ void main() {
     expect(exerciseDisplayName('4-7-8 Sleep', S.thai), 'หายใจแบบ 4-7-8');
     expect(exerciseDisplayName('Custom', S.thai), 'กำหนดเอง');
     expect(exerciseDisplayName('Morning wake', S.en), 'Custom');
+    // the same mapping drives the timeline colour
+    expect(historyExerciseId('Box breathing'), 'box');
+    expect(historyExerciseId('Calm tide'), 'default');
+    expect(historyExerciseId('4-7-8 Sleep'), '478');
+    expect(historyExerciseId('Balance'), 'custom');
+    expect(historyExerciseId('belly'), 'belly');
     expect(SessionRecord.fromJson({'t': '2026-11-01T08:00:00.000', 's': 60})!.exercise, 'custom');
     expect(S.thai.monthYear(DateTime(2026, 11)), 'พฤศจิกายน 2569');
   });

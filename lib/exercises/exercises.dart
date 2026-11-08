@@ -109,9 +109,18 @@ String exerciseLabel(BreathDurations d, S s) => exerciseDisplayName(exerciseId(d
 /// of an id. Names whose rhythm still exists map to it; the rest are custom.
 const _legacyNames = {'Calm tide': 'default', 'Box breathing': 'box', '4-7-8 Sleep': '478'};
 
-/// Display name for an id stored in the history, in the current language.
-String exerciseDisplayName(String stored, S s) {
+/// The current exercise id for a value stored in the history: a preset id,
+/// 'default' or 'custom'. Old English names are mapped; anything unknown is
+/// custom.
+String historyExerciseId(String stored) {
   final id = _legacyNames[stored] ?? stored;
+  if (id == 'default' || exercises.any((e) => e.id == id)) return id;
+  return 'custom';
+}
+
+/// Display name for a value stored in the history, in the current language.
+String exerciseDisplayName(String stored, S s) {
+  final id = historyExerciseId(stored);
   for (final e in exercises) {
     if (e.id == id) return e.name(s);
   }

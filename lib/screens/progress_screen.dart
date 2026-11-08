@@ -22,9 +22,20 @@ class _ProgressScreenState extends State<ProgressScreen> {
   /// controller so switching tabs keeps them until the app closes.
   DateTime? _day;
 
-  void _setMonth(DateTime m) => setState(() => _month = widget.app.progressMonth = m);
+  void _setMonth(DateTime m) {
+    final now = widget.app.clock();
+    final current = m.year == now.year && m.month == now.month;
+    setState(() => _month = m);
+    widget.app.progressMonth = current ? null : m;
+  }
 
-  void _setDay(DateTime d) => setState(() => _day = widget.app.progressDay = d);
+  /// Picking today stores null, so "today" keeps following the real date even
+  /// if the app stays open past midnight.
+  void _setDay(DateTime d) {
+    final picked = d == dayOf(widget.app.clock()) ? null : d;
+    setState(() => _day = picked);
+    widget.app.progressDay = picked;
+  }
 
   @override
   void initState() {
@@ -386,8 +397,9 @@ class _TimelineEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = S.of(context);
-    final ex = exercises.where((e) => e.id == r.exercise).firstOrNull;
-    final tint = ex?.tint ?? (r.exercise == 'default' ? const Color(0xFFBDDEF7) : const Color(0xFFDCE3EC));
+    final id = historyExerciseId(r.exercise);
+    final ex = exercises.where((e) => e.id == id).firstOrNull;
+    final tint = ex?.tint ?? (id == 'default' ? const Color(0xFFBDDEF7) : const Color(0xFFDCE3EC));
     final time = '${r.start.hour.toString().padLeft(2, '0')}:${r.start.minute.toString().padLeft(2, '0')}';
     const lineColor = Color(0xFFD9E3EE);
     final status = r.completed ? l.completedLabel : l.stoppedEarly;

@@ -139,7 +139,11 @@ Future<void> tabsFlow(WidgetTester t, String p, S s) async {
   await advance(t, 0.3);
   await t.tap(find.text(s.tabProgress).last);
   await advance(t, 0.3);
-  expect(app.progressDay, DateTime(fixedNow.year, fixedNow.month, fixedNow.day - 5));
+  final picked = DateTime(fixedNow.year, fixedNow.month, fixedNow.day - 5);
+  expect(app.progressDay, picked);
+  await t.drag(find.byType(ListView), const Offset(0, -2000));
+  await advance(t, 0.3);
+  expect(find.text(s.dayHeading(picked)), findsOneWidget);
 
   // the next morning: today has no sessions yet -> "Breathe now" button
   app.clock = () => DateTime(fixedNow.year, fixedNow.month, fixedNow.day + 1, 8, 0);
