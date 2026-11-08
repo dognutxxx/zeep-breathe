@@ -26,19 +26,18 @@ import 'wardrobe/wardrobe_controller.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  // Draw behind the status and navigation bars on every Android version, as
-  // on iOS: the view then fills the whole window, so the splash logo sits
-  // exactly where the native launch screen drew it (no jump, no grey bars).
-  // Screens keep clear of the bars with SafeArea.
+  // Draw behind the status and navigation bars, as on iOS: the view then
+  // fills the whole window, so the splash logo sits exactly where the native
+  // launch screen drew it (no jump, no grey bars). MainActivity.kt sets the
+  // window up for every Android version (bar colours too, since Android 7
+  // can't show dark navigation icons); screens keep clear with SafeArea.
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Color(0x00000000),
       statusBarIconBrightness: Brightness.dark,
       statusBarBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0x00000000),
       systemNavigationBarIconBrightness: Brightness.dark,
-      systemNavigationBarContrastEnforced: false,
     ),
   );
   // Show the splash at once and load while it plays (it waits for this).
