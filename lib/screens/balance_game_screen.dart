@@ -23,7 +23,6 @@ import '../ui/widgets.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
 import 'share_screen.dart';
-import '../wardrobe/outfits.dart';
 import 'wardrobe_cards.dart';
 
 enum _Stage { waiting, countdown, playing, paused, finished, unavailable }
@@ -768,7 +767,7 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
                   FilledButton(
                     onPressed: () {
                       final nav = Navigator.of(context);
-                      final items = _saved ? app.lastGrowth?.newItems ?? const [] : const <OutfitItem>[];
+                      final items = app.wardrobe.takePendingNewItems();
                       nav.pop();
                       if (items.isNotEmpty) showNewItemCards(nav.context, app, items);
                     },

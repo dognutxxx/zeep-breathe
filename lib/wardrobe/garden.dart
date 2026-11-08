@@ -60,13 +60,10 @@ GardenLevel gardenFromSteps(int steps) {
 
 /// Steps and practice days from a whole history (used once, to bring existing
 /// users in at the level their past sessions earned).
-({int steps, int practiceDays, DateTime? lastDay, int stepsOnLastDay}) progressFromHistory(
-  List<SessionRecord> records,
-) {
-  final sorted = [...records]..sort((a, b) => a.start.compareTo(b.start));
+({int steps, Set<DateTime> days, Map<DateTime, int> stepsByDay}) progressFromHistory(List<SessionRecord> records) {
   final stepsByDay = <DateTime, int>{};
   final days = <DateTime>{};
-  for (final r in sorted) {
+  for (final r in records) {
     final d = dayOf(r.start);
     days.add(d);
     if (countsAsStep(r)) {
@@ -74,15 +71,5 @@ GardenLevel gardenFromSteps(int steps) {
       if (n < maxStepsPerDay) stepsByDay[d] = n + 1;
     }
   }
-  final steps = stepsByDay.values.fold(0, (a, b) => a + b);
-  DateTime? last;
-  for (final d in days) {
-    if (last == null || d.isAfter(last)) last = d;
-  }
-  return (
-    steps: steps,
-    practiceDays: days.length,
-    lastDay: last,
-    stepsOnLastDay: last == null ? 0 : stepsByDay[last] ?? 0,
-  );
+  return (steps: stepsByDay.values.fold(0, (a, b) => a + b), days: days, stepsByDay: stepsByDay);
 }

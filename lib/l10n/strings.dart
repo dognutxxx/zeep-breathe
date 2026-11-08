@@ -390,8 +390,10 @@ class S {
   String get dailyLimit =>
       _('The sprout grew 3 times today. More tomorrow!', 'วันนี้ต้นอ่อนโตครบ 3 ครั้งแล้ว พรุ่งนี้มาต่อนะ');
   String get newItemTitle => _('Something new for Zeep!', 'Zeep ได้ของใหม่!');
-  String newItemBody(String item, int days) =>
-      _('$item · unlocked after $days days of practice', '$item · ปลดล็อกเมื่อฝึกครบ $days วัน');
+  String newItemBody(String item, int days) => _(
+    days == 1 ? '$item · unlocked after 1 day of practice' : '$item · unlocked after $days days of practice',
+    '$item · ปลดล็อกเมื่อฝึกครบ $days วัน',
+  );
   String get tryItOn => _('Try it on', 'ลองใส่เลย');
   String get later => _('Later', 'ไว้ทีหลัง');
   String get summaryTitle => _('Zeep has gifts for you', 'Zeep มีของรอคุณอยู่');

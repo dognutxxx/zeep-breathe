@@ -4,6 +4,7 @@
 // card (N) and from the bloom strip on the finish card (S.9).
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../app_controller.dart';
 import '../l10n/strings.dart';
@@ -31,14 +32,35 @@ class WardrobeScreen extends StatefulWidget {
   State<WardrobeScreen> createState() => _WardrobeScreenState();
 }
 
-class _WardrobeScreenState extends State<WardrobeScreen> {
+class _WardrobeScreenState extends State<WardrobeScreen> with SingleTickerProviderStateMixin {
   late int _tab = widget.initialTab;
+
+  // The Breathe tab's ticker stops while this page covers it, so Zeep here
+  // has its own idle animator and ticker.
+  final _anim = Animator();
+  final _frame = ValueNotifier<int>(0);
+  late final Ticker _ticker;
+  Duration _last = Duration.zero;
 
   @override
   void initState() {
     super.initState();
     // whatever was new has now been seen: the red dot on T1.9 goes away
     WidgetsBinding.instance.addPostFrameCallback((_) => widget.app.wardrobe.markAllSeen());
+    _ticker = createTicker((elapsed) {
+      final dt = ((elapsed - _last).inMicroseconds / 1e6).clamp(0.0, 0.1);
+      _last = elapsed;
+      _anim.update(dt, 0, 0, false);
+      _frame.value++;
+    });
+    if (!widget.app.reduceMotion) _ticker.start();
+  }
+
+  @override
+  void dispose() {
+    _ticker.dispose();
+    _frame.dispose();
+    super.dispose();
   }
 
   @override
@@ -53,7 +75,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
               child: ListenableBuilder(
-                listenable: app,
+                listenable: Listenable.merge([app, w, _frame]),
                 builder: (context, _) => Column(
                   children: [
                     Padding(
@@ -82,8 +104,8 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                         child: CustomPaint(
                           size: Size.infinite,
                           painter: ZeepPainter(
-                            pose: app.anim.pose,
-                            time: app.anim.time,
+                            pose: _anim.pose,
+                            time: _anim.time,
                             ripples: const [],
                             reduceMotion: app.reduceMotion,
                             outfit: w.outfit,
@@ -238,9 +260,13 @@ class _ItemTile extends StatelessWidget {
                       children: [
                         const Icon(Icons.lock_rounded, size: 12, color: ZeepColors.textFaint),
                         const SizedBox(width: 2),
-                        Text(
-                          l.daysLeft(w.daysLeft(item)),
-                          style: const TextStyle(fontSize: 11, color: ZeepColors.textSoft),
+                        Flexible(
+                          child: Text(
+                            l.daysLeft(w.daysLeft(item)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11, color: ZeepColors.textSoft),
+                          ),
                         ),
                       ],
                     ),

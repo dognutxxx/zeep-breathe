@@ -356,7 +356,7 @@ class _FinishedCard extends StatelessWidget {
                         onPressed: () {
                           // this card goes away with the session: show N from the navigator
                           final nav = Navigator.of(context);
-                          final items = app.lastGrowth?.newItems ?? const [];
+                          final items = app.wardrobe.takePendingNewItems();
                           app.stopSession();
                           if (items.isNotEmpty) showNewItemCards(nav.context, app, items);
                         },

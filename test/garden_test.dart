@@ -49,9 +49,8 @@ void main() {
         rec(d2.add(const Duration(hours: 1)), ex: 'game-easy'),
       ]);
       expect(h.steps, 4); // 3 capped on day 1 + 1 game on day 2
-      expect(h.practiceDays, 2);
-      expect(h.lastDay, DateTime(2026, 11, 3));
-      expect(h.stepsOnLastDay, 1);
+      expect(h.days, {DateTime(2026, 11, 1), DateTime(2026, 11, 3)});
+      expect(h.stepsByDay[DateTime(2026, 11, 3)], 1);
     });
   });
 
@@ -123,6 +122,41 @@ void main() {
       again.chooseFlower(null);
       expect(again.wornFlower, isNull);
       expect(again.flowerOff, isTrue);
+    });
+
+    test('a session dated before the newest day (clock or time zone change) still counts right', () async {
+      await w.load(const []);
+      final today = DateTime(2026, 11, 20, 7);
+      final yesterday = DateTime(2026, 11, 19, 22);
+      for (var i = 0; i < 3; i++) {
+        w.onSessionSaved(rec(today.add(Duration(minutes: i))));
+      }
+      // back in time: yesterday is a new practice day with its own 3 steps
+      var e = w.onSessionSaved(rec(yesterday));
+      expect(e.grew, isTrue);
+      expect(w.practiceDays, 2);
+      // and today is still full
+      e = w.onSessionSaved(rec(today.add(const Duration(hours: 5))));
+      expect(e.dailyLimit, isTrue);
+      expect(w.practiceDays, 2);
+      expect(w.steps, 4);
+      // the same holds after a restart
+      final again = WardrobeController();
+      await again.load(const []);
+      expect(again.practiceDays, 2);
+      expect(again.onSessionSaved(rec(yesterday.add(const Duration(minutes: 5)))).grew, isTrue);
+      expect(again.onSessionSaved(rec(today.add(const Duration(hours: 6)))).dailyLimit, isTrue);
+    });
+
+    test('new items wait for card N even across several sessions', () async {
+      await w.load(const []);
+      w.setForTest(practiceDays: 2);
+      final day = DateTime(2026, 11, 20, 7);
+      w.onSessionSaved(rec(day)); // 3 days: round glasses
+      w.onSessionSaved(rec(day.add(const Duration(days: 1)))); // "Again" on another day: nothing new
+      w.onSessionSaved(rec(day.add(const Duration(days: 2)))); // 5 days: flower crown
+      expect(w.takePendingNewItems(), [OutfitItem.roundGlasses, OutfitItem.flowerCrown]);
+      expect(w.takePendingNewItems(), isEmpty);
     });
 
     test('opening the wardrobe marks new items as seen', () async {
