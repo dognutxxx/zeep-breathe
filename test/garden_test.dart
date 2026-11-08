@@ -167,6 +167,25 @@ void main() {
       expect(again.steps, 4);
     });
 
+    test('cards L and N waiting for "Done" survive closing the app (QA B5)', () async {
+      await w.load(const []);
+      w.setForTest(steps: 3, practiceDays: 2);
+      w.onSessionSaved(rec(DateTime(2026, 11, 20, 7)));
+      final again = WardrobeController();
+      await again.load(const []);
+      final bloom = again.takePendingBloom();
+      expect(bloom, isNotNull);
+      expect(bloom!.bloomed, isTrue);
+      expect(bloom.newFlower, flowerKinds[0]);
+      expect(bloom.after.level, 2);
+      expect(again.takePendingNewItems(), [OutfitItem.roundGlasses]);
+      // and once shown they stay gone after another restart
+      final third = WardrobeController();
+      await third.load(const []);
+      expect(third.takePendingBloom(), isNull);
+      expect(third.takePendingNewItems(), isEmpty);
+    });
+
     test('new items wait for card N even across several sessions', () async {
       await w.load(const []);
       w.setForTest(practiceDays: 2);

@@ -655,7 +655,14 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const ZeepAvatar(tint: tintHold, size: 110, breath: 0.3),
+            ZeepAvatar(
+              tint: tintHold,
+              size: 110,
+              breath: 0.3,
+              outfit: app.wardrobe.outfit,
+              growth: app.wardrobe.growth,
+              roomy: true,
+            ),
             const SizedBox(height: 18),
             Text(
               s.noTiltSensor,
@@ -681,7 +688,14 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const ZeepAvatar(tint: tintExhale, size: 104, breath: 0.7),
+              ZeepAvatar(
+                tint: tintExhale,
+                size: 104,
+                breath: 0.7,
+                outfit: app.wardrobe.outfit,
+                growth: app.wardrobe.growth,
+                roomy: true,
+              ),
               const SizedBox(height: 8),
               Text(
                 completed ? s.gameComplete : s.gameStopped,

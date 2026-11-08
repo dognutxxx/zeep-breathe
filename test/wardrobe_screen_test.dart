@@ -1,6 +1,7 @@
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zeep_breathe/app_controller.dart';
@@ -77,4 +78,50 @@ void main() {
     expect(app.wardrobe.wornFlower, isNull);
     expect(find.bySemanticsLabel('$daisy, ${s.wearing}'), findsNothing);
   });
+
+  testWidgets('a locked flower shows the level Zeep reaches when it blooms (QA B3)', (t) async {
+    await open(t, tab: 1); // 2 blooms: level 3, the tulip opens at the end of it
+    expect(find.text(s.levelN(4)), findsOneWidget);
+    expect(find.text(s.levelN(21)), findsOneWidget); // the golden lotus
+  });
+
+  for (final lang in [S.en, S.thai]) {
+    testWidgets('text at 2x: names and days left read in full (QA B2, ${lang.th ? 'th' : 'en'})', (t) async {
+      t.view.physicalSize = const Size(1179, 30000);
+      t.view.devicePixelRatio = 3;
+      addTearDown(t.view.reset);
+      for (final tab in [0, 1]) {
+        await t.pumpWidget(
+          MaterialApp(
+            locale: lang.th ? const Locale('th') : const Locale('en'),
+            supportedLocales: S.supportedLocales,
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(2)),
+              child: child!,
+            ),
+            home: WardrobeScreen(app: app, initialTab: tab),
+          ),
+        );
+        await t.pump(const Duration(milliseconds: 100));
+        expect(t.takeException(), isNull); // no overflow
+      }
+      await t.pumpWidget(
+        MaterialApp(
+          locale: lang.th ? const Locale('th') : const Locale('en'),
+          supportedLocales: S.supportedLocales,
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: WardrobeScreen(app: app),
+        ),
+      );
+      await t.pump(const Duration(milliseconds: 100));
+      final lotus = OutfitItem.lotusCrown;
+      expect(find.textContaining(lang.daysLeft(app.wardrobe.daysLeft(lotus))), findsOneWidget);
+      expect(find.text(lang.itemName(lotus)), findsOneWidget);
+    });
+  }
 }

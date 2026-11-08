@@ -27,13 +27,29 @@ class GrowthEvent {
   /// True when the session was completed but today already had 3 steps.
   final bool dailyLimit;
   final List<OutfitItem> newItems;
+
+  /// Step counts before and after the session (to save a pending bloom).
+  final int stepsBefore, stepsAfter;
   const GrowthEvent({
     required this.before,
     required this.after,
     required this.grew,
     required this.dailyLimit,
     required this.newItems,
+    this.stepsBefore = 0,
+    this.stepsAfter = 0,
   });
+
+  /// A saved bloom, read back after the app was closed.
+  factory GrowthEvent.fromSteps(int before, int after) => GrowthEvent(
+    before: gardenFromSteps(before),
+    after: gardenFromSteps(after),
+    grew: true,
+    dailyLimit: false,
+    newItems: const [],
+    stepsBefore: before,
+    stepsAfter: after,
+  );
 
   bool get bloomed => after.blooms > before.blooms;
   FlowerKind? get newFlower => bloomed ? after.newestFlower : null;
@@ -158,6 +174,7 @@ class WardrobeController extends ChangeNotifier {
   /// Call after the history saved [r]. Returns what changed.
   GrowthEvent onSessionSaved(SessionRecord r) {
     final before = garden;
+    final stepsBefore = _steps;
     final unlockedBefore = unlocked.toSet();
     final day = dayOf(r.start);
     _dayStepsMap.putIfAbsent(day, () => 0);
@@ -174,23 +191,40 @@ class WardrobeController extends ChangeNotifier {
     }
     final newItems = unlocked.where((i) => !unlockedBefore.contains(i)).toList();
     _pendingNew.addAll(newItems);
-    _changed(grown: grew);
-    final e = GrowthEvent(before: before, after: garden, grew: grew, dailyLimit: limit, newItems: newItems);
+    if (grew) {
+      _garden = null;
+      _growth = null;
+    }
+    final e = GrowthEvent(
+      before: before,
+      after: garden,
+      grew: grew,
+      dailyLimit: limit,
+      newItems: newItems,
+      stepsBefore: stepsBefore,
+      stepsAfter: _steps,
+    );
     if (e.bloomed) _pendingBloom = e;
+    // saved after the pending cards are set, so they survive closing the app
+    _changed(grown: grew);
     return e;
   }
 
   /// The bloom for card L, if one has not been shown yet; clears it.
   GrowthEvent? takePendingBloom() {
     final e = _pendingBloom;
+    if (e == null) return null;
     _pendingBloom = null;
+    _save();
     return e;
   }
 
   /// Items for card N that have not been shown yet; clears the list.
   List<OutfitItem> takePendingNewItems() {
     final items = List.of(_pendingNew);
+    if (items.isEmpty) return items;
     _pendingNew.clear();
+    _save();
     return items;
   }
 
@@ -250,6 +284,9 @@ class WardrobeController extends ChangeNotifier {
     'flower': _flowerChoice,
     'seen': [for (final i in _seen) i.name],
     'summary': summaryPending,
+    // cards L and N not shown yet (the app may close before "Done")
+    'pendingNew': [for (final i in _pendingNew) i.name],
+    if (_pendingBloom != null) 'pendingBloom': [_pendingBloom!.stepsBefore, _pendingBloom!.stepsAfter],
   };
 
   void _fromJson(Map j) {
@@ -279,6 +316,17 @@ class WardrobeController extends ChangeNotifier {
           for (final n in seen) ?OutfitItem.byName('$n'),
       ]);
     summaryPending = j['summary'] == true;
+    final pn = j['pendingNew'];
+    _pendingNew
+      ..clear()
+      ..addAll([
+        if (pn is List)
+          for (final n in pn) ?OutfitItem.byName('$n'),
+      ]);
+    final pb = j['pendingBloom'];
+    _pendingBloom = pb is List && pb.length == 2 && pb[0] is num && pb[1] is num
+        ? GrowthEvent.fromSteps((pb[0] as num).toInt(), (pb[1] as num).toInt())
+        : null;
     _garden = null;
     _growth = null;
   }

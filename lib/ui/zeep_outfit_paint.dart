@@ -814,6 +814,7 @@ void _cloud(Canvas p, _Geo g, double time, bool reduceMotion) {
 
 /// Draws one flower of [kind] centred at [c]; [k] is the scale (Zeep's `s`).
 void drawBloom(Canvas p, FlowerKind kind, Offset c, double k) {
+  if (!(k > 0) || !k.isFinite) return;
   final ink = _stroke(ZeepColors.ink, 0.9 * k);
   switch (kind.style) {
     case FlowerStyle.tulip:
@@ -921,6 +922,7 @@ const _budGrey = Color(0xFFE6E0DA);
 /// The flower while it opens on card L: a grey bud that swells, then petals
 /// that grow out and take their colour. Same shapes as [drawBloom].
 void drawGrowingBloom(Canvas p, FlowerKind kind, Offset c, double k, SproutGrowth g) {
+  if (!(k > 0) || !k.isFinite) return;
   p.save();
   p.translate(c.dx, c.dy);
   if (g.rock != 0) {

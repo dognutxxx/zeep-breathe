@@ -128,7 +128,13 @@ class SessionScreen extends StatelessWidget {
                   const SizedBox(width: 16),
                   ControlButton(
                     tooltip: l.stop,
-                    onTap: app.stopSession,
+                    onTap: () {
+                      // a session stopped after 30 s is saved and may bloom or
+                      // unlock something: same cards as "Done"
+                      final nav = Navigator.of(context);
+                      app.stopSession();
+                      showGrowthCards(nav.context, app);
+                    },
                     icon: const Icon(Icons.stop_rounded, color: Color(0xFF4E4A48), size: 28),
                   ),
                   const SizedBox(width: 16),

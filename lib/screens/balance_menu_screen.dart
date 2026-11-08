@@ -70,7 +70,15 @@ class BalanceMenuScreen extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 6),
-                            const Center(child: ZeepAvatar(tint: ZeepColors.mint, size: 96)),
+                            Center(
+                              child: ZeepAvatar(
+                                tint: ZeepColors.mint,
+                                size: 96,
+                                outfit: app.wardrobe.outfit,
+                                growth: app.wardrobe.growth,
+                                roomy: true,
+                              ),
+                            ),
                             const SizedBox(height: 8),
                             Text(
                               s.gameHowTo,

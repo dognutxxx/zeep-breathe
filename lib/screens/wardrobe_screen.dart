@@ -232,9 +232,9 @@ class _ItemTile extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: open ? () => w.toggle(item) : null,
-          child: SizedBox(
-            width: 112,
-            height: 136,
+          child: ConstrainedBox(
+            // as tall as the text needs (large text sizes)
+            constraints: const BoxConstraints.tightFor(width: 112).copyWith(minHeight: 136),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
               child: Column(
@@ -250,26 +250,22 @@ class _ItemTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     name,
-                    maxLines: 2,
                     textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12, height: 1.2, color: ZeepColors.text),
                   ),
                   if (!open)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.lock_rounded, size: 12, color: ZeepColors.textFaint),
-                        const SizedBox(width: 2),
-                        Flexible(
-                          child: Text(
-                            l.daysLeft(w.daysLeft(item)),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 11, color: ZeepColors.textSoft),
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          const WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Icon(Icons.lock_rounded, size: 12, color: ZeepColors.textFaint),
                           ),
-                        ),
-                      ],
+                          TextSpan(text: ' ${l.daysLeft(w.daysLeft(item))}'),
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 11, color: ZeepColors.textSoft),
                     ),
                 ],
               ),
@@ -348,7 +344,7 @@ class _GardenTab extends StatelessWidget {
           runSpacing: 8,
           children: [
             for (var i = 0; i < flowerKinds.length; i++)
-              _FlowerTile(w: w, kind: flowerKinds[i], count: counts[i], level: i + 1),
+              _FlowerTile(w: w, kind: flowerKinds[i], count: counts[i], level: i + 2),
           ],
         ),
       ],
@@ -383,12 +379,12 @@ class _FlowerTile extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: open ? () => w.chooseFlower(kind) : null,
-          child: SizedBox(
-            width: 82,
-            height: 100,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints.tightFor(width: 82).copyWith(minHeight: 100),
             child: Stack(
               children: [
-                Positioned.fill(
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
                   child: Column(
                     children: [
                       const SizedBox(height: 8),
@@ -397,11 +393,13 @@ class _FlowerTile extends StatelessWidget {
                         child: SizedBox(width: 56, height: 56, child: CustomPaint(painter: _BloomPainter(kind))),
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: open ? ZeepColors.text : ZeepColors.textSoft),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          name,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 12, color: open ? ZeepColors.text : ZeepColors.textSoft),
+                        ),
                       ),
                     ],
                   ),

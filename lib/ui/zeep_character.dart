@@ -178,6 +178,9 @@ void drawZeep(
   Outfit outfit = Outfit.none,
   SproutGrowth growth = SproutGrowth.none,
 }) {
+  // an empty or squashed box (e.g. a short screen): nothing to draw. Several
+  // loops below step by a multiple of s, so s must be positive.
+  if (!(s > 0) || !s.isFinite) return;
   final br = pose.breath.clamp(-0.1, 1.1);
   final float = reduceMotion ? 0.0 : math.sin(time * _tau / 3.8);
   final cx = center.dx;
@@ -562,7 +565,12 @@ class ZeepAvatar extends StatelessWidget {
     this.hold = 0,
     this.outfit = Outfit.none,
     this.growth = SproutGrowth.none,
+    this.roomy = false,
   });
+
+  /// Shrink Zeep a little when it wears an outfit so hats and friends fit
+  /// inside the box (menus and results; not on the game board).
+  final bool roomy;
 
   @override
   Widget build(BuildContext context) {
@@ -570,7 +578,7 @@ class ZeepAvatar extends StatelessWidget {
       child: SizedBox(
         width: size,
         height: size,
-        child: CustomPaint(painter: _AvatarPainter(tint, breath, hold, outfit, growth)),
+        child: CustomPaint(painter: _AvatarPainter(tint, breath, hold, outfit, growth, roomy)),
       ),
     );
   }
@@ -581,12 +589,15 @@ class _AvatarPainter extends CustomPainter {
   final double breath, hold;
   final Outfit outfit;
   final SproutGrowth growth;
-  _AvatarPainter(this.tint, this.breath, this.hold, this.outfit, this.growth);
+  final bool roomy;
+  _AvatarPainter(this.tint, this.breath, this.hold, this.outfit, this.growth, this.roomy);
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Zeep spans ~190 x 175 design units (arms, sprout, legs, shadow)
-    final s = size.shortestSide / 160;
+    // Zeep spans ~190 x 175 design units (arms, sprout, legs, shadow); with
+    // an outfit, hats and friends need more room around it
+    final dressed = !outfit.isEmpty || !growth.isNone;
+    final s = size.shortestSide / (dressed && roomy ? 200 : 160);
     final pose = Pose(
       breath: breath,
       armLift: breath,
