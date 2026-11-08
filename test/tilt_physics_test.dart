@@ -265,4 +265,28 @@ void main() {
       expect(c.ball.pos.length, 0);
     });
   });
+
+  group('isUpsideDown', () {
+    test('upright the right way up is not upside down', () {
+      expect(isUpsideDown(const Vec3(0, g, 0)), isFalse);
+      expect(isUpsideDown(const Vec3(0, 0, g)), isFalse); // flat
+      expect(isUpsideDown(Vec3(0, g * math.sin(rad(45)), g * math.cos(rad(45)))), isFalse);
+    });
+
+    test('upright with the top edge down is upside down', () {
+      expect(isUpsideDown(const Vec3(0, -g, 0)), isTrue);
+      expect(isUpsideDown(Vec3(0, -g * math.sin(rad(40)), g * math.cos(rad(40)))), isTrue);
+    });
+
+    test('hysteresis: stays upside down until clearly righted', () {
+      final nearEdge = Vec3(0, -g * 0.4, g * math.sqrt(1 - 0.16));
+      expect(isUpsideDown(nearEdge), isFalse);
+      expect(isUpsideDown(nearEdge, wasUpsideDown: true), isTrue);
+      expect(isUpsideDown(const Vec3(0, 0, g), wasUpsideDown: true), isFalse);
+    });
+
+    test('zero reading keeps the previous answer', () {
+      expect(isUpsideDown(const Vec3(0, 0, 0), wasUpsideDown: true), isTrue);
+    });
+  });
 }

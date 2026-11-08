@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -14,7 +15,7 @@ import '../ui/widgets.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
 
-enum _Stage { waiting, countdown, playing, unavailable }
+enum _Stage { waiting, countdown, playing, turnUpright, unavailable }
 
 class BalancePrototypeScreen extends StatefulWidget {
   final TiltSource source;
@@ -22,10 +23,15 @@ class BalancePrototypeScreen extends StatefulWidget {
   /// No reading within this time = treat the device as having no sensor.
   final Duration sensorTimeout;
 
+  /// Pause when gravity says the phone is upside down. Defaults to Android
+  /// only: iOS can't rotate the app to reverse portrait (Info.plist).
+  final bool? detectUpsideDown;
+
   const BalancePrototypeScreen({
     super.key,
     this.source = const AccelerometerTiltSource(),
     this.sensorTimeout = const Duration(seconds: 2),
+    this.detectUpsideDown,
   });
 
   @override
@@ -43,6 +49,12 @@ class _BalancePrototypeScreenState extends State<BalancePrototypeScreen> with Si
   Duration _last = Duration.zero;
   _Stage _stage = _Stage.waiting;
   double _countdown = _countdownSeconds;
+  bool _portrait = true;
+  bool _upsideDown = false;
+
+  /// The tilt maths assume the screen is portrait-up; otherwise pause.
+  bool get _blocked => !_portrait || _upsideDown;
+  bool get _checkUpsideDown => widget.detectUpsideDown ?? defaultTargetPlatform == TargetPlatform.android;
 
   @override
   void initState() {
@@ -58,9 +70,32 @@ class _BalancePrototypeScreenState extends State<BalancePrototypeScreen> with Si
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _portrait = MediaQuery.orientationOf(context) == Orientation.portrait;
+    _applyBlocked();
+  }
+
   void _onReading(Vec3 g) {
     _tilt.onReading(g);
-    if (_stage == _Stage.waiting) setState(_startCountdown);
+    final was = _upsideDown;
+    if (_checkUpsideDown) _upsideDown = isUpsideDown(g, wasUpsideDown: was);
+    if (_stage == _Stage.waiting) {
+      setState(() => _blocked ? _stage = _Stage.turnUpright : _startCountdown());
+    } else if (_upsideDown != was) {
+      setState(_applyBlocked);
+    }
+  }
+
+  /// Pause while the screen isn't portrait-up; once it is again, count
+  /// 3-2-1 and take the new pose as level.
+  void _applyBlocked() {
+    if (_blocked) {
+      if (_stage == _Stage.countdown || _stage == _Stage.playing) _stage = _Stage.turnUpright;
+    } else if (_stage == _Stage.turnUpright) {
+      _startCountdown();
+    }
   }
 
   /// No sensor, or the sensor failed (also mid-game): stop and say so.
@@ -91,6 +126,8 @@ class _BalancePrototypeScreenState extends State<BalancePrototypeScreen> with Si
       case _Stage.playing:
         _tilt.update(dt);
         setState(() {});
+      case _Stage.turnUpright:
+        _tilt.tick(dt); // no physics while paused
       case _Stage.waiting:
       case _Stage.unavailable:
         break;
@@ -235,6 +272,7 @@ class _BalancePrototypeScreenState extends State<BalancePrototypeScreen> with Si
 
   Widget _overlay(S s) {
     final counting = _stage == _Stage.countdown;
+    final upright = _stage == _Stage.turnUpright;
     return Container(
       decoration: BoxDecoration(color: withAlpha(ZeepColors.bgTop, 0.82), borderRadius: BorderRadius.circular(28)),
       alignment: Alignment.center,
@@ -242,8 +280,16 @@ class _BalancePrototypeScreenState extends State<BalancePrototypeScreen> with Si
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (upright) ...[
+            const Icon(Icons.screen_rotation_rounded, size: 44, color: ZeepColors.blue),
+            const SizedBox(height: 12),
+          ],
           Text(
-            counting ? s.holdComfortably : s.waitingForSensor,
+            upright
+                ? s.turnUpright
+                : counting
+                ? s.holdComfortably
+                : s.waitingForSensor,
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: ZeepColors.text),
           ),

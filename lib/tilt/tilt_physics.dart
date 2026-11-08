@@ -69,10 +69,10 @@ class TiltMapper {
     if (up.length == 0) return false;
     // Screen-right projected onto the level plane. This assumes the screen is
     // portrait-up, so device x = screen right. main.dart asks for portrait,
-    // but iPad (multitasking) and Android 16 large screens can still rotate;
-    // there device x is NOT screen right and Zeep moves the wrong way (open
-    // issue, fix pending). If device x is parallel to gravity (phone on its
-    // side) fall back to the y axis.
+    // but iPad (multitasking) and Android 16 large screens can still rotate,
+    // so the game screen pauses whenever the screen is not portrait-up (see
+    // BalancePrototypeScreen and [isUpsideDown]). If device x is parallel to
+    // gravity (phone on its side) fall back to the y axis.
     var right = _project(const Vec3(1, 0, 0), up);
     if (right.length < 0.2) right = _cross(_project(const Vec3(0, 1, 0), up).unit, up);
     right = right.unit;
@@ -204,6 +204,19 @@ class BallPhysics {
     pos = Vec2(x, y);
     vel = Vec2(vx, vy);
   }
+}
+
+/// True when the phone is held upright but upside down (top edge towards the
+/// floor). Android large screens may rotate the app to reverse portrait while
+/// Flutter still reports "portrait", which would flip every tilt direction.
+/// Readings use the Android convention: upright and the right way up gives
+/// y = +g, upside down gives y = -g. Hysteresis keeps it from flickering.
+/// A phone lying flat that was rotated upside down can't be told apart this
+/// way (gravity is on z); that case is accepted.
+bool isUpsideDown(Vec3 g, {bool wasUpsideDown = false}) {
+  final u = g.unit;
+  if (u.length == 0) return wasUpsideDown;
+  return u.y < (wasUpsideDown ? -0.3 : -0.5);
 }
 
 /// Mapper + filter + physics in one object, driven once per frame.

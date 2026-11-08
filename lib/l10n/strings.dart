@@ -162,6 +162,7 @@ class S {
     "This device has no tilt sensor, so the game isn't available.",
     'เครื่องนี้ไม่มีเซ็นเซอร์เอียง จึงเล่นเกมนี้ไม่ได้',
   );
+  String get turnUpright => _('Turn your device upright to play', 'หมุนเครื่องเป็นแนวตั้งเพื่อเล่น');
 
   // ---------------------------------------------------------------- progress
   String get progressTitle => _('Progress', 'ความคืบหน้า');
