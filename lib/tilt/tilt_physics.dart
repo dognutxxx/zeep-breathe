@@ -18,6 +18,7 @@ class Vec3 {
   const Vec3(this.x, this.y, this.z);
 
   double dot(Vec3 o) => x * o.x + y * o.y + z * o.z;
+  Vec3 operator +(Vec3 o) => Vec3(x + o.x, y + o.y, z + o.z);
   Vec3 operator -(Vec3 o) => Vec3(x - o.x, y - o.y, z - o.z);
   Vec3 operator *(double k) => Vec3(x * k, y * k, z * k);
   double get length => math.sqrt(dot(this));
@@ -66,9 +67,12 @@ class TiltMapper {
   bool calibrate(Vec3 g) {
     final up = g.unit;
     if (up.length == 0) return false;
-    // Screen-right projected onto the level plane. The app is portrait-locked,
-    // so the device x axis is never parallel to gravity in normal play; if it
-    // is (phone on its side) fall back to the y axis.
+    // Screen-right projected onto the level plane. This assumes the screen is
+    // portrait-up, so device x = screen right. main.dart asks for portrait,
+    // but iPad (multitasking) and Android 16 large screens can still rotate;
+    // there device x is NOT screen right and Zeep moves the wrong way (open
+    // issue, fix pending). If device x is parallel to gravity (phone on its
+    // side) fall back to the y axis.
     var right = _project(const Vec3(1, 0, 0), up);
     if (right.length < 0.2) right = _cross(_project(const Vec3(0, 1, 0), up).unit, up);
     right = right.unit;
@@ -204,10 +208,21 @@ class BallPhysics {
 
 /// Mapper + filter + physics in one object, driven once per frame.
 class TiltController {
+  /// The level pose is the average reading over this last stretch of time,
+  /// so a single shaky sample at the end of the countdown can't skew it.
+  static const calibrationWindow = 0.5;
+
+  /// No new reading for this long: treat the phone as level (Zeep slows to a
+  /// stop) instead of rolling on a stale value.
+  static const staleAfter = 0.5;
+
   final TiltMapper mapper;
   final LowPass filter;
   final BallPhysics ball;
   Vec3? _latest;
+  double _clock = 0;
+  double _sinceReading = 0;
+  final _recent = <(double, Vec3)>[];
 
   TiltController({TiltMapper? mapper, LowPass? filter, BallPhysics? ball})
     : mapper = mapper ?? TiltMapper(),
@@ -217,20 +232,58 @@ class TiltController {
   bool get calibrated => mapper.calibrated;
   bool get hasReading => _latest != null;
 
-  void onReading(Vec3 g) => _latest = g;
+  void onReading(Vec3 g) {
+    _latest = g;
+    _sinceReading = 0;
+    _recent.add((_clock, g));
+    _prune();
+  }
 
-  /// Takes the latest reading as level and puts Zeep back in the middle.
+  void _prune() {
+    final from = _clock - calibrationWindow;
+    _recent.removeWhere((r) => r.$1 < from);
+    // if the clock isn't running, keep the buffer bounded anyway
+    if (_recent.length > 256) _recent.removeRange(0, _recent.length - 256);
+  }
+
+  /// Average reading over the last [calibrationWindow] seconds.
+  Vec3? get averageReading {
+    _prune();
+    if (_recent.isEmpty) return _latest;
+    var sum = const Vec3(0, 0, 0);
+    for (final r in _recent) {
+      sum = sum + r.$2;
+    }
+    return sum * (1 / _recent.length);
+  }
+
+  /// Takes the recent average reading as level and puts Zeep back in the
+  /// middle.
   bool calibrate() {
-    final g = _latest;
+    final g = averageReading;
     if (g == null || !mapper.calibrate(g)) return false;
     filter.reset();
     ball.reset();
     return true;
   }
 
+  /// Advances time without moving Zeep. Call every frame while not playing
+  /// (e.g. during the countdown) so the calibration window is timed.
+  void tick(double dt) {
+    _clock += dt;
+    _sinceReading += dt;
+  }
+
+  /// One frame of play.
   void update(double dt) {
+    tick(dt);
     final g = _latest;
     if (g == null || !mapper.calibrated) return;
+    if (_sinceReading > staleAfter) {
+      filter.reset();
+      ball.step(dt, Vec2.zero);
+      return;
+    }
     // filter first, then the dead zone: tremor is smoothed away before the
     // still-check, so a steady hand gives exactly zero tilt
     final t = mapper.shape(filter.add(mapper.raw(g), dt));

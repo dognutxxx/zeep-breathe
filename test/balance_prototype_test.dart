@@ -70,6 +70,18 @@ void main() {
     await frames(t, 0.6);
     expect(t.getTopLeft(find.byType(ZeepAvatar)).dx, greaterThan(start.dx + 20));
     await t.pumpWidget(const SizedBox());
+    unawaited(src.controller.close());
+  });
+
+  testWidgets('sensor fails mid-game: shows the no-sensor message', (t) async {
+    final src = FakeTilt();
+    await t.pumpWidget(app(src));
+    src.controller.add(const Vec3(0, 0, 9.81));
+    await frames(t, 3.5);
+    expect(find.text(S.en.resetCentre), findsOneWidget);
+    src.controller.addError(StateError('sensor lost'));
+    await frames(t, 0.1);
+    expect(find.text(S.en.noTiltSensor), findsOneWidget);
     await t.pumpWidget(const SizedBox());
     unawaited(src.controller.close());
   });

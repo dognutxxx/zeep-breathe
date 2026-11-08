@@ -63,8 +63,10 @@ class _BalancePrototypeScreenState extends State<BalancePrototypeScreen> with Si
     if (_stage == _Stage.waiting) setState(_startCountdown);
   }
 
+  /// No sensor, or the sensor failed (also mid-game): stop and say so.
   void _unavailable() {
-    if (!mounted || _tilt.hasReading) return;
+    if (!mounted || _stage == _Stage.unavailable) return;
+    _timeout?.cancel();
     _sub?.cancel();
     setState(() => _stage = _Stage.unavailable);
   }
@@ -80,6 +82,7 @@ class _BalancePrototypeScreenState extends State<BalancePrototypeScreen> with Si
     _last = elapsed;
     switch (_stage) {
       case _Stage.countdown:
+        _tilt.tick(dt); // times the calibration average
         _countdown -= dt;
         if (_countdown <= 0) {
           _stage = _tilt.calibrate() ? _Stage.playing : _Stage.waiting;

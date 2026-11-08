@@ -179,12 +179,72 @@ void main() {
         ..ball.setBounds(150, 250)
         ..onReading(const Vec3(0, 0, g));
       c.calibrate();
-      c.onReading(flatRightDown(15));
       for (var i = 0; i < 180; i++) {
+        c.onReading(flatRightDown(15));
         c.update(1 / 60);
       }
       expect(c.ball.pos.x, 150);
       expect(c.ball.pos.y, 0);
+    });
+
+    test('calibrating from shaky readings: the held pose still reads level', () {
+      // review #2: the countdown ends while the hand jitters, and the very
+      // last sample carries a 0.6 m/s² sideways bump (≈3.5°, beyond the dead
+      // zone). The level pose is averaged, so holding still keeps Zeep put.
+      const held = Vec3(0, 3, 9.33);
+      final c = TiltController()..ball.setBounds(150, 250);
+      final rnd = math.Random(3);
+      for (var i = 0; i < 150; i++) {
+        // 50 Hz sensor, ±0.4 m/s² of hand jitter on x and y
+        final jx = (rnd.nextDouble() * 2 - 1) * 0.4;
+        final jy = (rnd.nextDouble() * 2 - 1) * 0.4;
+        c.onReading(Vec3(held.x + jx, held.y + jy, held.z));
+        c.tick(1 / 50);
+      }
+      c.onReading(Vec3(held.x + 0.6, held.y, held.z));
+      expect(c.calibrate(), isTrue);
+      for (var i = 0; i < 600; i++) {
+        c.onReading(held);
+        c.update(1 / 60);
+      }
+      expect(c.ball.pos.x, 0);
+      expect(c.ball.pos.y, 0);
+    });
+
+    test('only the last half second counts towards the level pose', () {
+      final c = TiltController();
+      for (var i = 0; i < 100; i++) {
+        c.onReading(flatRightDown(20)); // old pose, before the player settled
+        c.tick(1 / 50);
+      }
+      for (var i = 0; i < 40; i++) {
+        c.onReading(const Vec3(0, 0, g));
+        c.tick(1 / 50);
+      }
+      final avg = c.averageReading!;
+      expect(avg.x, 0);
+      expect(avg.z, g);
+    });
+
+    test('readings stop mid-game: Zeep slows to a stop instead of rolling on', () {
+      // review #3: a stale reading must not keep Zeep pinned to a wall
+      final c = TiltController()
+        ..ball.setBounds(1000, 1000)
+        ..onReading(const Vec3(0, 0, g));
+      c.calibrate();
+      c.onReading(flatRightDown(15));
+      for (var i = 0; i < 20; i++) {
+        c.update(1 / 60);
+      }
+      expect(c.ball.vel.x, greaterThan(0));
+      for (var i = 0; i < 300; i++) {
+        c.update(1 / 60); // no new readings
+      }
+      expect(c.ball.vel.length, 0);
+      final x = c.ball.pos.x;
+      expect(x, lessThan(1000));
+      c.update(1 / 60);
+      expect(c.ball.pos.x, x);
     });
 
     test('recalibrating re-centres Zeep and makes the current pose level', () {
@@ -192,13 +252,14 @@ void main() {
         ..ball.setBounds(150, 250)
         ..onReading(const Vec3(0, 0, g));
       c.calibrate();
-      c.onReading(flatRightDown(15));
       for (var i = 0; i < 60; i++) {
+        c.onReading(flatRightDown(15));
         c.update(1 / 60);
       }
       expect(c.calibrate(), isTrue);
       expect(c.ball.pos.length, 0);
       for (var i = 0; i < 120; i++) {
+        c.onReading(flatRightDown(15));
         c.update(1 / 60);
       }
       expect(c.ball.pos.length, 0);
