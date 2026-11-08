@@ -35,13 +35,10 @@ class MainActivity : FlutterActivity() {
         if (Build.VERSION.SDK_INT >= 30) {
             w.setDecorFitsSystemWindows(false)
         } else {
-            // Android 7 can't draw dark navigation icons: keep its bar opaque
-            // (content stays above it) rather than white icons on a light app.
-            val nav = if (Build.VERSION.SDK_INT >= 26) {
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-            } else {
-                0
-            }
+            // Android 7 can't draw dark navigation icons: it gets a dim scrim
+            // behind its white icons instead of a clear bar (set below).
+            val nav = View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                if (Build.VERSION.SDK_INT >= 26) View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR else 0
             @Suppress("DEPRECATION")
             w.decorView.systemUiVisibility = w.decorView.systemUiVisibility or
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
@@ -51,10 +48,8 @@ class MainActivity : FlutterActivity() {
         }
         @Suppress("DEPRECATION")
         w.statusBarColor = Color.TRANSPARENT
-        if (Build.VERSION.SDK_INT >= 26) {
-            @Suppress("DEPRECATION")
-            w.navigationBarColor = Color.TRANSPARENT
-        }
+        @Suppress("DEPRECATION")
+        w.navigationBarColor = if (Build.VERSION.SDK_INT >= 26) Color.TRANSPARENT else 0x66000000
         if (Build.VERSION.SDK_INT >= 29) w.isNavigationBarContrastEnforced = false
     }
 
