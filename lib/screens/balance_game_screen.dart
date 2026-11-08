@@ -83,6 +83,13 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
   bool _logged = false, _saved = false, _newBest = false;
   bool _inside = true;
 
+  /// Medium level: a phase pulse the haptics service could not play yet.
+  HapticPattern? _pendingPhase;
+
+  /// The sensor failed while the results were showing: Play again must show
+  /// the no-sensor message instead of starting.
+  bool _sensorLost = false;
+
   /// Popped (back button, swipe or Done): the route animates out, nothing
   /// more may happen.
   bool _leaving = false;
@@ -149,6 +156,11 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
   /// No sensor, or the sensor failed (also mid-game): stop and say so.
   void _unavailable() {
     if (!mounted || _stage == _Stage.unavailable) return;
+    if (_stage == _Stage.finished) {
+      // keep the results on screen; Play again will say there's no sensor
+      _sensorLost = true;
+      return;
+    }
     _timeout?.cancel();
     _rotationTimer?.cancel();
     _sub?.cancel();
@@ -174,10 +186,17 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
   }
 
   void _playAgain() {
+    if (_sensorLost) {
+      _sensorLost = false;
+      _stage = _Stage.waiting; // so _unavailable switches the screen
+      _unavailable();
+      return;
+    }
     setState(() {
       _played = 0;
       _startedAt = null;
       _logged = _saved = _newBest = false;
+      _pendingPhase = null;
       _score.reset();
       _breath.stop();
       _startCountdown();
@@ -250,9 +269,15 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
       EdgeEvent.entered => HapticPattern.edgeIn,
       null => null,
     };
-    // the service skips a pulse right after another (e.g. a medium-level
-    // phase pulse): then try again after the guard
-    if (edge != null && !app.haptics.fire(edge, app.time) && app.haptics.enabled) _edge.dropped();
+    // A phase pulse waiting for the service's 250 ms guard comes first: it
+    // is played as soon as the guard allows, and edge pulses wait for it.
+    final phase = _pendingPhase;
+    if (phase != null && app.haptics.fire(phase, app.time)) _pendingPhase = null;
+    if (edge != null) {
+      final played = _pendingPhase == null && app.haptics.fire(edge, app.time);
+      // skipped (busy with another pulse): try again after the edge guard
+      if (!played && app.haptics.enabled) _edge.dropped();
+    }
     if (_played >= _length) _finish(completed: true);
   }
 
@@ -266,7 +291,9 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
         Phase.exhale => HapticPattern.exhaleStart,
         Phase.rest => null,
       };
-      if (p != null) app.haptics.fire(p, app.time);
+      // a phase pulse is never lost: if the service is busy (an edge pulse
+      // just played), it is played a moment later from _play
+      if (p != null && !app.haptics.fire(p, app.time) && app.haptics.enabled) _pendingPhase = p;
     }
   }
 
@@ -494,8 +521,9 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
         final w = box.maxWidth, h = box.maxHeight;
         final zeep = (w < h ? w : h * 1.0).clamp(0.0, double.infinity) * 0.2;
         final zeepSize = zeep.clamp(56.0, 112.0);
-        // Zeep's body spans ~70 % of its avatar box: keep that inside
-        final r = zeepSize * 0.36;
+        // Zeep's body spans ~70 % of its avatar box and the arms a bit more:
+        // keep all of it inside the board
+        final r = zeepSize * 0.46;
         _tilt.ball.setBounds(w / 2 - r - 6, h / 2 - r - 6);
         _circle = circleFor(
           widget.level,

@@ -40,82 +40,96 @@ class BalanceMenuScreen extends StatelessWidget {
               return Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 560),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  // the Start button stays pinned at the bottom; the rest scrolls
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            tooltip: s.back,
-                            onPressed: () => Navigator.of(context).maybePop(),
-                            icon: const Icon(Icons.chevron_left_rounded, size: 32, color: ZeepColors.text),
-                          ),
-                          Expanded(
-                            child: Text(
-                              s.gameName,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: ZeepColors.text),
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                          children: [
+                            Row(
+                              children: [
+                                IconButton(
+                                  tooltip: s.back,
+                                  onPressed: () => Navigator.of(context).maybePop(),
+                                  icon: const Icon(Icons.chevron_left_rounded, size: 32, color: ZeepColors.text),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    s.gameName,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: ZeepColors.text,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 48),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 48),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      const Center(child: ZeepAvatar(tint: ZeepColors.mint, size: 96)),
-                      const SizedBox(height: 8),
-                      Text(
-                        s.gameHowTo,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 14.5, color: ZeepColors.textSoft, height: 1.4),
-                      ),
-                      const SizedBox(height: 18),
-                      _Heading(s.chooseLevel),
-                      for (final l in BalanceLevel.values)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _LevelCard(
-                            level: l,
-                            best: st.gameBest[l.index],
-                            selected: l == level,
-                            onTap: () => st.update((x) => x.gameLevel = l.index),
-                          ),
-                        ),
-                      const SizedBox(height: 8),
-                      _Heading(s.gameLength),
-                      Row(
-                        children: [
-                          for (final m in gameDurations)
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: _Chip(
-                                  label: s.minutes(m),
-                                  selected: st.gameMinutes == m,
-                                  onTap: () => st.update((x) => x.gameMinutes = m),
+                            const SizedBox(height: 6),
+                            const Center(child: ZeepAvatar(tint: ZeepColors.mint, size: 96)),
+                            const SizedBox(height: 8),
+                            Text(
+                              s.gameHowTo,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 14.5, color: ZeepColors.textSoft, height: 1.4),
+                            ),
+                            const SizedBox(height: 18),
+                            _Heading(s.chooseLevel),
+                            for (final l in BalanceLevel.values)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _LevelCard(
+                                  level: l,
+                                  best: st.gameBest[l.index],
+                                  selected: l == level,
+                                  onTap: () => st.update((x) => x.gameLevel = l.index),
                                 ),
                               ),
+                            const SizedBox(height: 8),
+                            _Heading(s.gameLength),
+                            Row(
+                              children: [
+                                for (final m in gameDurations)
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      child: _Chip(
+                                        label: s.minutes(m),
+                                        selected: st.gameMinutes == m,
+                                        onTap: () => st.update((x) => x.gameMinutes = m),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
-                        ],
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 24),
-                      FilledButton.icon(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => BalanceGameScreen(
-                              app: app,
-                              level: level,
-                              minutes: st.gameMinutes,
-                              source: source,
-                              rotationSource: rotationSource,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                        child: FilledButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => BalanceGameScreen(
+                                app: app,
+                                level: level,
+                                minutes: st.gameMinutes,
+                                source: source,
+                                rotationSource: rotationSource,
+                              ),
                             ),
                           ),
-                        ),
-                        icon: const Icon(Icons.play_arrow_rounded),
-                        label: Text(s.startGame, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: ZeepColors.blue,
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          shape: const StadiumBorder(),
+                          icon: const Icon(Icons.play_arrow_rounded),
+                          label: Text(s.startGame, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: ZeepColors.blue,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: const StadiumBorder(),
+                          ),
                         ),
                       ),
                     ],

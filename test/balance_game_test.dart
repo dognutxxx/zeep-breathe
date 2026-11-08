@@ -404,6 +404,8 @@ void main() {
     await t.pumpWidget(wrap(BalanceMenuScreen(app: testApp, source: src, rotationSource: FakeRotation())));
     expect(find.text(S.en.noBestYet), findsWidgets);
     await t.tap(find.text(S.en.levelName(BalanceLevel.hard)));
+    // the test font is wider than the real one: scroll the chips into view
+    await t.scrollUntilVisible(find.text(S.en.minutes(3)), 100, scrollable: find.byType(Scrollable).first);
     await t.tap(find.text(S.en.minutes(3)));
     await t.pump();
     expect(testApp.settings.gameLevel, 2);
@@ -509,6 +511,38 @@ void main() {
     await src.controller.close();
     await frames(t, 0.2);
     expect(find.text(S.en.noTiltSensor), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  // ------------------------------------------------------------ QA fixes (B1, B2)
+
+  testWidgets('medium, swaying across the edge: no phase pulse is lost (QA B1)', (t) async {
+    final src = await startPlaying(t, level: BalanceLevel.medium);
+    // 4-2-6 rhythm: inhale 0 s, hold 4 s, exhale 6 s, inhale 12 s
+    for (var i = 0; i < 44; i++) {
+      src.controller.add(Vec3(i.isEven ? -6 : 6, 0, 7.5));
+      await frames(t, 0.3);
+    }
+    final f = haptics().fired;
+    expect(f.where((p) => p == HapticPattern.edgeOut || p == HapticPattern.edgeIn), isNotEmpty);
+    expect(f.where((p) => p == HapticPattern.inhaleStart), hasLength(2));
+    expect(f.where((p) => p == HapticPattern.holdStart), hasLength(1));
+    expect(f.where((p) => p == HapticPattern.exhaleStart), hasLength(1));
+    await t.pumpWidget(const SizedBox());
+    unawaited(src.controller.close());
+  });
+
+  testWidgets('sensor fails on the results screen: results stay, Play again says no sensor (QA B2)', (t) async {
+    final src = await startPlaying(t);
+    await frames(t, 61);
+    expect(find.text(S.en.gameComplete), findsOneWidget);
+    src.controller.addError(StateError('sensor lost'));
+    await frames(t, 0.2);
+    expect(find.text(S.en.gameComplete), findsOneWidget);
+    await t.tap(find.text(S.en.playAgain));
+    await frames(t, 0.2);
+    expect(find.text(S.en.noTiltSensor), findsOneWidget);
+    expect(testApp.history.records, hasLength(1));
     await t.pumpWidget(const SizedBox());
   });
 }

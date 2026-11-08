@@ -182,7 +182,7 @@ class S {
   String get gameLength => _('Game length', 'เวลาเล่น');
   String get startGame => _('Start game', 'เริ่มเล่น');
   String bestScore(int p) => _('Best $p%', 'ดีที่สุด $p%');
-  String get noBestYet => _('Not played yet', 'ยังไม่เคยเล่น');
+  String get noBestYet => _('No best score yet', 'ยังไม่มีสถิติ');
   String get gameHowTo => _(
     'Keep Zeep inside the circle. The more time inside, the higher your score.',
     'ประคอง Zeep ให้อยู่ในวง ยิ่งอยู่ในวงนาน คะแนนยิ่งสูง',
