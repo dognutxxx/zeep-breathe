@@ -17,7 +17,9 @@ import 'package:zeep_breathe/l10n/strings.dart';
 import 'package:zeep_breathe/main.dart';
 import 'package:zeep_breathe/screens/balance_game_screen.dart';
 import 'package:zeep_breathe/screens/balance_menu_screen.dart';
+import 'package:zeep_breathe/screens/share_screen.dart';
 import 'package:zeep_breathe/settings/settings_controller.dart';
+import 'package:zeep_breathe/share/share_card.dart';
 import 'package:zeep_breathe/tilt/tilt_physics.dart';
 import 'package:zeep_breathe/tilt/tilt_sensor.dart';
 import 'package:zeep_breathe/ui/zeep_colors.dart';
@@ -281,4 +283,28 @@ Future<void> gameFlow(WidgetTester t, String p, S s) async {
   await t.pump(const Duration(seconds: 1));
   unawaited(src.controller.close());
   unawaited(src2.controller.close());
+}
+
+/// Community phase 1 (CS): one share card of each kind, one per colour.
+Future<void> shareFlow(WidgetTester t, String p, S s) async {
+  phone(t);
+  final cards = [
+    ('26_share_streak', StreakAchievement(fixedNow, days: 7, totalMinutes: 52), ShareCardColor.lavender),
+    (
+      '27_share_session',
+      SessionAchievement(fixedNow, exerciseName: exercises[1].name(s), minutes: 15, breaths: 47),
+      ShareCardColor.mint,
+    ),
+    ('28_share_game', GameAchievement(fixedNow, level: BalanceLevel.hard, score: 96), ShareCardColor.sky),
+  ];
+  for (final (name, a, colour) in cards) {
+    await t.pumpWidget(_gameApp(ShareScreen(achievement: a, sharer: (_, _, _) async {})));
+    await advance(t, 0.3);
+    if (colour != ShareCardColor.lavender) {
+      await t.tap(find.byTooltip(s.cardThemeName(colour)));
+      await advance(t, 0.3);
+    }
+    await shot('screens/$p$name.png');
+  }
+  await t.pumpWidget(const SizedBox());
 }

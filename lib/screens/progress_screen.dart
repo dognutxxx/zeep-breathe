@@ -5,8 +5,10 @@ import '../exercises/exercises.dart';
 import '../game/balance_game.dart';
 import '../history/session_history.dart';
 import '../l10n/strings.dart';
+import '../share/share_card.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
+import 'share_screen.dart';
 
 class ProgressScreen extends StatefulWidget {
   final AppController app;
@@ -67,7 +69,19 @@ class _ProgressScreenState extends State<ProgressScreen> {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: ZeepColors.text),
           ),
           const SizedBox(height: 16),
-          _StreakCard(stats: st, practisedToday: st.practisedOn(now)),
+          _StreakCard(
+            stats: st,
+            practisedToday: st.practisedOn(now),
+            onShare: st.currentStreak > 0
+                ? () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => ShareScreen(
+                        achievement: StreakAchievement(now, days: st.currentStreak, totalMinutes: st.totalMinutes),
+                      ),
+                    ),
+                  )
+                : null,
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -155,7 +169,10 @@ class _Card extends StatelessWidget {
 class _StreakCard extends StatelessWidget {
   final HistoryStats stats;
   final bool practisedToday;
-  const _StreakCard({required this.stats, required this.practisedToday});
+
+  /// Community phase 1: share the streak as a picture card (null = no streak).
+  final VoidCallback? onShare;
+  const _StreakCard({required this.stats, required this.practisedToday, this.onShare});
 
   @override
   Widget build(BuildContext context) {
@@ -208,6 +225,41 @@ class _StreakCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(msg, style: const TextStyle(fontSize: 12.5, color: Color(0xFF4A4E58))),
+                  if (onShare != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Semantics(
+                        button: true,
+                        label: l.shareStreak,
+                        excludeSemantics: true,
+                        child: InkWell(
+                          onTap: onShare,
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: withAlpha(Colors.white, 0.75),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.ios_share_rounded, size: 15, color: Color(0xFF3463CC)),
+                                const SizedBox(width: 5),
+                                Text(
+                                  l.share,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF3463CC),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

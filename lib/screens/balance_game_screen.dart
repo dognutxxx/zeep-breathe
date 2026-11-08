@@ -16,11 +16,13 @@ import '../breathing/breathing_engine.dart';
 import '../game/balance_game.dart';
 import '../haptics/haptics_service.dart';
 import '../l10n/strings.dart';
+import '../share/share_card.dart';
 import '../tilt/tilt_physics.dart';
 import '../tilt/tilt_sensor.dart';
 import '../ui/widgets.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
+import 'share_screen.dart';
 
 enum _Stage { waiting, countdown, playing, paused, finished, unavailable }
 
@@ -735,6 +737,19 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
                 spacing: 10,
                 runSpacing: 10,
                 children: [
+                  if (completed)
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => ShareScreen(
+                            achievement: GameAchievement(app.clock(), level: widget.level, score: score),
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.ios_share_rounded, size: 18),
+                      label: Text(s.shareScore),
+                      style: _outlined,
+                    ),
                   OutlinedButton(onPressed: _playAgain, style: _outlined, child: Text(s.playAgain)),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(),

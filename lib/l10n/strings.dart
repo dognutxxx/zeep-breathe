@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import '../breathing/breathing_engine.dart';
 import '../game/balance_game.dart';
 import '../haptics/haptics_service.dart';
+import '../share/share_card.dart';
 
 class S {
   final bool th;
@@ -205,6 +206,25 @@ class S {
   // T3.4 timeline
   String gameEntryName(BalanceLevel l) => '$gameName · ${levelName(l)}';
   String scoreEntry(int p) => _('Score $p%', 'คะแนน $p%');
+
+  // ---------------------------------------------------------------- share card (Community phase 1, CS)
+  String get share => _('Share', 'แชร์');
+  String get shareScore => _('Share score', 'แชร์คะแนน');
+  String get shareStreak => _('Share your streak', 'แชร์วันฝึกต่อเนื่อง');
+  String get shareTitle => _('Share card', 'การ์ดแชร์');
+  String get cardColour => _('Card colour', 'สีการ์ด');
+  String cardThemeName(ShareCardColor t) => switch (t) {
+    ShareCardColor.lavender => _('Lavender', 'ม่วงลาเวนเดอร์'),
+    ShareCardColor.mint => _('Mint', 'เขียวมิ้นต์'),
+    ShareCardColor.sky => _('Sky', 'ฟ้า'),
+  };
+  String cardDays(int n) => _(n == 1 ? '1 day' : '$n days', '$n วัน');
+  String get cardStreakLine => _('breathing in a row', 'ฝึกหายใจต่อเนื่อง');
+  String cardTotal(int minutes) => _('$minutes min in total', 'รวม $minutes นาที');
+  String cardBreaths(int n) => _('$n full breaths', 'หายใจครบ $n รอบ');
+  String get cardFooter => _('Come breathe with me', 'มาหายใจด้วยกันนะ');
+  String get shareText => _('Breathing with Zeep · ZEEP Breathe', 'หายใจไปกับ Zeep · ZEEP Breathe');
+  String get shareFailed => _("Couldn't open sharing. Please try again.", 'เปิดเมนูแชร์ไม่ได้ ลองอีกครั้งนะ');
 
   // ---------------------------------------------------------------- progress
   String get progressTitle => _('Progress', 'ความคืบหน้า');
