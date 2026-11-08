@@ -45,13 +45,13 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
   // W: outfits tab (top, then locked items further down), then the garden
   await t.tap(find.byTooltip(s.openWardrobe));
   await advance(t, 0.6);
-  await shot('screens/${p}25_wardrobe.png');
+  await shot('screens/${p}29_wardrobe.png');
   await t.drag(find.byType(ListView), const Offset(0, -900));
   await advance(t, 0.4);
-  await shot('screens/${p}26_wardrobe_locked.png');
+  await shot('screens/${p}30_wardrobe_locked.png');
   await t.tap(find.text(s.tabGarden));
   await advance(t, 0.5);
-  await shot('screens/${p}27_garden.png');
+  await shot('screens/${p}31_garden.png');
   await t.tap(find.byTooltip(s.back));
   await advance(t, 0.6);
 
@@ -64,10 +64,10 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
   await advance(t, 0.6);
   expect(app.lastGrowth!.bloomed, isTrue);
   expect(app.lastGrowth!.newItems, [OutfitItem.sleepCap]);
-  await shot('screens/${p}28_finished_bloom.png');
+  await shot('screens/${p}32_finished_bloom.png');
   await t.tap(find.text(s.done));
   await advance(t, 0.6);
-  await shot('screens/${p}29_new_item.png');
+  await shot('screens/${p}33_new_item.png');
   await t.tap(find.text(s.later));
   await advance(t, 0.4);
   expect(app.wardrobe.unseen, [OutfitItem.sleepCap]);
@@ -76,7 +76,7 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
   app.wardrobe.summaryPending = true;
   showSummaryCard(t.element(find.byType(Scaffold).first), app);
   await advance(t, 0.5);
-  await shot('screens/${p}30_summary.png');
+  await shot('screens/${p}34_summary.png');
   await t.tap(find.text(s.later));
   await advance(t, 0.3);
   expect(app.wardrobe.summaryPending, isFalse);
