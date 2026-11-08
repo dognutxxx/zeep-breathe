@@ -41,22 +41,17 @@ class GrowthEvent {
 
 class WardrobeController extends ChangeNotifier {
   static const _key = 'zeep.wardrobe';
-  static const _version = 2;
-
-  /// Per-day step counts are kept for this many days back from the newest
-  /// practice day (enough for clock changes and time-zone trips).
-  static const _keepStepDays = 14;
+  static const _version = 3;
 
   SharedPreferences? _prefs;
 
   int _steps = 0;
 
-  /// Every day with at least one saved session. A set, so a session dated
-  /// before the newest day (clock changed, travel) is still counted right.
-  final Set<DateTime> _days = {};
-
-  /// Steps counted per day, for the 3-a-day limit (recent days only).
-  final Map<DateTime, int> _stepsByDay = {};
+  /// Every day with at least one saved session (keys) and the steps counted
+  /// on it (values, at most 3). One entry per practice day, never trimmed, so
+  /// a session dated before or after the others (clock changes, time-zone
+  /// trips) is still counted right.
+  final Map<DateTime, int> _dayStepsMap = {};
   Outfit _outfit = Outfit.none;
 
   /// null = wear the newest flower, '' = no flower, else a FlowerKind id.
@@ -74,7 +69,7 @@ class WardrobeController extends ChangeNotifier {
   SproutGrowth? _growth;
 
   int get steps => _steps;
-  int get practiceDays => _days.length;
+  int get practiceDays => _dayStepsMap.length;
   GardenLevel get garden => _garden ??= gardenFromSteps(_steps);
   Outfit get outfit => _outfit;
 
@@ -145,20 +140,16 @@ class WardrobeController extends ChangeNotifier {
   void migrate(List<SessionRecord> history) {
     final h = progressFromHistory(history);
     _steps = h.steps;
-    _days
+    _dayStepsMap
       ..clear()
-      ..addAll(h.days);
-    _stepsByDay
-      ..clear()
-      ..addAll(h.stepsByDay);
-    _prune();
+      ..addAll({for (final d in h.days) d: h.stepsByDay[d] ?? 0});
     _garden = null;
     _growth = null;
     // items already earned are not "new" one by one: one summary card instead
     _seen
       ..clear()
       ..addAll(unlocked);
-    summaryPending = _steps > 0 || _days.isNotEmpty;
+    summaryPending = _steps > 0 || _dayStepsMap.isNotEmpty;
   }
 
   /// Call after the history saved [r]. Returns what changed.
@@ -166,19 +157,18 @@ class WardrobeController extends ChangeNotifier {
     final before = garden;
     final unlockedBefore = unlocked.toSet();
     final day = dayOf(r.start);
-    _days.add(day);
+    _dayStepsMap.putIfAbsent(day, () => 0);
     var grew = false, limit = false;
     if (countsAsStep(r)) {
-      final n = _stepsByDay[day] ?? 0;
+      final n = _dayStepsMap[day]!;
       if (n < maxStepsPerDay) {
-        _stepsByDay[day] = n + 1;
+        _dayStepsMap[day] = n + 1;
         _steps++;
         grew = true;
       } else {
         limit = true;
       }
     }
-    _prune();
     final newItems = unlocked.where((i) => !unlockedBefore.contains(i)).toList();
     _pendingNew.addAll(newItems);
     _changed(grown: grew);
@@ -190,13 +180,6 @@ class WardrobeController extends ChangeNotifier {
     final items = List.of(_pendingNew);
     _pendingNew.clear();
     return items;
-  }
-
-  void _prune() {
-    if (_stepsByDay.isEmpty) return;
-    final newest = _stepsByDay.keys.reduce((a, b) => a.isAfter(b) ? a : b);
-    final oldest = DateTime(newest.year, newest.month, newest.day - _keepStepDays);
-    _stepsByDay.removeWhere((d, _) => d.isBefore(oldest));
   }
 
   /// Tapping an item: wear it, swap within its slot, or take it off.
@@ -250,8 +233,7 @@ class WardrobeController extends ChangeNotifier {
   Map<String, Object?> _toJson() => {
     'v': _version,
     'steps': _steps,
-    'days': [for (final d in _days) _dayKey(d)],
-    'daySteps': {for (final e in _stepsByDay.entries) _dayKey(e.key): e.value},
+    'days': {for (final e in _dayStepsMap.entries) _dayKey(e.key): e.value},
     'wear': [for (final i in _outfit.items) i.name],
     'flower': _flowerChoice,
     'seen': [for (final i in _seen) i.name],
@@ -260,19 +242,12 @@ class WardrobeController extends ChangeNotifier {
 
   void _fromJson(Map j) {
     _steps = (j['steps'] as num?)?.toInt() ?? 0;
+    _dayStepsMap.clear();
     final days = j['days'];
-    _days
-      ..clear()
-      ..addAll([
-        if (days is List)
-          for (final s in days) ?_parseDay(s),
-      ]);
-    _stepsByDay.clear();
-    final ds = j['daySteps'];
-    if (ds is Map) {
-      for (final e in ds.entries) {
+    if (days is Map) {
+      for (final e in days.entries) {
         final d = _parseDay(e.key), n = e.value;
-        if (d != null && n is num) _stepsByDay[d] = n.toInt();
+        if (d != null && n is num) _dayStepsMap[d] = n.toInt().clamp(0, maxStepsPerDay);
       }
     }
     final wear = j['wear'];
@@ -304,8 +279,8 @@ class WardrobeController extends ChangeNotifier {
     if (steps != null) _steps = steps;
     if (practiceDays != null) {
       var i = 0;
-      while (_days.length < practiceDays) {
-        _days.add(DateTime(2000, 1, 1 + i++));
+      while (_dayStepsMap.length < practiceDays) {
+        _dayStepsMap.putIfAbsent(DateTime(2000, 1, 1 + i++), () => 0);
       }
     }
     _changed(grown: true);

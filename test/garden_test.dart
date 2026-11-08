@@ -148,6 +148,25 @@ void main() {
       expect(again.onSessionSaved(rec(today.add(const Duration(hours: 6)))).dailyLimit, isTrue);
     });
 
+    test('a clock set into the future and back does not lift the 3-a-day limit', () async {
+      await w.load(const []);
+      // the phone's clock was a month ahead for one session
+      w.onSessionSaved(rec(DateTime(2026, 12, 20, 7)));
+      // clock fixed: ten sessions today grow only three times
+      final today = DateTime(2026, 11, 20, 7);
+      var grew = 0;
+      for (var i = 0; i < 10; i++) {
+        if (w.onSessionSaved(rec(today.add(Duration(minutes: i)))).grew) grew++;
+      }
+      expect(grew, 3);
+      expect(w.practiceDays, 2);
+      // still true after a restart
+      final again = WardrobeController();
+      await again.load(const []);
+      expect(again.onSessionSaved(rec(today.add(const Duration(hours: 3)))).dailyLimit, isTrue);
+      expect(again.steps, 4);
+    });
+
     test('new items wait for card N even across several sessions', () async {
       await w.load(const []);
       w.setForTest(practiceDays: 2);
