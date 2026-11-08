@@ -144,13 +144,16 @@ class SessionHistory extends ChangeNotifier {
     return records.where((r) => dayOf(r.start) == d).toList()..sort((a, b) => a.start.compareTo(b.start));
   }
 
-  void add(SessionRecord r) {
-    if (r.seconds < minLoggedSeconds) return;
+  /// Saves [r] and returns true; sessions shorter than [minLoggedSeconds]
+  /// are not saved (returns false).
+  bool add(SessionRecord r) {
+    if (r.seconds < minLoggedSeconds) return false;
     records.add(r);
     if (records.length > _maxRecords) records.removeRange(0, records.length - _maxRecords);
     _stats = null;
     notifyListeners();
     _prefs?.setString(_key, jsonEncode(records.map((e) => e.toJson()).toList()));
+    return true;
   }
 
   @visibleForTesting
