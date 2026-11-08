@@ -82,6 +82,10 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
   DateTime? _startedAt;
   bool _logged = false, _saved = false, _newBest = false;
   bool _inside = true;
+
+  /// Popped (back button, swipe or Done): the route animates out, nothing
+  /// more may happen.
+  bool _leaving = false;
   GameCircle _circle = const GameCircle(Vec2.zero, 0);
 
   AppController get app => widget.app;
@@ -94,7 +98,12 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
     _breath = BreathingEngine(app.settings.durations, double.infinity);
     _ticker = createTicker(_onTick)..start();
     try {
-      _sub = widget.source.readings().listen(_onReading, onError: (_) => _unavailable(), cancelOnError: true);
+      _sub = widget.source.readings().listen(
+        _onReading,
+        onError: (_) => _unavailable(),
+        onDone: _unavailable,
+        cancelOnError: true,
+      );
     } catch (_) {
       _stage = _Stage.unavailable;
     }
@@ -115,7 +124,11 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) _pause();
+    if (state != AppLifecycleState.resumed) {
+      _pause();
+      // Android draws no frames in the background, so the ticker can't fade
+      app.music.stopNow();
+    }
   }
 
   Future<void> _readRotation() async {
@@ -197,6 +210,7 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
     // cap the step: after a pause or a hitch Zeep must not jump
     final dt = ((elapsed - _last).inMicroseconds / 1e6).clamp(0.0, 0.1);
     _last = elapsed;
+    if (_leaving) return;
     // HomePage's ticker is stopped while this route covers it
     app.time += dt;
     app.music.update(dt, app.settings.music && _stage == _Stage.playing, app.settings.track);
@@ -231,14 +245,14 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
     _played += dt;
     _inside = _circle.contains(_tilt.ball.pos);
     _score.add(dt, _inside);
-    switch (_edge.update(_inside, _played)) {
-      case EdgeEvent.left:
-        app.haptics.fire(HapticPattern.edgeOut, app.time);
-      case EdgeEvent.entered:
-        app.haptics.fire(HapticPattern.edgeIn, app.time);
-      case null:
-        break;
-    }
+    final edge = switch (_edge.update(_inside, _played)) {
+      EdgeEvent.left => HapticPattern.edgeOut,
+      EdgeEvent.entered => HapticPattern.edgeIn,
+      null => null,
+    };
+    // the service skips a pulse right after another (e.g. a medium-level
+    // phase pulse): then try again after the guard
+    if (edge != null && !app.haptics.fire(edge, app.time) && app.haptics.enabled) _edge.dropped();
     if (_played >= _length) _finish(completed: true);
   }
 
@@ -258,6 +272,7 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
 
   @override
   void dispose() {
+    app.music.stopNow(); // no ticker drives the fade once this screen is gone
     WidgetsBinding.instance.removeObserver(this);
     _timeout?.cancel();
     _rotationTimer?.cancel();
@@ -274,8 +289,12 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
     final s = S.of(context);
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
-        // leaving mid-game (back button / swipe): save it as stopped
-        if (didPop) _log(completed: false);
+        if (!didPop) return;
+        // leaving mid-game (back button / swipe): save it as stopped, and
+        // stop playing during the pop animation (no score, pulses or finish)
+        _log(completed: false);
+        _leaving = true;
+        app.music.stopNow();
       },
       child: Scaffold(
         body: ZeepBackground(

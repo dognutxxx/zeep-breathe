@@ -83,7 +83,11 @@ enum EdgeEvent { left, entered }
 /// given for [guard] seconds.
 class EdgeHaptics {
   final double guard;
-  bool? _inside;
+
+  /// Where Zeep was at the last pulse (or the first frame): a change that
+  /// happens during the guard is not lost, it is pulsed once the guard ends
+  /// if Zeep is still on the other side.
+  bool? _announced;
   double _lastPulse = double.negativeInfinity;
 
   EdgeHaptics({this.guard = 0.5});
@@ -91,16 +95,26 @@ class EdgeHaptics {
   /// Call every frame of play; returns the pulse to play, if any. The first
   /// call only records where Zeep is.
   EdgeEvent? update(bool inside, double now) {
-    final was = _inside;
-    _inside = inside;
-    if (was == null || was == inside) return null;
-    if (now - _lastPulse < guard) return null;
+    final was = _announced;
+    if (was == null) {
+      _announced = inside;
+      return null;
+    }
+    if (was == inside || now - _lastPulse < guard) return null;
+    _announced = inside;
     _lastPulse = now;
     return inside ? EdgeEvent.entered : EdgeEvent.left;
   }
 
+  /// The pulse from the last [update] could not be played (the haptics
+  /// service was busy with another pulse): try again after the guard.
+  void dropped() {
+    final a = _announced;
+    if (a != null) _announced = !a;
+  }
+
   void reset() {
-    _inside = null;
+    _announced = null;
     _lastPulse = double.negativeInfinity;
   }
 }

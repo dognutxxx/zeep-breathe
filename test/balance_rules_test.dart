@@ -75,6 +75,25 @@ void main() {
     expect(e.update(false, 3.1), isNull);
   });
 
+  test('edge haptics: a change inside the guard is pulsed once the guard ends (review #2)', () {
+    final e = EdgeHaptics();
+    expect(e.update(false, 0), isNull);
+    expect(e.update(true, 1.0), EdgeEvent.entered);
+    expect(e.update(false, 1.2), isNull); // too soon after the tick
+    expect(e.update(false, 1.4), isNull);
+    expect(e.update(false, 1.5), EdgeEvent.left); // still out: pulse now
+    expect(e.update(false, 5), isNull);
+  });
+
+  test('edge haptics: a dropped pulse is tried again after the guard', () {
+    final e = EdgeHaptics();
+    e.update(true, 0);
+    expect(e.update(false, 1), EdgeEvent.left);
+    e.dropped();
+    expect(e.update(false, 1.2), isNull);
+    expect(e.update(false, 1.5), EdgeEvent.left);
+  });
+
   test('history ids and names for games', () {
     expect(gameHistoryId(BalanceLevel.medium), 'game-medium');
     expect(gameLevelOf('game-hard'), BalanceLevel.hard);

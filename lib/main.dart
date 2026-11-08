@@ -85,6 +85,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       widget.app.pauseIfRunning();
+      // no more frames in the background on Android: stop the fade now
+      widget.app.music.stopNow();
     }
   }
 

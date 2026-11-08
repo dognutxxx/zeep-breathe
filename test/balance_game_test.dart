@@ -49,11 +49,22 @@ class RecordingHaptics extends HapticsService {
   }
 }
 
+/// Music that records what the game asks of it (the real one has no player
+/// in tests).
+class RecordingMusic extends MusicService {
+  bool? lastWant;
+  int stops = 0;
+  @override
+  void update(double dt, bool want, int track) => lastWant = want;
+  @override
+  void stopNow() => stops++;
+}
+
 Future<AppController> makeApp() async {
   SharedPreferences.setMockInitialValues({});
   final settings = SettingsController();
   await settings.load();
-  return AppController(settings: settings, haptics: RecordingHaptics(), music: MusicService())..clock = (() => now);
+  return AppController(settings: settings, haptics: RecordingHaptics(), music: RecordingMusic())..clock = (() => now);
 }
 
 Widget wrap(Widget home, {Locale locale = const Locale('en')}) => MaterialApp(
@@ -419,5 +430,85 @@ void main() {
     expect(find.text(S.thai.scoreSummary(100)), findsOneWidget);
     await t.pumpWidget(const SizedBox());
     unawaited(src.controller.close());
+  });
+
+  // ------------------------------------------------------------ leaving (review #1, #4)
+
+  RecordingMusic music() => testApp.music as RecordingMusic;
+
+  /// GM -> start -> countdown done: playing, with GM underneath.
+  Future<FakeTilt> fromMenu(WidgetTester t) async {
+    portrait(t);
+    final src = FakeTilt();
+    await t.pumpWidget(wrap(BalanceMenuScreen(app: testApp, source: src, rotationSource: FakeRotation())));
+    await t.tap(find.text(S.en.startGame));
+    await frames(t, 0.6);
+    src.controller.add(const Vec3(0, 0, 9.81));
+    await frames(t, 3.5);
+    expect(find.text(S.en.inCircle), findsOneWidget);
+    return src;
+  }
+
+  testWidgets('back after 40 s: saved once as stopped, best unchanged, music stopped', (t) async {
+    final src = await fromMenu(t);
+    await frames(t, 40);
+    expect(music().lastWant, isTrue);
+    await t.tap(find.byTooltip(S.en.back));
+    await frames(t, 1);
+    expect(find.text(S.en.startGame), findsOneWidget); // back on GM
+    final r = testApp.history.records.single;
+    expect(r.completed, isFalse);
+    expect(r.score, 100);
+    expect(r.seconds, inInclusiveRange(40, 41));
+    expect(testApp.settings.gameBest, [0, 0, 0]);
+    expect(music().stops, greaterThan(0));
+    // nothing more happens after leaving (no finish, no confirm pulse)
+    await frames(t, 25);
+    expect(testApp.history.records, hasLength(1));
+    expect(haptics().fired, isNot(contains(HapticPattern.confirm)));
+    await t.pumpWidget(const SizedBox());
+    unawaited(src.controller.close());
+  });
+
+  testWidgets('back after 10 s: nothing saved', (t) async {
+    final src = await fromMenu(t);
+    await frames(t, 10);
+    await t.tap(find.byTooltip(S.en.back));
+    await frames(t, 1);
+    expect(testApp.history.records, isEmpty);
+    await t.pumpWidget(const SizedBox());
+    unawaited(src.controller.close());
+  });
+
+  testWidgets('Stop, then Done: saved once, music stopped, back on GM', (t) async {
+    final src = await fromMenu(t);
+    await frames(t, 35);
+    await t.tap(find.text(S.en.stop));
+    await frames(t, 0.2);
+    final stops = music().stops;
+    await t.tap(find.text(S.en.done));
+    await frames(t, 1);
+    expect(find.text(S.en.startGame), findsOneWidget);
+    expect(testApp.history.records, hasLength(1));
+    expect(music().stops, greaterThan(stops));
+    await t.pumpWidget(const SizedBox());
+    unawaited(src.controller.close());
+  });
+
+  testWidgets('background: music is stopped at once (no frames on Android)', (t) async {
+    final src = await startPlaying(t);
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    expect(music().stops, greaterThan(0));
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await t.pumpWidget(const SizedBox());
+    unawaited(src.controller.close());
+  });
+
+  testWidgets('sensor stream ends mid-game: no-sensor message, the game stops (review #5)', (t) async {
+    final src = await startPlaying(t);
+    await src.controller.close();
+    await frames(t, 0.2);
+    expect(find.text(S.en.noTiltSensor), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
   });
 }
