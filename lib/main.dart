@@ -16,6 +16,7 @@ import 'settings/settings_controller.dart';
 import 'ui/beta_banner.dart';
 import 'ui/widgets.dart';
 import 'ui/zeep_colors.dart';
+import 'wardrobe/wardrobe_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,10 +28,18 @@ Future<void> main() async {
   final music = MusicService();
   final history = SessionHistory();
   await Future.wait([haptics.init(), music.init(), history.load()]);
+  final wardrobe = WardrobeController();
+  await wardrobe.load(history.records);
 
   runApp(
     ZeepBreatheApp(
-      controller: AppController(settings: settings, haptics: haptics, music: music, history: history),
+      controller: AppController(
+        settings: settings,
+        haptics: haptics,
+        music: music,
+        history: history,
+        wardrobe: wardrobe,
+      ),
     ),
   );
 }
