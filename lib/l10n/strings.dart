@@ -148,6 +148,21 @@ class S {
   String get chooseDuration => _('Session length', 'เลือกเวลาการฝึก');
   String get startBreathing => _('Start breathing', 'เริ่มฝึกหายใจ');
 
+  // ---------------------------------------------------------------- Zeep Balance game (T2.3, GP)
+  String get gameName => _('Zeep Balance', 'Zeep ทรงตัว');
+  String get gameCardDesc =>
+      _('Tilt to guide Zeep into the circle, then hold still', 'เอียงเครื่องพา Zeep เข้าวง แล้วนิ่งไว้');
+  String get prototypeBadge => _('Prototype', 'ต้นแบบ');
+  String get tiltHint => _('Tilt your phone gently to roll Zeep', 'เอียงเครื่องเบาๆ เพื่อให้ Zeep กลิ้ง');
+  String get holdComfortably => _('Hold your phone comfortably', 'ถือเครื่องในท่าที่สบาย');
+  String get calibratingHint => _('This position becomes level for the game', 'ท่านี้จะเป็นระนาบของเกม');
+  String get resetCentre => _('Reset centre', 'ตั้งศูนย์ใหม่');
+  String get waitingForSensor => _('Starting the tilt sensor…', 'กำลังเปิดเซ็นเซอร์เอียง…');
+  String get noTiltSensor => _(
+    "This device has no tilt sensor, so the game isn't available.",
+    'เครื่องนี้ไม่มีเซ็นเซอร์เอียง จึงเล่นเกมนี้ไม่ได้',
+  );
+
   // ---------------------------------------------------------------- progress
   String get progressTitle => _('Progress', 'ความคืบหน้า');
   String get currentStreak => _('Current streak', 'ฝึกต่อเนื่องตอนนี้');

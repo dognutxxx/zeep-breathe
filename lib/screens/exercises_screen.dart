@@ -5,6 +5,7 @@ import '../exercises/exercises.dart';
 import '../l10n/strings.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
+import 'balance_prototype_screen.dart';
 import 'mode_screen.dart';
 
 class ExercisesScreen extends StatelessWidget {
@@ -56,7 +57,97 @@ class ExercisesScreen extends StatelessWidget {
                 style: const TextStyle(fontSize: 13.5, color: Color(0xFF3463CC)),
               ),
             ),
+          // T2.3: Zeep Balance game (step 1: tilt prototype)
+          Padding(
+            padding: EdgeInsets.only(top: current == null ? 12 : 0),
+            child: _GameCard(
+              onTap: () =>
+                  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const BalancePrototypeScreen())),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _GameCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _GameCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    return Semantics(
+      button: true,
+      label: '${s.gameName}. ${s.gameCardDesc}. ${s.prototypeBadge}',
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.white,
+        elevation: 1,
+        shadowColor: withAlpha(Colors.black, 0.18),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 12, 8, 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 76,
+                  height: 76,
+                  decoration: BoxDecoration(
+                    color: withAlpha(ZeepColors.mint, 0.35),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const ZeepAvatar(tint: ZeepColors.mint, size: 76),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              s.gameName,
+                              style: const TextStyle(
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.w700,
+                                color: ZeepColors.text,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF1D2),
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: Text(
+                              s.prototypeBadge,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF8A5A00),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(s.gameCardDesc, style: const TextStyle(fontSize: 13, color: Color(0xFF4A4E58), height: 1.4)),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: ZeepColors.textFaint),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
