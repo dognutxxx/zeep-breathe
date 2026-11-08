@@ -76,8 +76,9 @@ class ShareCard extends StatelessWidget {
       size: size,
       child: DecoratedBox(
         decoration: BoxDecoration(
+          // square and opaque: apps fill transparent corners with their own
+          // colour (black in dark mode). The preview rounds it with a clip.
           gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: theme.gradient),
-          borderRadius: BorderRadius.circular(28),
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),

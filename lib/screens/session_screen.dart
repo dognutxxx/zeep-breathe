@@ -312,18 +312,22 @@ class _FinishedCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 // Community phase 1: share this session as a picture card
                 TextButton.icon(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => ShareScreen(
-                        achievement: SessionAchievement(
-                          app.clock(),
-                          exerciseName: exerciseLabel(app.engine.durations, l),
-                          minutes: mins,
-                          breaths: app.engine.breaths,
+                  onPressed: () {
+                    // HomePage's ticker stops under the new route: end the fade now
+                    app.music.stopNow();
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ShareScreen(
+                          achievement: SessionAchievement(
+                            app.sessionStart,
+                            exerciseName: exerciseLabel(app.engine.durations, l),
+                            minutes: mins,
+                            breaths: app.engine.breaths,
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                   icon: const Icon(Icons.ios_share_rounded, size: 18),
                   label: Text(l.share, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                   style: TextButton.styleFrom(foregroundColor: ZeepColors.blue),

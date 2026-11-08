@@ -183,9 +183,10 @@ class _StreakCard extends StatelessWidget {
         : practisedToday
         ? l.streakToday
         : l.streakKeep;
+    // the card reads as one sentence; the Share button stays its own node
     return Semantics(
+      container: true,
       label: l.streakSemantics(n, msg),
-      excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
         decoration: BoxDecoration(
@@ -198,37 +199,49 @@ class _StreakCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    l.currentStreak,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF3463CC)),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        '$n',
-                        style: const TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.w800,
-                          color: ZeepColors.text,
-                          height: 1.1,
+                  ExcludeSemantics(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l.currentStreak,
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF3463CC)),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        l.dayUnit(n),
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: ZeepColors.textSoft),
-                      ),
-                    ],
+                        const SizedBox(height: 2),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              '$n',
+                              style: const TextStyle(
+                                fontSize: 40,
+                                fontWeight: FontWeight.w800,
+                                color: ZeepColors.text,
+                                height: 1.1,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              l.dayUnit(n),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: ZeepColors.textSoft,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(msg, style: const TextStyle(fontSize: 12.5, color: Color(0xFF4A4E58))),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(msg, style: const TextStyle(fontSize: 12.5, color: Color(0xFF4A4E58))),
                   if (onShare != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Semantics(
+                        container: true, // its own node, not merged into the card's sentence
                         button: true,
                         label: l.shareStreak,
                         excludeSemantics: true,

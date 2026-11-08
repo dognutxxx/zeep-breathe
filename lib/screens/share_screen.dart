@@ -110,9 +110,13 @@ class _ShareScreenState extends State<ShareScreen> {
                               ),
                             ],
                           ),
-                          child: RepaintBoundary(
-                            key: _cardKey,
-                            child: ShareCard(achievement: widget.achievement, theme: _theme),
+                          // the clip is outside the boundary: the PNG keeps square corners
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(28),
+                            child: RepaintBoundary(
+                              key: _cardKey,
+                              child: ShareCard(achievement: widget.achievement, theme: _theme),
+                            ),
                           ),
                         ),
                       ),

@@ -739,13 +739,22 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
                 children: [
                   if (completed)
                     OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => ShareScreen(
-                            achievement: GameAchievement(app.clock(), level: widget.level, score: score),
+                      onPressed: () {
+                        // this screen's ticker stops under the new route: end the fade now
+                        app.music.stopNow();
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ShareScreen(
+                              // the record's time, so the card's day matches Progress
+                              achievement: GameAchievement(
+                                _startedAt ?? app.clock(),
+                                level: widget.level,
+                                score: score,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                       icon: const Icon(Icons.ios_share_rounded, size: 18),
                       label: Text(s.shareScore),
                       style: _outlined,

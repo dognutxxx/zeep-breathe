@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -101,6 +102,15 @@ void main() {
     });
     expect(png, isNotNull);
     expect(pngSize(png!), (1080, 1350));
+    // corners are opaque: apps would fill transparent corners with black
+    await t.runAsync(() async {
+      final codec = await instantiateImageCodec(png!);
+      final frame = await codec.getNextFrame();
+      final rgba = (await frame.image.toByteData(format: ImageByteFormat.rawRgba))!;
+      expect(rgba.getUint8(3), 255); // pixel (0, 0)
+      expect(rgba.getUint8(rgba.lengthInBytes - 1), 255); // bottom-right
+      frame.image.dispose();
+    });
     expect(text, S.en.shareText);
     expect(origin, isNotNull); // iPad needs an anchor for the popover
   });
