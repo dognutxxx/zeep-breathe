@@ -135,6 +135,10 @@ class AppController extends ChangeNotifier {
       ),
     );
     lastStreak = history.stats(clock()).currentStreak;
+    // a session was just saved: the Progress tab should show it, so the
+    // calendar goes back to today
+    progressDay = null;
+    progressMonth = null;
   }
 
   void toggleMusic() => settings.update((s) => s.music = !s.music);

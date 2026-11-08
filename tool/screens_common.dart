@@ -157,7 +157,9 @@ Future<void> tabsFlow(WidgetTester t, String p, S s) async {
   await shot('screens/${p}18_timeline_today_empty.png');
   app.clock = () => fixedNow;
 
-  // finish a 1-minute session -> streak badge on the finish card
+  // finish a 1-minute session -> streak badge on the finish card; a picked
+  // day goes back to today once the session is saved
+  app.progressDay = DateTime(fixedNow.year, fixedNow.month, fixedNow.day - 3);
   app.settings.update((x) => x.sessionMinutes = 1, persist: false);
   app.setTab(HomeTab.breathe);
   app.startSession();
@@ -165,6 +167,7 @@ Future<void> tabsFlow(WidgetTester t, String p, S s) async {
   app.engine.sessionElapsed = 59.8;
   await advance(t, 0.6);
   await shot('screens/${p}13_finished_streak.png');
+  expect(app.progressDay, isNull);
   await t.pumpWidget(const SizedBox());
   await t.pump(const Duration(seconds: 1));
 }
