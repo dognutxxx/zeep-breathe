@@ -262,8 +262,9 @@ Future<void> showGrowthCards(BuildContext context, AppController app) async {
     final choice = await showBloomCard(context, app, bloom);
     if (!context.mounted) return;
     if (choice == BloomChoice.garden) {
-      openWardrobe(context, app, tab: 1);
-      return;
+      // the garden first; new items still get their card when it closes
+      await openWardrobe(context, app, tab: 1);
+      if (!context.mounted) return;
     }
   }
   if (items.isNotEmpty && context.mounted) await showNewItemCards(context, app, items);

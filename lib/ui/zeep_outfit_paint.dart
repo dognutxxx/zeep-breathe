@@ -989,15 +989,26 @@ void drawGrowingBloom(Canvas p, FlowerKind kind, Offset c, double k, SproutGrowt
   p.restore();
 }
 
-/// Where the worn flower sits (centre and scale) for a still Zeep drawn with
-/// reduceMotion at [center] and scale [s]; card L draws its glow around it.
+/// Tip of the sprout: the stem gets a little taller for every grown leaf and
+/// for a flower. Used by drawZeep and by [flowerAnchor], so they always agree.
+Offset sproutTipAt(double x, double cy, double b, double s, double br, SproutGrowth g) {
+  final grown = g.leaves * 6.0 + (g.flower != null ? 2.0 : 0.0);
+  return Offset(x, cy - b - (15 + 4 * br + grown) * s);
+}
+
+/// The worn flower sits on a short stalk above [tip]; returns its centre and
+/// drawing scale. (Other characters will pass their own anchor point.)
+({Offset centre, double k}) flowerOnTip(Offset tip, double s, FlowerKind f) =>
+    (centre: tip + Offset(0, -13 * s * f.size), k: 1.5 * s * f.size);
+
+/// Where the worn flower sits for a still Zeep drawn with reduceMotion at
+/// [center] and scale [s] (no float, no sway); card L draws its glow there.
 ({Offset centre, double k}) flowerAnchor(Offset center, double s, Pose pose, SproutGrowth g) {
-  final f = g.flower;
   final br = pose.breath.clamp(-0.1, 1.1);
-  final cy = center.dy - br * 4 * s;
+  const float = 0.0;
+  final cy = center.dy + float * 5 * s - br * 4 * s;
   final b = 52 * s * (1 + 0.07 * br);
-  final grown = g.leaves * 6.0 + (f != null ? 2.0 : 0.0);
-  final tip = Offset(center.dx, cy - b - (15 + 4 * br + grown) * s);
-  final size = f?.size ?? 1;
-  return (centre: tip + Offset(0, -13 * s * size), k: 1.5 * s * size);
+  final tip = sproutTipAt(center.dx, cy, b, s, br, g);
+  final f = g.flower;
+  return f == null ? (centre: tip, k: 1.5 * s) : flowerOnTip(tip, s, f);
 }

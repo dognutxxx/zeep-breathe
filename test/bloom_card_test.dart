@@ -55,11 +55,16 @@ void main() {
     await t.pump(const Duration(milliseconds: 16));
   }
 
+  // the Breathe tab keeps ticking under card L: so does the app here
   Future<void> wait(WidgetTester t, int ms) async {
     for (var i = 0; i < ms ~/ 16; i++) {
+      app.tick(0.016);
       await t.pump(const Duration(milliseconds: 16));
     }
   }
+
+  bool nextFocused() =>
+      FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<OutlinedButton>() != null;
 
   List<HapticPattern> fired() => [for (final e in app.haptics.events) e.pattern];
 
@@ -67,10 +72,15 @@ void main() {
     await start(t);
     expect(find.byType(BloomCard), findsOneWidget);
     expect(find.text(s.newItemTitle), findsNothing);
-    await wait(t, 3500);
+    await wait(t, 1000);
+    expect(nextFocused(), isFalse); // hidden buttons take no focus
+    await wait(t, 2500);
+    expect(nextFocused(), isTrue);
     expect(find.text(s.flowerTitle(flowerKinds[0])), findsOneWidget);
     expect(find.text(s.levelN(2)), findsOneWidget);
     expect(fired(), [HapticPattern.inhaleStart, HapticPattern.bloom, HapticPattern.confirm]);
+    // pulses are timed on the app's own clock, never ahead of it
+    expect(app.haptics.events.last.time, lessThanOrEqualTo(app.time));
     await t.tap(find.text(s.next));
     await wait(t, 400);
     expect(find.byType(BloomCard), findsNothing);
@@ -94,7 +104,7 @@ void main() {
     await t.pump();
     expect(find.byType(BloomCard), findsOneWidget);
     await t.tap(find.byType(BloomCard));
-    await t.pump();
+    await wait(t, 250); // 200 ms crossfade to the end
     expect(state.ms, greaterThanOrEqualTo(3400));
     expect(fired(), [HapticPattern.bloom]);
     await t.tap(find.text(s.next));
@@ -113,5 +123,19 @@ void main() {
     await wait(t, 500);
     expect(find.byType(BloomCard), findsNothing);
     expect(find.text(s.tabGarden), findsOneWidget); // the wardrobe opened on the garden
+  });
+
+  testWidgets('"See the garden" opens the garden; card N follows when it closes', (t) async {
+    await start(t);
+    await wait(t, 3500);
+    await t.tap(find.text(s.seeGarden));
+    await wait(t, 600);
+    expect(find.byType(BloomCard), findsNothing);
+    expect(find.text(s.tabGarden), findsOneWidget);
+    expect(find.text(s.newItemTitle), findsNothing);
+    await t.tap(find.byTooltip(s.back));
+    await wait(t, 600);
+    expect(find.text(s.newItemTitle), findsOneWidget);
+    expect(find.textContaining(s.itemName(OutfitItem.roundGlasses)), findsOneWidget);
   });
 }

@@ -320,6 +320,11 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) return;
+        if (_stage == _Stage.finished) {
+          // leaving the results ("Done" or back): cards L and N follow
+          final nav = Navigator.of(context);
+          WidgetsBinding.instance.addPostFrameCallback((_) => showGrowthCards(nav.context, app));
+        }
         // leaving mid-game (back button / swipe): save it as stopped, and
         // stop playing during the pop animation (no score, pulses or finish)
         _log(completed: false);
@@ -765,11 +770,8 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
                     ),
                   OutlinedButton(onPressed: _playAgain, style: _outlined, child: Text(s.playAgain)),
                   FilledButton(
-                    onPressed: () {
-                      final nav = Navigator.of(context);
-                      nav.pop();
-                      showGrowthCards(nav.context, app);
-                    },
+                    // the PopScope above shows cards L and N
+                    onPressed: () => Navigator.of(context).pop(),
                     style: FilledButton.styleFrom(
                       backgroundColor: ZeepColors.blue,
                       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),

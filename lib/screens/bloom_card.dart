@@ -59,7 +59,7 @@ class BloomCard extends StatefulWidget {
 class BloomCardState extends State<BloomCard> with SingleTickerProviderStateMixin {
   late final AnimationController _c;
   final _nextFocus = FocusNode();
-  bool _bloomFired = false, _inhaleFired = false, _confirmFired = false;
+  bool _bloomFired = false, _inhaleFired = false, _confirmFired = false, _focused = false;
 
   bool get _reduce => widget.reduceMotion;
   double get _end => _reduce ? _reducedEnd : _rockEnd;
@@ -87,7 +87,6 @@ class BloomCardState extends State<BloomCard> with SingleTickerProviderStateMixi
         '${l.bloomedTitle} ${l.bloomedDetail(e.after.level, l.flowerName(e.newFlower!))}',
         Directionality.of(context),
       );
-      _nextFocus.requestFocus();
     });
   }
 
@@ -98,15 +97,19 @@ class BloomCardState extends State<BloomCard> with SingleTickerProviderStateMixi
     super.dispose();
   }
 
-  void _fire(HapticPattern p) {
-    final h = widget.app.haptics;
-    // the app's clock stands still under this card: add our own time to it,
-    // so the 250 ms guard keeps working
-    h.fire(p, widget.app.time + (_c.lastElapsedDuration ?? Duration.zero).inMicroseconds / 1e6);
-  }
+  // The Breathe tab keeps ticking under this see-through card, so the app's
+  // clock (and the 250 ms guard) runs on its own.
+  void _fire(HapticPattern p) => widget.app.haptics.fire(p, widget.app.time);
 
   void _onTick() {
     final t = ms;
+    // focus "Next" once the buttons can be used (not while they are hidden)
+    if (!_focused && t >= (_reduce ? 400 : buttonsFromMs)) {
+      _focused = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _nextFocus.requestFocus();
+      });
+    }
     if (_reduce) {
       if (!_bloomFired && t >= 200) _fireBloom();
     } else {
@@ -137,8 +140,10 @@ class BloomCardState extends State<BloomCard> with SingleTickerProviderStateMixi
     } else {
       _confirmFired = true;
     }
-    _c.value = _seqEnd / _end;
-    _c.forward();
+    // a 200 ms crossfade to the resting end, then the slow rock goes on
+    _c.animateTo(_seqEnd / _end, duration: const Duration(milliseconds: 200)).whenComplete(() {
+      if (mounted) _c.forward();
+    });
   }
 
   void _close(BloomChoice c) => Navigator.of(context).pop(c);
@@ -270,30 +275,33 @@ class BloomCardState extends State<BloomCard> with SingleTickerProviderStateMixi
                         opacity: buttons,
                         child: IgnorePointer(
                           ignoring: !canTap,
-                          child: Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 12,
-                            runSpacing: 10,
-                            children: [
-                              FilledButton(
-                                onPressed: () => _close(BloomChoice.garden),
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: ZeepColors.mint,
-                                  foregroundColor: ZeepColors.mintDark,
-                                  minimumSize: const Size(132, 48),
+                          child: ExcludeFocus(
+                            excluding: !canTap,
+                            child: Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 12,
+                              runSpacing: 10,
+                              children: [
+                                FilledButton(
+                                  onPressed: () => _close(BloomChoice.garden),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: ZeepColors.mint,
+                                    foregroundColor: ZeepColors.mintDark,
+                                    minimumSize: const Size(132, 48),
+                                  ),
+                                  child: Text(l.seeGarden, style: const TextStyle(fontWeight: FontWeight.w600)),
                                 ),
-                                child: Text(l.seeGarden, style: const TextStyle(fontWeight: FontWeight.w600)),
-                              ),
-                              OutlinedButton(
-                                focusNode: _nextFocus,
-                                onPressed: () => _close(BloomChoice.next),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: ZeepColors.text,
-                                  minimumSize: const Size(112, 48),
+                                OutlinedButton(
+                                  focusNode: _nextFocus,
+                                  onPressed: () => _close(BloomChoice.next),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: ZeepColors.text,
+                                    minimumSize: const Size(112, 48),
+                                  ),
+                                  child: Text(l.next),
                                 ),
-                                child: Text(l.next),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),

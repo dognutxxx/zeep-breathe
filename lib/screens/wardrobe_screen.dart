@@ -15,8 +15,9 @@ import '../wardrobe/flowers.dart';
 import '../wardrobe/outfits.dart';
 import '../wardrobe/wardrobe_controller.dart';
 
-void openWardrobe(BuildContext context, AppController app, {int tab = 0}) {
-  Navigator.of(context).push(
+/// Opens W; the future completes when it is closed.
+Future<void> openWardrobe(BuildContext context, AppController app, {int tab = 0}) {
+  return Navigator.of(context).push(
     MaterialPageRoute<void>(
       builder: (_) => WardrobeScreen(app: app, initialTab: tab),
     ),

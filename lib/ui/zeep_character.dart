@@ -244,8 +244,7 @@ void drawZeep(
   final top = Offset(cx, cy - b * 0.97);
   final sway = reduceMotion ? 0.0 : math.sin(time * 1.7) * 2 * s;
   // the stem gets a little taller for every grown leaf and for a flower
-  final grown = growth.leaves * 6.0 + (growth.flower != null ? 2.0 : 0.0);
-  final tip = Offset(cx + sway, cy - b - (15 + 4 * br + grown) * s);
+  final tip = sproutTipAt(cx + sway, cy, b, s, br, growth);
   final stemCtl = Offset(cx - 3 * s, (top.dy + tip.dy) * 0.5);
   final open = 0.55 + 0.25 * br + 0.1 * math.sin(time * 1.3);
   void sprout() {
@@ -265,9 +264,8 @@ void drawZeep(
     final f = growth.flower;
     if (f != null) {
       // the flower sits on a short stalk above the two sprout leaves
-      final fc = tip + Offset(0, -13 * s * f.size);
+      final (centre: fc, k: k) = flowerOnTip(tip, s, f);
       p.drawLine(tip, fc, _stroke(ZeepColors.ink, 2.2 * s));
-      final k = 1.5 * s * f.size;
       if (growth.open >= 1 && growth.colour >= 1 && growth.rock == 0) {
         drawBloom(p, f, fc, k);
       } else {
