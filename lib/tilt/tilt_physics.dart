@@ -67,12 +67,9 @@ class TiltMapper {
   bool calibrate(Vec3 g) {
     final up = g.unit;
     if (up.length == 0) return false;
-    // Screen-right projected onto the level plane. This assumes the screen is
-    // portrait-up, so device x = screen right. main.dart asks for portrait,
-    // but iPad (multitasking) and Android 16 large screens can still rotate,
-    // so the game screen pauses whenever the screen is not portrait-up (see
-    // BalancePrototypeScreen and [isUpsideDown]). If device x is parallel to
-    // gravity (phone on its side) fall back to the y axis.
+    // Screen-right projected onto the level plane. Readings are already in
+    // screen axes (see [remapTilt]), so x = screen right in every rotation.
+    // If x is parallel to gravity (phone on its side) fall back to y.
     var right = _project(const Vec3(1, 0, 0), up);
     if (right.length < 0.2) right = _cross(_project(const Vec3(0, 1, 0), up).unit, up);
     right = right.unit;
@@ -206,17 +203,37 @@ class BallPhysics {
   }
 }
 
-/// True when the phone is held upright but upside down (top edge towards the
-/// floor). Android large screens may rotate the app to reverse portrait while
-/// Flutter still reports "portrait", which would flip every tilt direction.
-/// Readings use the Android convention: upright and the right way up gives
-/// y = +g, upside down gives y = -g. Hysteresis keeps it from flickering.
-/// A phone lying flat that was rotated upside down can't be told apart this
-/// way (gravity is on z); that case is accepted.
-bool isUpsideDown(Vec3 g, {bool wasUpsideDown = false}) {
-  final u = g.unit;
-  if (u.length == 0) return wasUpsideDown;
-  return u.y < (wasUpsideDown ? -0.3 : -0.5);
+/// Turns a reading from device axes into screen axes.
+///
+/// The accelerometer reports axes fixed to the device's *natural*
+/// orientation (portrait on phones and iPads, landscape on some Android
+/// tablets) and does not follow the screen when it rotates. [rotation] is how
+/// far the screen is rotated from natural, in quarter turns: 0; 1 = the
+/// device was turned 90 degrees counter-clockwise (Android ROTATION_90, iOS
+/// interface landscapeRight); 2 = upside down; 3 = turned clockwise. Same
+/// idea as Android's `SensorManager.remapCoordinateSystem`:
+///
+///   rotation   screen x   screen y
+///   0          x          y
+///   1          -y         x
+///   2          -x         -y
+///   3          y          -x
+///
+/// z (out of the screen) never changes. iOS needs no special case:
+/// sensors_plus already reports CoreMotion in the Android convention, and
+/// the iOS side of `zeep/display` maps interface orientations onto the same
+/// quarter turns (table in AppDelegate.swift).
+Vec3 remapTilt(Vec3 g, int rotation) {
+  switch (rotation & 3) {
+    case 1:
+      return Vec3(-g.y, g.x, g.z);
+    case 2:
+      return Vec3(-g.x, -g.y, g.z);
+    case 3:
+      return Vec3(g.y, -g.x, g.z);
+    default:
+      return g;
+  }
 }
 
 /// Mapper + filter + physics in one object, driven once per frame.

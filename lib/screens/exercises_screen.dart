@@ -5,7 +5,7 @@ import '../exercises/exercises.dart';
 import '../l10n/strings.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
-import 'balance_prototype_screen.dart';
+import 'balance_menu_screen.dart';
 import 'mode_screen.dart';
 
 class ExercisesScreen extends StatelessWidget {
@@ -57,12 +57,12 @@ class ExercisesScreen extends StatelessWidget {
                 style: const TextStyle(fontSize: 13.5, color: Color(0xFF3463CC)),
               ),
             ),
-          // T2.3: Zeep Balance game (step 1: tilt prototype)
+          // T2.3: Zeep Balance game
           Padding(
             padding: EdgeInsets.only(top: current == null ? 12 : 0),
             child: _GameCard(
               onTap: () =>
-                  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const BalancePrototypeScreen())),
+                  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => BalanceMenuScreen(app: app))),
             ),
           ),
         ],
@@ -80,7 +80,7 @@ class _GameCard extends StatelessWidget {
     final s = S.of(context);
     return Semantics(
       button: true,
-      label: '${s.gameName}. ${s.gameCardDesc}. ${s.prototypeBadge}',
+      label: '${s.gameName}. ${s.gameCardDesc}',
       excludeSemantics: true,
       child: Material(
         color: Colors.white,
@@ -117,22 +117,6 @@ class _GameCard extends StatelessWidget {
                                 fontSize: 16.5,
                                 fontWeight: FontWeight.w700,
                                 color: ZeepColors.text,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF1D2),
-                              borderRadius: BorderRadius.circular(7),
-                            ),
-                            child: Text(
-                              s.prototypeBadge,
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF8A5A00),
                               ),
                             ),
                           ),

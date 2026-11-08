@@ -6,6 +6,7 @@ import UIKit
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private let haptics = ZeepHaptics()
   private var hapticsChannel: FlutterMethodChannel?
+  private var displayChannel: FlutterMethodChannel?
 
   override func application(
     _ application: UIApplication,
@@ -33,6 +34,45 @@ import UIKit
       }
     }
     hapticsChannel = channel
+
+    // `zeep/display` channel used by lib/tilt/tilt_sensor.dart (Zeep Balance)
+    guard let displayRegistrar = engineBridge.pluginRegistry.registrar(forPlugin: "ZeepDisplay") else { return }
+    let display = FlutterMethodChannel(name: "zeep/display", binaryMessenger: displayRegistrar.messenger())
+    display.setMethodCallHandler { call, result in
+      switch call.method {
+      case "rotation":
+        result(ZeepDisplay.rotation())
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+    displayChannel = display
+  }
+}
+
+/// Quarter turns of the interface from portrait, matching Android's
+/// Surface.ROTATION_* and remapTilt() in lib/tilt/tilt_physics.dart.
+/// CoreMotion axes are fixed to the device in portrait (home button / bottom
+/// edge down), and sensors_plus reports them in the Android convention.
+///
+///   interfaceOrientation   device turned        returns
+///   .portrait              (natural)            0
+///   .landscapeRight        90 deg CCW, home R   1
+///   .portraitUpsideDown    180 deg              2
+///   .landscapeLeft         90 deg CW, home L    3
+///
+/// Uses the window scene, so iPad Split View / Slide Over report the real
+/// interface orientation rather than the window's shape.
+enum ZeepDisplay {
+  static func rotation() -> Int {
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    let scene = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+    switch scene?.interfaceOrientation {
+    case .landscapeRight: return 1
+    case .portraitUpsideDown: return 2
+    case .landscapeLeft: return 3
+    default: return 0
+    }
   }
 }
 
@@ -65,6 +105,9 @@ final class ZeepHaptics {
     case "hold": pulses = [(0, 0.04, 0.6, 0.5), (0.14, 0.04, 0.6, 0.5)]
     case "exhale": pulses = [(0, 0.12, 0.35, 0.1)]
     case "confirm": pulses = [(0, 0.03, 0.4, 0.6)]
+    // Zeep Balance edge pulses
+    case "edgeOut": pulses = [(0, 0.07, 0.4, 0.15)]
+    case "edgeIn": pulses = [(0, 0.015, 0.3, 0.7)]
     default: pulses = [(0, 0.09, 0.45, 0.2)]
     }
     let events = pulses.map { at, dur, intensity, sharpness in

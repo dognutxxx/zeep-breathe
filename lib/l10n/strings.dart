@@ -6,6 +6,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../breathing/breathing_engine.dart';
+import '../game/balance_game.dart';
 import '../haptics/haptics_service.dart';
 
 class S {
@@ -81,6 +82,8 @@ class S {
     HapticPattern.holdStart => _('hold · double pulse', 'กลั้น · 2 ครั้ง'),
     HapticPattern.exhaleStart => _('exhale pulse', 'หายใจออก'),
     HapticPattern.confirm => _('vibration on', 'เปิดการสั่น'),
+    HapticPattern.edgeOut => _('left the circle', 'ออกนอกวง'),
+    HapticPattern.edgeIn => _('back in the circle', 'กลับเข้าวง'),
   };
   String get sessionComplete => _('Session complete', 'ฝึกครบแล้ว');
   String sessionSummary(int breaths, int mins) =>
@@ -152,7 +155,6 @@ class S {
   String get gameName => _('Zeep Balance', 'Zeep ทรงตัว');
   String get gameCardDesc =>
       _('Tilt to guide Zeep into the circle, then hold still', 'เอียงเครื่องพา Zeep เข้าวง แล้วนิ่งไว้');
-  String get prototypeBadge => _('Prototype', 'ต้นแบบ');
   String get tiltHint => _('Tilt your phone gently to roll Zeep', 'เอียงเครื่องเบาๆ เพื่อให้ Zeep กลิ้ง');
   String get holdComfortably => _('Hold your phone comfortably', 'ถือเครื่องในท่าที่สบาย');
   String get calibratingHint => _('This position becomes level for the game', 'ท่านี้จะเป็นระนาบของเกม');
@@ -162,7 +164,47 @@ class S {
     "This device has no tilt sensor, so the game isn't available.",
     'เครื่องนี้ไม่มีเซ็นเซอร์เอียง จึงเล่นเกมนี้ไม่ได้',
   );
-  String get turnUpright => _('Turn your device upright to play', 'หมุนเครื่องเป็นแนวตั้งเพื่อเล่น');
+  // GM: level select
+  String get chooseLevel => _('Choose a level', 'เลือกด่าน');
+  String levelName(BalanceLevel l) => switch (l) {
+    BalanceLevel.easy => _('Easy', 'ง่าย'),
+    BalanceLevel.medium => _('Medium', 'กลาง'),
+    BalanceLevel.hard => _('Hard', 'ยาก'),
+  };
+  String levelDesc(BalanceLevel l) => switch (l) {
+    BalanceLevel.easy => _('A big circle that stays still', 'วงใหญ่ อยู่นิ่งกับที่'),
+    BalanceLevel.medium => _(
+      'The circle breathes with your rhythm: bigger on inhale, smaller on exhale',
+      'วงหายใจตามจังหวะของคุณ ขยายตอนหายใจเข้า หดตอนหายใจออก',
+    ),
+    BalanceLevel.hard => _('A small circle that drifts slowly', 'วงเล็ก ลอยเคลื่อนช้าๆ'),
+  };
+  String get gameLength => _('Game length', 'เวลาเล่น');
+  String get startGame => _('Start game', 'เริ่มเล่น');
+  String bestScore(int p) => _('Best $p%', 'ดีที่สุด $p%');
+  String get noBestYet => _('Not played yet', 'ยังไม่เคยเล่น');
+  String get gameHowTo => _(
+    'Keep Zeep inside the circle. The more time inside, the higher your score.',
+    'ประคอง Zeep ให้อยู่ในวง ยิ่งอยู่ในวงนาน คะแนนยิ่งสูง',
+  );
+  // GP: playing
+  String get keepInCircle => _('Keep Zeep in the circle', 'ประคอง Zeep ให้อยู่ในวง');
+  String get inCircle => _('In the circle', 'อยู่ในวง');
+  String get outOfCircle => _('Outside, tilt back gently', 'ออกนอกวง เอียงกลับเบาๆ');
+  String get scoreLabel => _('Score', 'คะแนน');
+  String get timeLeftLabel => _('Time left', 'เหลือเวลา');
+  String get resume => _('Resume', 'เล่นต่อ');
+  // GR: results
+  String get gameComplete => _('Well balanced!', 'ทรงตัวได้ดีมาก!');
+  String get gameStopped => _('Game stopped', 'หยุดเกมแล้ว');
+  String scoreSummary(int p) => _('$p% of the time in the circle', 'อยู่ในวง $p% ของเวลา');
+  String starsLabel(int n) => _('$n of 3 stars', '$n จาก 3 ดาว');
+  String get newBest => _('New best!', 'สถิติใหม่!');
+  String get playAgain => _('Play again', 'เล่นอีกครั้ง');
+  String get gameNotSaved => _('Games under 30 seconds are not saved.', 'เกมที่สั้นกว่า 30 วินาทีจะไม่ถูกบันทึก');
+  // T3.4 timeline
+  String gameEntryName(BalanceLevel l) => '$gameName · ${levelName(l)}';
+  String scoreEntry(int p) => _('Score $p%', 'คะแนน $p%');
 
   // ---------------------------------------------------------------- progress
   String get progressTitle => _('Progress', 'ความคืบหน้า');

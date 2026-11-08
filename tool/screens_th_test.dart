@@ -46,6 +46,17 @@ void main() {
     }
   });
 
+  testWidgets('game (th)', (t) async {
+    debugDisableShadows = false;
+    try {
+      thai(t);
+      await gameFlow(t, 'th_', S.thai);
+    } finally {
+      debugDisableShadows = true;
+      t.platformDispatcher.clearAllTestValues();
+    }
+  });
+
   testWidgets('sheets (th)', (t) async {
     debugDisableShadows = false;
     try {

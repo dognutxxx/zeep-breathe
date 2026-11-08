@@ -7,7 +7,18 @@
 
 import 'package:flutter/services.dart';
 
-enum HapticPattern { inhaleStart, holdStart, exhaleStart, confirm }
+enum HapticPattern {
+  inhaleStart,
+  holdStart,
+  exhaleStart,
+  confirm,
+
+  /// Zeep Balance: Zeep left the circle (one soft pulse).
+  edgeOut,
+
+  /// Zeep Balance: Zeep is back in the circle (a very short tick).
+  edgeIn,
+}
 
 class Pulse {
   final double at, dur, intensity, sharpness;
@@ -20,6 +31,8 @@ extension HapticPatternInfo on HapticPattern {
     HapticPattern.holdStart => const [Pulse(0, 0.04, 0.6, 0.5), Pulse(0.14, 0.04, 0.6, 0.5)],
     HapticPattern.exhaleStart => const [Pulse(0, 0.12, 0.35, 0.1)],
     HapticPattern.confirm => const [Pulse(0, 0.03, 0.4, 0.6)],
+    HapticPattern.edgeOut => const [Pulse(0, 0.07, 0.4, 0.15)],
+    HapticPattern.edgeIn => const [Pulse(0, 0.015, 0.3, 0.7)],
   };
 
   String get label => switch (this) {
@@ -27,6 +40,8 @@ extension HapticPatternInfo on HapticPattern {
     HapticPattern.holdStart => 'hold · double pulse',
     HapticPattern.exhaleStart => 'exhale pulse',
     HapticPattern.confirm => 'vibration on',
+    HapticPattern.edgeOut => 'left the circle',
+    HapticPattern.edgeIn => 'back in the circle',
   };
 
   /// Name understood by the native side.
@@ -35,6 +50,8 @@ extension HapticPatternInfo on HapticPattern {
     HapticPattern.holdStart => 'hold',
     HapticPattern.exhaleStart => 'exhale',
     HapticPattern.confirm => 'confirm',
+    HapticPattern.edgeOut => 'edgeOut',
+    HapticPattern.edgeIn => 'edgeIn',
   };
 }
 

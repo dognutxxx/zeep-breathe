@@ -266,27 +266,51 @@ void main() {
     });
   });
 
-  group('isUpsideDown', () {
-    test('upright the right way up is not upside down', () {
-      expect(isUpsideDown(const Vec3(0, g, 0)), isFalse);
-      expect(isUpsideDown(const Vec3(0, 0, g)), isFalse); // flat
-      expect(isUpsideDown(Vec3(0, g * math.sin(rad(45)), g * math.cos(rad(45)))), isFalse);
+  group('remapTilt', () {
+    const v = Vec3(1, 2, 3);
+
+    test('the table for all four rotations (z never changes)', () {
+      Vec3 r(int k) => remapTilt(v, k);
+      expect([r(0).x, r(0).y, r(0).z], [1, 2, 3]);
+      expect([r(1).x, r(1).y, r(1).z], [-2, 1, 3]);
+      expect([r(2).x, r(2).y, r(2).z], [-1, -2, 3]);
+      expect([r(3).x, r(3).y, r(3).z], [2, -1, 3]);
     });
 
-    test('upright with the top edge down is upside down', () {
-      expect(isUpsideDown(const Vec3(0, -g, 0)), isTrue);
-      expect(isUpsideDown(Vec3(0, -g * math.sin(rad(40)), g * math.cos(rad(40)))), isTrue);
+    test('turning back undoes it', () {
+      for (var k = 0; k < 4; k++) {
+        final back = remapTilt(remapTilt(v, k), (4 - k) % 4);
+        expect([back.x, back.y, back.z], [1, 2, 3]);
+      }
     });
 
-    test('hysteresis: stays upside down until clearly righted', () {
-      final nearEdge = Vec3(0, -g * 0.4, g * math.sqrt(1 - 0.16));
-      expect(isUpsideDown(nearEdge), isFalse);
-      expect(isUpsideDown(nearEdge, wasUpsideDown: true), isTrue);
-      expect(isUpsideDown(const Vec3(0, 0, g), wasUpsideDown: true), isFalse);
-    });
+    // Physical checks: lay the phone flat, turn the screen, then lower the
+    // edge that is on the RIGHT of the screen. The screen reading must look
+    // like flatRightDown in every rotation. Device edges in each case:
+    //   0: right edge (device +x)       1 (turned CCW): bottom edge (-y)
+    //   2: left edge (-x)               3 (turned CW): top edge (+y)
+    // Lowering a device edge e makes the reading -g*sin(a) along e.
+    // Same numbers on iOS and Android: sensors_plus gives both in the
+    // Android convention and zeep/display uses the same quarter turns.
+    final s = math.sin(rad(10)) * g, c = math.cos(rad(10)) * g;
+    final lowered = <int, Vec3>{
+      0: Vec3(-s, 0, c), // right edge down
+      1: Vec3(0, s, c), // bottom edge down
+      2: Vec3(s, 0, c), // left edge down
+      3: Vec3(0, -s, c), // top edge down
+    };
+    for (var k = 0; k < 4; k++) {
+      test('rotation $k: lowering the screen-right edge reads as right', () {
+        final m = TiltMapper()..calibrate(const Vec3(0, 0, g));
+        final t = m.tilt(remapTilt(lowered[k]!, k));
+        expect(t.x, greaterThan(0.1));
+        expect(t.y.abs(), lessThan(1e-9));
+      });
+    }
 
-    test('zero reading keeps the previous answer', () {
-      expect(isUpsideDown(const Vec3(0, 0, 0), wasUpsideDown: true), isTrue);
+    test('upright phone turned upside down (rotation 2) still reads level', () {
+      final m = TiltMapper()..calibrate(remapTilt(const Vec3(0, -g, 0), 2));
+      expect(m.tilt(remapTilt(const Vec3(0, -g, 0), 2)).length, 0);
     });
   });
 }
