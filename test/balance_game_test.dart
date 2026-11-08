@@ -13,10 +13,12 @@ import 'package:zeep_breathe/game/balance_game.dart';
 import 'package:zeep_breathe/haptics/haptics_service.dart';
 import 'package:zeep_breathe/screens/balance_game_screen.dart';
 import 'package:zeep_breathe/screens/balance_menu_screen.dart';
+import 'package:zeep_breathe/screens/bloom_card.dart';
 import 'package:zeep_breathe/settings/settings_controller.dart';
 import 'package:zeep_breathe/tilt/tilt_physics.dart';
 import 'package:zeep_breathe/tilt/tilt_sensor.dart';
 import 'package:zeep_breathe/ui/zeep_character.dart';
+import 'package:zeep_breathe/wardrobe/outfits.dart';
 
 class FakeTilt implements TiltSource {
   final controller = StreamController<Vec3>();
@@ -548,5 +550,68 @@ void main() {
     expect(find.text(S.en.noTiltSensor), findsOneWidget);
     expect(testApp.history.records, hasLength(1));
     await t.pumpWidget(const SizedBox());
+  });
+
+  // ------------------------------------------------------------ cards L and N after the results (review L7)
+
+  /// Wardrobe one step from a bloom, one practice day from the round glasses;
+  /// play a whole 1-minute game from GM.
+  Future<FakeTilt> finishedGame(WidgetTester t) async {
+    // ignore: invalid_use_of_visible_for_testing_member
+    testApp.wardrobe.setForTest(steps: 3, practiceDays: 2);
+    final src = await fromMenu(t);
+    await frames(t, 61);
+    expect(find.text(S.en.playAgain), findsOneWidget); // results
+    return src;
+  }
+
+  Future<void> checkCards(WidgetTester t, int stopsBefore) async {
+    await frames(t, 0.5);
+    expect(find.byType(BloomCard), findsOneWidget);
+    expect(testApp.history.records, hasLength(1));
+    expect(music().stops, greaterThan(stopsBefore));
+    await frames(t, 3.6);
+    await t.tap(find.text(S.en.next));
+    await frames(t, 0.6);
+    expect(find.byType(BloomCard), findsNothing);
+    expect(find.text(S.en.newItemTitle), findsOneWidget);
+    expect(find.textContaining(S.en.itemName(OutfitItem.roundGlasses)), findsOneWidget);
+    await t.tap(find.text(S.en.later));
+    await frames(t, 0.5);
+    expect(find.text(S.en.startGame), findsOneWidget); // back on GM
+    expect(find.byType(BloomCard), findsNothing);
+  }
+
+  testWidgets('results, Done: card L, then card N, back on GM', (t) async {
+    final src = await finishedGame(t);
+    final stops = music().stops;
+    await t.tap(find.text(S.en.done));
+    await checkCards(t, stops);
+    await t.pumpWidget(const SizedBox());
+    unawaited(src.controller.close());
+  });
+
+  testWidgets('results, system back: the same cards as Done', (t) async {
+    final src = await finishedGame(t);
+    final stops = music().stops;
+    await t.binding.handlePopRoute();
+    await checkCards(t, stops);
+    await t.pumpWidget(const SizedBox());
+    unawaited(src.controller.close());
+  });
+
+  testWidgets('back in the middle of a game: no card L or N', (t) async {
+    // ignore: invalid_use_of_visible_for_testing_member
+    testApp.wardrobe.setForTest(steps: 3, practiceDays: 2);
+    final src = await fromMenu(t);
+    await frames(t, 40);
+    await t.tap(find.byTooltip(S.en.back));
+    await frames(t, 4);
+    expect(testApp.history.records.single.completed, isFalse);
+    expect(find.byType(BloomCard), findsNothing);
+    expect(find.text(S.en.newItemTitle), findsNothing);
+    expect(find.text(S.en.startGame), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+    unawaited(src.controller.close());
   });
 }
