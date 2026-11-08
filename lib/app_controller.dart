@@ -9,6 +9,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'audio/music_service.dart';
 import 'breathing/breathing_engine.dart';
 import 'exercises/exercises.dart';
+import 'game/balance_game.dart';
 import 'haptics/haptics_service.dart';
 import 'history/session_history.dart';
 import 'settings/settings_controller.dart';
@@ -142,6 +143,37 @@ class AppController extends ChangeNotifier {
       progressDay = null;
       progressMonth = null;
     }
+  }
+
+  /// Saves a Zeep Balance game to the history (counts toward the streak like
+  /// a breathing session) and keeps the best score of a finished game.
+  /// Returns true if it was saved (games under 30 s are not).
+  bool logGame({
+    required BalanceLevel level,
+    required DateTime start,
+    required int seconds,
+    required int score,
+    required bool completed,
+  }) {
+    if (completed && score > settings.gameBest[level.index]) {
+      settings.update((s) => s.gameBest = [...s.gameBest]..[level.index] = score);
+    }
+    final saved = history.add(
+      SessionRecord(
+        start: start,
+        seconds: seconds,
+        breaths: 0,
+        exercise: gameHistoryId(level),
+        completed: completed,
+        score: score,
+      ),
+    );
+    lastStreak = history.stats(clock()).currentStreak;
+    if (saved) {
+      progressDay = null;
+      progressMonth = null;
+    }
+    return saved;
   }
 
   void toggleMusic() => settings.update((s) => s.music = !s.music);

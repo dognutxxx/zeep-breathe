@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../exercises/exercises.dart';
+import '../game/balance_game.dart';
 import '../history/session_history.dart';
 import '../l10n/strings.dart';
 import '../ui/zeep_character.dart';
@@ -399,11 +400,20 @@ class _TimelineEntry extends StatelessWidget {
     final l = S.of(context);
     final id = historyExerciseId(r.exercise);
     final ex = exercises.where((e) => e.id == id).firstOrNull;
-    final tint = ex?.tint ?? (id == 'default' ? const Color(0xFFBDDEF7) : const Color(0xFFDCE3EC));
+    final game = gameLevelOf(id) != null;
+    final tint = game
+        ? ZeepColors.mint
+        : ex?.tint ?? (id == 'default' ? const Color(0xFFBDDEF7) : const Color(0xFFDCE3EC));
     final time = '${r.start.hour.toString().padLeft(2, '0')}:${r.start.minute.toString().padLeft(2, '0')}';
     const lineColor = Color(0xFFD9E3EE);
-    final status = r.completed ? l.completedLabel : l.stoppedEarly;
+    final score = r.score;
+    final status = game && score != null
+        ? '${l.scoreEntry(score)}${r.completed ? '' : ' · ${l.stoppedEarly}'}'
+        : r.completed
+        ? l.completedLabel
+        : l.stoppedEarly;
     final statusColor = r.completed ? ZeepColors.mintDark : ZeepColors.textSoft;
+    final stars = game && score != null && r.completed ? starsFor(score) : 0;
     return Semantics(
       label: '$time, ${exerciseDisplayName(r.exercise, l)}, ${l.duration(r.seconds)}, $status',
       excludeSemantics: true,
@@ -483,12 +493,20 @@ class _TimelineEntry extends StatelessWidget {
                             Row(
                               children: [
                                 Icon(
-                                  r.completed ? Icons.check_circle_rounded : Icons.timelapse_rounded,
+                                  game
+                                      ? Icons.sports_esports_rounded
+                                      : r.completed
+                                      ? Icons.check_circle_rounded
+                                      : Icons.timelapse_rounded,
                                   size: 14,
                                   color: statusColor,
                                 ),
                                 const SizedBox(width: 4),
-                                Text(status, style: TextStyle(fontSize: 12, color: statusColor)),
+                                Flexible(
+                                  child: Text(status, style: TextStyle(fontSize: 12, color: statusColor)),
+                                ),
+                                for (var i = 0; i < stars; i++)
+                                  const Icon(Icons.star_rounded, size: 14, color: Color(0xFFE9B949)),
                               ],
                             ),
                           ],

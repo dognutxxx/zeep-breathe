@@ -97,6 +97,15 @@ void main() {
     }
   });
 
+  testWidgets('game', (t) async {
+    debugDisableShadows = false;
+    try {
+      await gameFlow(t, '', S.en);
+    } finally {
+      debugDisableShadows = true;
+    }
+  });
+
   testWidgets('app icon', (t) async {
     await _icon(t);
   });

@@ -63,6 +63,19 @@ class MusicService {
     }
   }
 
+  /// Silences the music at once, without waiting for frames: for when no
+  /// ticker will call [update] any more (leaving the game, app in the
+  /// background - Android stops drawing frames there). A later [update] with
+  /// want = true fades it back in.
+  void stopNow() {
+    _vol = 0;
+    final p = _player;
+    if (p == null || !available) return;
+    _sentVol = 0;
+    p.setVolume(0);
+    if (p.playing) p.pause();
+  }
+
   Future<void> _load(AudioPlayer p, int track) async {
     _loading = true;
     try {

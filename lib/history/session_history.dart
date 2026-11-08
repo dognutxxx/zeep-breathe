@@ -11,8 +11,12 @@ class SessionRecord {
   final DateTime start;
   final int seconds;
   final int breaths;
-  final String exercise; // display name, e.g. "Calm tide" or "Custom"
+  final String exercise; // exercise id, e.g. "box", or a game id "game-easy"
   final bool completed;
+
+  /// Zeep Balance score (0-100, % of time inside the circle); null for
+  /// breathing sessions.
+  final int? score;
 
   const SessionRecord({
     required this.start,
@@ -20,6 +24,7 @@ class SessionRecord {
     required this.breaths,
     required this.exercise,
     required this.completed,
+    this.score,
   });
 
   Map<String, Object> toJson() => {
@@ -28,6 +33,7 @@ class SessionRecord {
     'b': breaths,
     'e': exercise,
     'c': completed,
+    'p': ?score,
   };
 
   static SessionRecord? fromJson(Object? j) {
@@ -40,6 +46,7 @@ class SessionRecord {
       breaths: (j['b'] as num?)?.toInt() ?? 0,
       exercise: '${j['e'] ?? 'custom'}',
       completed: j['c'] == true,
+      score: (j['p'] as num?)?.toInt().clamp(0, 100),
     );
   }
 }

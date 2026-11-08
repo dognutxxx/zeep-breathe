@@ -1,17 +1,26 @@
 // Shared helpers for the headless screenshot tests (screens_test.dart for
 // English, screens_th_test.dart for Thai).
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zeep_breathe/app_controller.dart';
 import 'package:zeep_breathe/audio/music_service.dart';
 import 'package:zeep_breathe/exercises/exercises.dart';
+import 'package:zeep_breathe/game/balance_game.dart';
 import 'package:zeep_breathe/haptics/haptics_service.dart';
 import 'package:zeep_breathe/history/session_history.dart';
 import 'package:zeep_breathe/l10n/strings.dart';
 import 'package:zeep_breathe/main.dart';
+import 'package:zeep_breathe/screens/balance_game_screen.dart';
+import 'package:zeep_breathe/screens/balance_menu_screen.dart';
 import 'package:zeep_breathe/settings/settings_controller.dart';
+import 'package:zeep_breathe/tilt/tilt_physics.dart';
+import 'package:zeep_breathe/tilt/tilt_sensor.dart';
+import 'package:zeep_breathe/ui/zeep_colors.dart';
 
 /// Every screenshot run uses this "now" (a Friday late in the month), so the
 /// images do not depend on the day the tests run.
@@ -170,4 +179,106 @@ Future<void> tabsFlow(WidgetTester t, String p, S s) async {
   expect(app.progressDay, isNull);
   await t.pumpWidget(const SizedBox());
   await t.pump(const Duration(seconds: 1));
+}
+
+class _FakeTilt implements TiltSource {
+  final controller = StreamController<Vec3>();
+  @override
+  Stream<Vec3> readings() => controller.stream;
+}
+
+class _FakeRotation implements DisplayRotationSource {
+  final int value;
+  const _FakeRotation([this.value = 0]);
+  @override
+  Future<int> rotation() async => value;
+}
+
+Widget _gameApp(Widget home) => MaterialApp(
+  debugShowCheckedModeBanner: false,
+  supportedLocales: S.supportedLocales,
+  localizationsDelegates: GlobalMaterialLocalizations.delegates,
+  theme: ThemeData(
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(seedColor: ZeepColors.blue, surface: Colors.white),
+    scaffoldBackgroundColor: ZeepColors.bgBottom,
+  ),
+  home: home,
+);
+
+Future<void> _tilt(WidgetTester t, _FakeTilt src, Vec3 g, double seconds) async {
+  for (var i = 0; i < (seconds / 0.05).round(); i++) {
+    src.controller.add(g);
+    await advance(t, 0.05);
+  }
+}
+
+/// Zeep Balance (T2.3): GM -> countdown -> GP medium -> out of the circle ->
+/// GR, then GP hard in landscape and the game in the Progress timeline.
+Future<void> gameFlow(WidgetTester t, String p, S s) async {
+  phone(t);
+  final app = await makeApp();
+  seedHistory(app);
+  app.settings.update((x) => x.gameBest = [92, 74, 0], persist: false);
+  final src = _FakeTilt();
+  await t.pumpWidget(_gameApp(BalanceMenuScreen(app: app, source: src, rotationSource: const _FakeRotation())));
+  await advance(t, 0.5);
+  await t.tap(find.text(s.levelName(BalanceLevel.medium)));
+  await advance(t, 0.3);
+  await shot('screens/${p}19_game_menu.png');
+
+  await t.tap(find.text(s.startGame));
+  await advance(t, 0.6);
+  src.controller.add(const Vec3(0, 0, 9.81));
+  await advance(t, 1.2);
+  await shot('screens/${p}20_game_countdown.png');
+  await advance(t, 2.3 + 1.5); // playing, mid-inhale
+  await _tilt(t, src, const Vec3(-0.9, 0.5, 9.75), 0.5);
+  await _tilt(t, src, const Vec3(0, 0, 9.81), 0.6);
+  await shot('screens/${p}21_game_medium.png');
+  await _tilt(t, src, const Vec3(-4, 1, 8.9), 1.0);
+  await shot('screens/${p}22_game_out.png');
+  await _tilt(t, src, const Vec3(3.2, -0.8, 9.2), 0.7);
+  await _tilt(t, src, const Vec3(0, 0, 9.81), 0.3);
+  await advance(t, 55);
+  await shot('screens/${p}23_game_results.png');
+  await t.pumpWidget(const SizedBox());
+
+  // hard, landscape (screen turned 90 degrees)
+  t.view.physicalSize = const Size(2556, 1179);
+  t.view.padding = const FakeViewPadding(left: 59 * 3, right: 59 * 3, bottom: 21 * 3);
+  t.view.viewPadding = const FakeViewPadding(left: 59 * 3, right: 59 * 3, bottom: 21 * 3);
+  final src2 = _FakeTilt();
+  await t.pumpWidget(
+    _gameApp(
+      BalanceGameScreen(
+        app: app,
+        level: BalanceLevel.hard,
+        minutes: 2,
+        source: src2,
+        rotationSource: const _FakeRotation(1),
+      ),
+    ),
+  );
+  await advance(t, 0.2);
+  src2.controller.add(remapTilt(const Vec3(0, 0, 9.81), 3));
+  await advance(t, 3.5 + 6);
+  await _tilt(t, src2, remapTilt(const Vec3(-1.2, -0.6, 9.7), 3), 0.5);
+  await _tilt(t, src2, remapTilt(const Vec3(0, 0, 9.81), 3), 0.8);
+  await shot('screens/${p}24_game_hard_landscape.png');
+  await t.pumpWidget(const SizedBox());
+
+  // the game shows in today's timeline
+  phone(t);
+  await t.pumpWidget(ZeepBreatheApp(controller: app));
+  await advance(t, 0.5);
+  await t.tap(find.text(s.tabProgress).last);
+  await advance(t, 0.5);
+  await t.drag(find.byType(ListView), const Offset(0, -2000));
+  await advance(t, 0.5);
+  await shot('screens/${p}25_timeline_game.png');
+  await t.pumpWidget(const SizedBox());
+  await t.pump(const Duration(seconds: 1));
+  unawaited(src.controller.close());
+  unawaited(src2.controller.close());
 }

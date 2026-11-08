@@ -5,6 +5,7 @@
 import 'package:flutter/painting.dart';
 
 import '../breathing/breathing_engine.dart';
+import '../game/balance_game.dart';
 import '../l10n/strings.dart';
 
 class Exercise {
@@ -81,7 +82,7 @@ const exercises = <Exercise>[
     tipTh: _sleepTipTh,
     durations: BreathDurations(4, 4, 4, 4),
     minutes: 5,
-    tint: Color(0xFFBDDEF7),
+    tint: Color(0xFFF4E4A6),
   ),
 ];
 
@@ -113,6 +114,7 @@ const _legacyNames = {'Calm tide': 'default', 'Box breathing': 'box', '4-7-8 Sle
 /// 'default' or 'custom'. Old English names are mapped; anything unknown is
 /// custom.
 String historyExerciseId(String stored) {
+  if (gameLevelOf(stored) != null) return stored;
   final id = _legacyNames[stored] ?? stored;
   if (id == 'default' || exercises.any((e) => e.id == id)) return id;
   return 'custom';
@@ -120,6 +122,8 @@ String historyExerciseId(String stored) {
 
 /// Display name for a value stored in the history, in the current language.
 String exerciseDisplayName(String stored, S s) {
+  final game = gameLevelOf(stored);
+  if (game != null) return s.gameEntryName(game);
   final id = historyExerciseId(stored);
   for (final e in exercises) {
     if (e.id == id) return e.name(s);
