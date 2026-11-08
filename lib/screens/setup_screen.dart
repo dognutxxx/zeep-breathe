@@ -23,152 +23,173 @@ class SetupScreen extends StatelessWidget {
     final l = S.of(context);
     return SafeArea(
       top: !app.bannerVisible,
-      child: Column(
-        children: [
-          // header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            child: Row(
-              children: [
-                _CircleButton(
-                  icon: Icons.menu_book_rounded,
-                  tooltip: l.howItWorks,
-                  onTap: () => showInstructionsSheet(context),
-                ),
-                Expanded(
-                  child: Text(
-                    l.appTitle,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: ZeepColors.text),
-                  ),
-                ),
-                HangerButton(app: app),
-                const SizedBox(width: 8),
-                _CircleButton(
-                  icon: Icons.settings_rounded,
-                  tooltip: l.breathingSettings,
-                  onTap: () => showSettingsSheet(context, app),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _ExerciseChip(app: app),
-              _TrackChip(app: app),
-            ],
-          ),
-          // character (idle); tap Zeep to open the wardrobe
-          Expanded(
-            child: Semantics(
-              button: true,
-              label: l.openWardrobe,
-              excludeSemantics: true,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => openWardrobe(context, app),
-                child: CustomPaint(
-                  size: Size.infinite,
-                  painter: ZeepPainter(
-                    pose: app.anim.pose,
-                    time: app.anim.time,
-                    ripples: app.haptics.ripples(app.time),
-                    reduceMotion: app.reduceMotion,
-                    outfit: app.wardrobe.outfit,
-                    growth: app.wardrobe.growth,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // speech bubble
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              decoration: BoxDecoration(color: const Color(0xFFF3EFEA), borderRadius: BorderRadius.circular(18)),
-              child: Text(
-                l.greeting,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF6A6560), height: 1.4),
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          const SizedBox(
-            height: 10,
-            width: double.infinity,
-            child: CustomPaint(painter: _WavyDivider()),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            l.howLong,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: ZeepColors.text),
-          ),
-          const SizedBox(height: 4),
-          PopupMenuButton<int>(
-            tooltip: l.sessionLength,
-            initialValue: s.sessionMinutes,
-            onSelected: (m) => s.update((x) => x.sessionMinutes = m),
-            color: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            itemBuilder: (_) => [for (final m in durationPresets) PopupMenuItem(value: m, child: Text(l.minutes(m)))],
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+      // On a very short screen (small Android phone with a navigation bar,
+      // large text) the page scrolls with Zeep at a minimum height instead of
+      // overflowing; otherwise Zeep fills the space as before.
+      child: LayoutBuilder(
+        builder: (context, box) => SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: box.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
                 children: [
-                  Text(
-                    '${s.sessionMinutes.toString().padLeft(2, '0')}:00',
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                      color: ZeepColors.text,
-                      fontFeatures: [FontFeature.tabularFigures()],
+                  // header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                    child: Row(
+                      children: [
+                        _CircleButton(
+                          icon: Icons.menu_book_rounded,
+                          tooltip: l.howItWorks,
+                          onTap: () => showInstructionsSheet(context),
+                        ),
+                        Expanded(
+                          child: Text(
+                            l.appTitle,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: ZeepColors.text),
+                          ),
+                        ),
+                        HangerButton(app: app),
+                        const SizedBox(width: 8),
+                        _CircleButton(
+                          icon: Icons.settings_rounded,
+                          tooltip: l.breathingSettings,
+                          onTap: () => showSettingsSheet(context, app),
+                        ),
+                      ],
                     ),
                   ),
-                  const Icon(Icons.keyboard_arrow_down_rounded, color: ZeepColors.text),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _ExerciseChip(app: app),
+                      _TrackChip(app: app),
+                    ],
+                  ),
+                  // character (idle); tap Zeep to open the wardrobe
+                  Expanded(
+                    child: Semantics(
+                      button: true,
+                      label: l.openWardrobe,
+                      excludeSemantics: true,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => openWardrobe(context, app),
+                        child: CustomPaint(
+                          size: const Size(0, 150), // the least Zeep gets on a short screen
+                          painter: ZeepPainter(
+                            pose: app.anim.pose,
+                            time: app.anim.time,
+                            ripples: app.haptics.ripples(app.time),
+                            reduceMotion: app.reduceMotion,
+                            outfit: app.wardrobe.outfit,
+                            growth: app.wardrobe.growth,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // speech bubble
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 28),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3EFEA),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Text(
+                        l.greeting,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 14, color: Color(0xFF6A6560), height: 1.4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const SizedBox(
+                    height: 10,
+                    width: double.infinity,
+                    child: CustomPaint(painter: _WavyDivider()),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    l.howLong,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: ZeepColors.text),
+                  ),
+                  const SizedBox(height: 4),
+                  PopupMenuButton<int>(
+                    tooltip: l.sessionLength,
+                    initialValue: s.sessionMinutes,
+                    onSelected: (m) => s.update((x) => x.sessionMinutes = m),
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    itemBuilder: (_) => [
+                      for (final m in durationPresets) PopupMenuItem(value: m, child: Text(l.minutes(m))),
+                    ],
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${s.sessionMinutes.toString().padLeft(2, '0')}:00',
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                              color: ZeepColors.text,
+                              fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                          const Icon(Icons.keyboard_arrow_down_rounded, color: ZeepColors.text),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 52),
+                    child: ZeepSlider(
+                      value: s.sessionMinutes,
+                      min: 1,
+                      max: maxSessionMinutes,
+                      semanticLabel: l.sessionLength,
+                      onChanged: (v) => s.update((x) => x.sessionMinutes = v, persist: false),
+                      onChangeEnd: (_) => s.save(),
+                    ),
+                  ),
+                  LinkButton(
+                    icon: Icons.menu_book_outlined,
+                    label: l.howItWorks,
+                    onTap: () => showInstructionsSheet(context),
+                  ),
+                  const SizedBox(height: 8),
+                  const Divider(height: 1, color: Color(0xFFE9ECEF)),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: FilledButton(
+                        onPressed: app.startSession,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: ZeepColors.mint,
+                          foregroundColor: ZeepColors.mintDark,
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                        ),
+                        child: Text(l.start, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 52),
-            child: ZeepSlider(
-              value: s.sessionMinutes,
-              min: 1,
-              max: maxSessionMinutes,
-              semanticLabel: l.sessionLength,
-              onChanged: (v) => s.update((x) => x.sessionMinutes = v, persist: false),
-              onChangeEnd: (_) => s.save(),
-            ),
-          ),
-          LinkButton(icon: Icons.menu_book_outlined, label: l.howItWorks, onTap: () => showInstructionsSheet(context)),
-          const SizedBox(height: 8),
-          const Divider(height: 1, color: Color(0xFFE9ECEF)),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: FilledButton(
-                onPressed: app.startSession,
-                style: FilledButton.styleFrom(
-                  backgroundColor: ZeepColors.mint,
-                  foregroundColor: ZeepColors.mintDark,
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-                ),
-                child: Text(l.start, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
