@@ -4,19 +4,42 @@
 /// Where an item sits on Zeep. One item per category, so at most 4 at once.
 enum OutfitSlot { sprout, face, head, friend }
 
+/// 28 items in unlock order. Approved 2026-11-08 ("Zeep wardrobe" and
+/// "Zeep flower garden" decks): unlocked by total days practised (days with
+/// at least one saved session, not necessarily in a row).
 enum OutfitItem {
   sproutBow(OutfitSlot.sprout, 1),
   roundGlasses(OutfitSlot.face, 3),
   flowerCrown(OutfitSlot.head, 5),
   beanie(OutfitSlot.head, 7),
   butterfly(OutfitSlot.friend, 10),
-  sproutFlower(OutfitSlot.sprout, 14),
+  ladybug(OutfitSlot.sprout, 14),
   cloud(OutfitSlot.friend, 21),
-  sleepCap(OutfitSlot.head, 30);
+  sleepCap(OutfitSlot.head, 30),
+  heartGlasses(OutfitSlot.face, 35),
+  mushroomHat(OutfitSlot.head, 40),
+  bee(OutfitSlot.friend, 45),
+  dewDrop(OutfitSlot.sprout, 50),
+  catEars(OutfitSlot.head, 60),
+  starStickers(OutfitSlot.face, 70),
+  skyFish(OutfitSlot.friend, 80),
+  strawHat(OutfitSlot.head, 90),
+  windChime(OutfitSlot.sprout, 100),
+  rainbowGlasses(OutfitSlot.face, 120),
+  bird(OutfitSlot.friend, 140),
+  goldLeafCrown(OutfitSlot.head, 150),
+  firefly(OutfitSlot.friend, 180),
+  lantern(OutfitSlot.sprout, 200),
+  wizardHat(OutfitSlot.head, 220),
+  catEyeGlasses(OutfitSlot.face, 240),
+  crescentMoon(OutfitSlot.friend, 270),
+  rainbowRibbon(OutfitSlot.sprout, 300),
+  halo(OutfitSlot.head, 330),
+  lotusCrown(OutfitSlot.head, 365);
 
   final OutfitSlot slot;
 
-  /// Best streak (days in a row) needed to unlock this item.
+  /// Total practice days needed to unlock this item.
   final int unlockDays;
   const OutfitItem(this.slot, this.unlockDays);
 
