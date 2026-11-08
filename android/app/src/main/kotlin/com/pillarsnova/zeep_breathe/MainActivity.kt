@@ -59,6 +59,7 @@ class MainActivity : FlutterActivity() {
             @Suppress("DEPRECATION") v.vibrate(when (name) {
                 "exhale" -> 120L
                 "edgeIn" -> 15L
+                "bloom" -> 110L
                 else -> 60L
             })
             return
@@ -73,6 +74,10 @@ class MainActivity : FlutterActivity() {
             // Zeep Balance edge pulses
             "edgeOut" -> VibrationEffect.createOneShot(70, if (amp) 100 else VibrationEffect.DEFAULT_AMPLITUDE)
             "edgeIn" -> VibrationEffect.createOneShot(15, if (amp) 80 else VibrationEffect.DEFAULT_AMPLITUDE)
+            // two soft pulses, the second stronger and longer (a petal opening)
+            "bloom" -> VibrationEffect.createWaveform(
+                longArrayOf(0, 60, 100, 110),
+                intArrayOf(0, if (amp) 90 else 255, 0, if (amp) 130 else 255), -1)
             else -> VibrationEffect.createOneShot(90, if (amp) 115 else VibrationEffect.DEFAULT_AMPLITUDE)
         }
         v.vibrate(effect) // repeat = -1: never loops

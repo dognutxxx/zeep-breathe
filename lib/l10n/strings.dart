@@ -87,6 +87,7 @@ class S {
     HapticPattern.confirm => _('vibration on', 'เปิดการสั่น'),
     HapticPattern.edgeOut => _('left the circle', 'ออกนอกวง'),
     HapticPattern.edgeIn => _('back in the circle', 'กลับเข้าวง'),
+    HapticPattern.bloom => _('bloom', 'ดอกบาน'),
   };
   String get sessionComplete => _('Session complete', 'ฝึกครบแล้ว');
   String sessionSummary(int breaths, int mins) =>
@@ -385,7 +386,17 @@ class S {
   String get leafGrew => _('A new leaf grew', 'ใบใหม่งอกแล้ว');
   String get bloomedTitle => _('It bloomed!', 'ดอกบานแล้ว!');
   String bloomedDetail(int level, String flower) =>
-      _('Level $level · you got a $flower', 'ขึ้นเลเวล $level · ได้ดอก$flower');
+      _('Level $level · you got a $flower', 'ขึ้นเลเวล $level · ได้${_withDok(flower)}');
+
+  /// Thai flower names read "ดอก…"; some already start with it (ดอกบัว).
+  String _withDok(String name) => !th || name.startsWith('ดอก') ? name : 'ดอก$name';
+
+  // ---------------------------------------------------------------- card L (bloom = level up)
+  String flowerTitle(FlowerKind f) => th ? _withDok(f.nameTh) : f.nameEn;
+  String get flowerNew => _("A new flower in Zeep's garden", 'ดอกใหม่ในสวนของ Zeep');
+  String flowerAgain(FlowerKind f, int n) =>
+      _('${f.nameEn} number $n in the garden', '${_withDok(f.nameTh)}ดอกที่ $n ในสวน');
+  String get next => _('Next', 'ต่อไป');
   String get seeGarden => _('See the garden', 'ดูในสวน');
   String get dailyLimit =>
       _('The sprout grew 3 times today. More tomorrow!', 'วันนี้ต้นอ่อนโตครบ 3 ครั้งแล้ว พรุ่งนี้มาต่อนะ');

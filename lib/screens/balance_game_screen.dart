@@ -767,9 +767,8 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
                   FilledButton(
                     onPressed: () {
                       final nav = Navigator.of(context);
-                      final items = app.wardrobe.takePendingNewItems();
                       nav.pop();
-                      if (items.isNotEmpty) showNewItemCards(nav.context, app, items);
+                      showGrowthCards(nav.context, app);
                     },
                     style: FilledButton.styleFrom(
                       backgroundColor: ZeepColors.blue,

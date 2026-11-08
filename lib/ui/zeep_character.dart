@@ -267,7 +267,12 @@ void drawZeep(
       // the flower sits on a short stalk above the two sprout leaves
       final fc = tip + Offset(0, -13 * s * f.size);
       p.drawLine(tip, fc, _stroke(ZeepColors.ink, 2.2 * s));
-      drawBloom(p, f, fc, 1.5 * s * f.size);
+      final k = 1.5 * s * f.size;
+      if (growth.open >= 1 && growth.colour >= 1 && growth.rock == 0) {
+        drawBloom(p, f, fc, k);
+      } else {
+        drawGrowingBloom(p, f, fc, k, growth);
+      }
     }
   }
 

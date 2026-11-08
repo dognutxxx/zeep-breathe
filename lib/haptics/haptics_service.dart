@@ -18,6 +18,9 @@ enum HapticPattern {
 
   /// Zeep Balance: Zeep is back in the circle (a very short tick).
   edgeIn,
+
+  /// Card L: a flower bloomed (two soft pulses, the second stronger).
+  bloom,
 }
 
 class Pulse {
@@ -33,6 +36,7 @@ extension HapticPatternInfo on HapticPattern {
     HapticPattern.confirm => const [Pulse(0, 0.03, 0.4, 0.6)],
     HapticPattern.edgeOut => const [Pulse(0, 0.07, 0.4, 0.15)],
     HapticPattern.edgeIn => const [Pulse(0, 0.015, 0.3, 0.7)],
+    HapticPattern.bloom => const [Pulse(0, 0.06, 0.35, 0.2), Pulse(0.16, 0.11, 0.5, 0.25)],
   };
 
   String get label => switch (this) {
@@ -42,6 +46,7 @@ extension HapticPatternInfo on HapticPattern {
     HapticPattern.confirm => 'vibration on',
     HapticPattern.edgeOut => 'left the circle',
     HapticPattern.edgeIn => 'back in the circle',
+    HapticPattern.bloom => 'bloom',
   };
 
   /// Name understood by the native side.
@@ -52,6 +57,7 @@ extension HapticPatternInfo on HapticPattern {
     HapticPattern.confirm => 'confirm',
     HapticPattern.edgeOut => 'edgeOut',
     HapticPattern.edgeIn => 'edgeIn',
+    HapticPattern.bloom => 'bloom',
   };
 }
 

@@ -62,6 +62,9 @@ class WardrobeController extends ChangeNotifier {
   /// the session) so "Again" before "Done" does not lose them.
   final List<OutfitItem> _pendingNew = [];
 
+  /// The latest bloom not yet celebrated on card L.
+  GrowthEvent? _pendingBloom;
+
   /// Existing users get one summary card the first time (decision 3).
   bool summaryPending = false;
 
@@ -172,7 +175,16 @@ class WardrobeController extends ChangeNotifier {
     final newItems = unlocked.where((i) => !unlockedBefore.contains(i)).toList();
     _pendingNew.addAll(newItems);
     _changed(grown: grew);
-    return GrowthEvent(before: before, after: garden, grew: grew, dailyLimit: limit, newItems: newItems);
+    final e = GrowthEvent(before: before, after: garden, grew: grew, dailyLimit: limit, newItems: newItems);
+    if (e.bloomed) _pendingBloom = e;
+    return e;
+  }
+
+  /// The bloom for card L, if one has not been shown yet; clears it.
+  GrowthEvent? takePendingBloom() {
+    final e = _pendingBloom;
+    _pendingBloom = null;
+    return e;
   }
 
   /// Items for card N that have not been shown yet; clears the list.

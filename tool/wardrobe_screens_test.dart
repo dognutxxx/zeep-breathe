@@ -1,5 +1,5 @@
-// Headless screenshots of the wardrobe (W, W.2), the bloom strip (S.9), the
-// new-item card (N) and the summary card, in English and Thai. Uses Windows'
+// Headless screenshots of the wardrobe (W, W.2), the bloom strip (S.9), card
+// L (level up), the new-item card (N) and the summary card, in English and Thai. Uses Windows'
 // Leelawadee UI font for both, since Roboto has no Thai glyphs.
 //   flutter test tool/wardrobe_screens_test.dart --update-goldens
 
@@ -65,7 +65,11 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
   expect(app.lastGrowth!.bloomed, isTrue);
   expect(app.lastGrowth!.newItems, [OutfitItem.sleepCap]);
   await shot('screens/${p}32_finished_bloom.png');
+  // card L (the flower opens), then card N
   await t.tap(find.text(s.done));
+  await advance(t, 3.6);
+  await shot('screens/${p}35_level_up.png');
+  await t.tap(find.text(s.next));
   await advance(t, 0.6);
   await shot('screens/${p}33_new_item.png');
   await t.tap(find.text(s.later));

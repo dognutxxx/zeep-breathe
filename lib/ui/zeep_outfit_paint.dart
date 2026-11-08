@@ -915,3 +915,89 @@ Float64List _rotateAt(Offset c, double ang) {
   final cs = math.cos(ang), sn = math.sin(ang);
   return Float64List.fromList([cs, sn, 0, 0, -sn, cs, 0, 0, 0, 0, 1, 0, c.dx, c.dy, 0, 1]);
 }
+
+const _budGrey = Color(0xFFE6E0DA);
+
+/// The flower while it opens on card L: a grey bud that swells, then petals
+/// that grow out and take their colour. Same shapes as [drawBloom].
+void drawGrowingBloom(Canvas p, FlowerKind kind, Offset c, double k, SproutGrowth g) {
+  p.save();
+  p.translate(c.dx, c.dy);
+  if (g.rock != 0) {
+    // rock around the bottom of the flower (where the stalk joins)
+    p.translate(0, 6 * k);
+    p.rotate(g.rock);
+    p.translate(0, -6 * k);
+  }
+  final open = g.open.clamp(0.0, 1.0);
+  if (open < 1) {
+    // closed bud with two green sepals
+    final b = g.budScale * (1 - open);
+    if (b > 0.01) {
+      _ellipse(
+        p,
+        Offset(-2.2 * k * b, 2.4 * k * b),
+        2.2 * k * b,
+        1.2 * k * b,
+        0.6,
+        const Color(0xFFB5E3C2),
+        ZeepColors.ink,
+        0.8 * k,
+      );
+      _ellipse(
+        p,
+        Offset(2.2 * k * b, 2.4 * k * b),
+        2.2 * k * b,
+        1.2 * k * b,
+        -0.6,
+        const Color(0xFFB5E3C2),
+        ZeepColors.ink,
+        0.8 * k,
+      );
+      _ellipse(
+        p,
+        Offset.zero,
+        3.2 * k * b,
+        4.4 * k * b,
+        0,
+        Color.lerp(_budGrey, kind.petal, g.colour * 0.4)!,
+        ZeepColors.ink,
+        0.9 * k,
+      );
+    }
+  }
+  if (open > 0) {
+    // petals grow out from the middle with a slight turn
+    p.rotate(-0.17 * (1 - open));
+    p.scale(open);
+    final t = g.colour.clamp(0.0, 1.0);
+    Color tint(Color c) => Color.lerp(_budGrey, c, t)!;
+    final shown = FlowerKind(
+      kind.id,
+      kind.nameTh,
+      kind.nameEn,
+      style: kind.style,
+      petals: kind.petals,
+      shape: kind.shape,
+      petal: tint(kind.petal),
+      center: tint(kind.center),
+      inner: kind.inner == null ? null : tint(kind.inner!),
+      size: kind.size,
+    );
+    drawBloom(p, shown, Offset.zero, k);
+  }
+  p.restore();
+}
+
+/// Where the worn flower sits (centre and scale) for a still Zeep drawn with
+/// reduceMotion at [center] and scale [s]; card L draws its glow around it.
+({Offset centre, double k}) flowerAnchor(Offset center, double s, Pose pose, SproutGrowth g) {
+  final f = g.flower;
+  final br = pose.breath.clamp(-0.1, 1.1);
+  final cy = center.dy - br * 4 * s;
+  final b = 52 * s * (1 + 0.07 * br);
+  final grown = g.leaves * 6.0 + (f != null ? 2.0 : 0.0);
+  final tip = Offset(center.dx, cy - b - (15 + 4 * br + grown) * s);
+  final size = f?.size ?? 1;
+  return (centre: tip + Offset(0, -13 * s * size), k: 1.5 * s * size);
+}

@@ -10,6 +10,7 @@ import '../ui/zeep_colors.dart';
 import '../wardrobe/flowers.dart';
 import '../wardrobe/outfits.dart';
 import '../wardrobe/wardrobe_controller.dart';
+import 'bloom_card.dart';
 import 'wardrobe_screen.dart';
 
 /// T1.9: opens the wardrobe; a red dot while something new is unseen.
@@ -249,4 +250,21 @@ class _ZeepDialog extends StatelessWidget {
       ),
     );
   }
+}
+
+/// After "Done" on the finish card or the game results: card L if a flower
+/// bloomed, then card N for each new item. Pass the navigator's context (the
+/// finish card itself is gone by then).
+Future<void> showGrowthCards(BuildContext context, AppController app) async {
+  final bloom = app.wardrobe.takePendingBloom();
+  final items = app.wardrobe.takePendingNewItems();
+  if (bloom != null) {
+    final choice = await showBloomCard(context, app, bloom);
+    if (!context.mounted) return;
+    if (choice == BloomChoice.garden) {
+      openWardrobe(context, app, tab: 1);
+      return;
+    }
+  }
+  if (items.isNotEmpty && context.mounted) await showNewItemCards(context, app, items);
 }

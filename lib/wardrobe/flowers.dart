@@ -145,7 +145,19 @@ class SproutGrowth {
 
   /// The flower Zeep wears on the sprout tip, if any.
   final FlowerKind? flower;
-  const SproutGrowth({this.leaves = 0, this.flower});
+
+  /// Bloom animation on card L only: 0 = a closed grey bud, 1 = open.
+  final double open;
+
+  /// 0 = petals still grey, 1 = the flower's own colours.
+  final double colour;
+
+  /// Size of the bud before it opens (it swells like an in-breath).
+  final double budScale;
+
+  /// Gentle rock of the flower around its stalk, in radians.
+  final double rock;
+  const SproutGrowth({this.leaves = 0, this.flower, this.open = 1, this.colour = 1, this.budScale = 1, this.rock = 0});
   static const none = SproutGrowth();
   bool get isNone => leaves == 0 && flower == null;
 }

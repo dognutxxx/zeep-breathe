@@ -354,11 +354,10 @@ class _FinishedCard extends StatelessWidget {
                     Expanded(
                       child: FilledButton(
                         onPressed: () {
-                          // this card goes away with the session: show N from the navigator
+                          // this card goes away with the session: show L and N from the navigator
                           final nav = Navigator.of(context);
-                          final items = app.wardrobe.takePendingNewItems();
                           app.stopSession();
-                          if (items.isNotEmpty) showNewItemCards(nav.context, app, items);
+                          showGrowthCards(nav.context, app);
                         },
                         style: FilledButton.styleFrom(
                           backgroundColor: ZeepColors.mint,
