@@ -11,6 +11,7 @@ import '../ui/widgets.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
 import 'share_screen.dart';
+import 'wardrobe_cards.dart';
 import 'sheets.dart';
 
 String fmtClock(double secs) {
@@ -66,6 +67,8 @@ class SessionScreen extends StatelessWidget {
                       time: app.anim.time,
                       ripples: app.haptics.ripples(app.time),
                       reduceMotion: app.reduceMotion,
+                      outfit: app.wardrobe.outfit,
+                      growth: app.wardrobe.growth,
                     ),
                   ),
                 ),
@@ -125,7 +128,13 @@ class SessionScreen extends StatelessWidget {
                   const SizedBox(width: 16),
                   ControlButton(
                     tooltip: l.stop,
-                    onTap: app.stopSession,
+                    onTap: () {
+                      // a session stopped after 30 s is saved and may bloom or
+                      // unlock something: same cards as "Done"
+                      final nav = Navigator.of(context);
+                      app.stopSession();
+                      showGrowthCards(nav.context, app);
+                    },
                     icon: const Icon(Icons.stop_rounded, color: Color(0xFF4E4A48), size: 28),
                   ),
                   const SizedBox(width: 16),
@@ -309,7 +318,8 @@ class _FinishedCard extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 8),
+                GrowthStrip(app: app, event: app.lastGrowth),
+                const SizedBox(height: 4),
                 // Community phase 1: share this session as a picture card
                 TextButton.icon(
                   onPressed: () {
@@ -349,7 +359,12 @@ class _FinishedCard extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton(
-                        onPressed: app.stopSession,
+                        onPressed: () {
+                          // this card goes away with the session: show L and N from the navigator
+                          final nav = Navigator.of(context);
+                          app.stopSession();
+                          showGrowthCards(nav.context, app);
+                        },
                         style: FilledButton.styleFrom(
                           backgroundColor: ZeepColors.mint,
                           foregroundColor: ZeepColors.mintDark,

@@ -108,6 +108,7 @@ final class ZeepHaptics {
     // Zeep Balance edge pulses
     case "edgeOut": pulses = [(0, 0.07, 0.4, 0.15)]
     case "edgeIn": pulses = [(0, 0.015, 0.3, 0.7)]
+    case "bloom": pulses = [(0, 0.06, 0.35, 0.2), (0.16, 0.11, 0.5, 0.25)]
     default: pulses = [(0, 0.09, 0.45, 0.2)]
     }
     let events = pulses.map { at, dur, intensity, sharpness in

@@ -9,6 +9,8 @@ import '../breathing/breathing_engine.dart';
 import '../game/balance_game.dart';
 import '../haptics/haptics_service.dart';
 import '../share/share_card.dart';
+import '../wardrobe/flowers.dart';
+import '../wardrobe/outfits.dart';
 
 class S {
   final bool th;
@@ -85,6 +87,7 @@ class S {
     HapticPattern.confirm => _('vibration on', 'เปิดการสั่น'),
     HapticPattern.edgeOut => _('left the circle', 'ออกนอกวง'),
     HapticPattern.edgeIn => _('back in the circle', 'กลับเข้าวง'),
+    HapticPattern.bloom => _('bloom', 'ดอกบาน'),
   };
   String get sessionComplete => _('Session complete', 'ฝึกครบแล้ว');
   String sessionSummary(int breaths, int mins) =>
@@ -317,4 +320,96 @@ class S {
 
   /// Thai shows the Buddhist-era year (2026 -> 2569).
   String monthYear(DateTime m) => '${monthNames[m.month - 1]} ${th ? m.year + 543 : m.year}';
+
+  // ---------------------------------------------------------------- wardrobe (W, N, S.9)
+  String get wardrobe => _("Zeep's wardrobe", 'ตู้เสื้อผ้า Zeep');
+  String get openWardrobe => _('Open wardrobe', 'เปิดตู้เสื้อผ้า');
+  String get tabOutfits => _('Outfits', 'ของแต่งตัว');
+  String get tabGarden => _('Flower garden', 'สวนดอกไม้');
+  String get wearNone => _('None', 'ไม่ใส่');
+  String get noFlower => _('No flower', 'ไม่ใส่ดอก');
+  String get wearing => _('wearing', 'ใส่อยู่');
+  String get locked => _('locked', 'ยังล็อก');
+  String get newItem => _('new', 'ใหม่');
+  String daysLeft(int n) => _(n == 1 ? '1 more day' : '$n more days', 'อีก $n วัน');
+  String practiceDays(int n) => _(n == 1 ? 'Practised on 1 day' : 'Practised on $n days', 'ฝึกมาแล้ว $n วัน');
+  String get outfitsHint =>
+      _('A new item unlocks as your practice days add up.', 'ฝึกครบจำนวนวันแล้วได้ของใหม่ ไม่ต้องฝึกติดกัน');
+  String slotName(OutfitSlot s) => switch (s) {
+    OutfitSlot.sprout => _('Sprout', 'ต้นอ่อน'),
+    OutfitSlot.face => _('Face', 'หน้า'),
+    OutfitSlot.head => _('Head', 'หัว'),
+    OutfitSlot.friend => _('Friend', 'เพื่อน'),
+  };
+  String itemName(OutfitItem i) => switch (i) {
+    OutfitItem.sproutBow => _('Sprout bow', 'โบว์ผูกก้าน'),
+    OutfitItem.roundGlasses => _('Round glasses', 'แว่นกลม'),
+    OutfitItem.flowerCrown => _('Flower crown', 'มงกุฎดอกไม้'),
+    OutfitItem.beanie => _('Beanie', 'หมวกไหมพรม'),
+    OutfitItem.butterfly => _('Butterfly', 'ผีเสื้อ'),
+    OutfitItem.ladybug => _('Ladybug', 'เต่าทองบนใบ'),
+    OutfitItem.cloud => _('Little cloud', 'เมฆน้อย'),
+    OutfitItem.sleepCap => _('Sleep cap', 'หมวกนอน'),
+    OutfitItem.heartGlasses => _('Heart glasses', 'แว่นหัวใจ'),
+    OutfitItem.mushroomHat => _('Mushroom hat', 'หมวกเห็ด'),
+    OutfitItem.bee => _('Little bee', 'ผึ้งน้อย'),
+    OutfitItem.dewDrop => _('Dewdrop', 'หยดน้ำค้าง'),
+    OutfitItem.catEars => _('Cat ears', 'ที่คาดผมหูแมว'),
+    OutfitItem.starStickers => _('Star stickers', 'สติกเกอร์ดาวที่แก้ม'),
+    OutfitItem.skyFish => _('Sky fish', 'ปลาลอยฟ้า'),
+    OutfitItem.strawHat => _('Straw hat', 'หมวกฟาง'),
+    OutfitItem.windChime => _('Wind chime', 'กระดิ่งลม'),
+    OutfitItem.rainbowGlasses => _('Rainbow glasses', 'แว่นสายรุ้ง'),
+    OutfitItem.bird => _('Little bird', 'นกน้อย'),
+    OutfitItem.goldLeafCrown => _('Gold leaf crown', 'มงกุฎใบไม้ทอง'),
+    OutfitItem.firefly => _('Firefly', 'หิ่งห้อย'),
+    OutfitItem.lantern => _('Tiny lantern', 'โคมไฟจิ๋ว'),
+    OutfitItem.wizardHat => _('Star wizard hat', 'หมวกพ่อมดดาว'),
+    OutfitItem.catEyeGlasses => _('Cat-eye glasses', 'แว่นตาแมว'),
+    OutfitItem.crescentMoon => _('Crescent moon', 'ดวงจันทร์เสี้ยว'),
+    OutfitItem.rainbowRibbon => _('Rainbow ribbon', 'ริบบิ้นสายรุ้ง'),
+    OutfitItem.halo => _('Halo', 'วงแสงฮาโล'),
+    OutfitItem.lotusCrown => _('Golden lotus crown', 'มงกุฎบัวทองคำ'),
+  };
+  String flowerName(FlowerKind f) => th ? f.nameTh : f.nameEn;
+  String levelLeaves(int level, int leaves, int need) =>
+      _('Level $level · leaves $leaves/$need', 'เลเวล $level · ใบ $leaves/$need');
+  String stepsToBloom(int n) => n == 1
+      ? _('One more session and it blooms', 'ฝึกอีก 1 ครั้ง ดอกจะบาน')
+      : _('$n more sessions to bloom', 'ฝึกอีก $n ครั้ง ดอกจะบาน');
+  String get gardenHint => _(
+    'Each finished session grows a leaf (up to 3 a day). Tap a flower for Zeep to wear.',
+    'ฝึกจนจบ 1 ครั้ง ใบงอก 1 ใบ (วันละไม่เกิน 3) แตะดอกที่บานแล้วเพื่อให้ Zeep ใส่',
+  );
+  String levelN(int n) => _('Level $n', 'เลเวล $n');
+  String bloomCount(int n) => '×$n';
+  String get leafGrew => _('A new leaf grew', 'ใบใหม่งอกแล้ว');
+  String get bloomedTitle => _('It bloomed!', 'ดอกบานแล้ว!');
+  String bloomedDetail(int level, String flower) =>
+      _('Level $level · you got a $flower', 'ขึ้นเลเวล $level · ได้${_withDok(flower)}');
+
+  /// Thai flower names read "ดอก…"; some already start with it (ดอกบัว).
+  String _withDok(String name) => !th || name.startsWith('ดอก') ? name : 'ดอก$name';
+
+  // ---------------------------------------------------------------- card L (bloom = level up)
+  String flowerTitle(FlowerKind f) => th ? _withDok(f.nameTh) : f.nameEn;
+  String get flowerNew => _("A new flower in Zeep's garden", 'ดอกใหม่ในสวนของ Zeep');
+  String flowerAgain(FlowerKind f, int n) =>
+      _('${f.nameEn} number $n in the garden', '${_withDok(f.nameTh)}ดอกที่ $n ในสวน');
+  String get next => _('Next', 'ต่อไป');
+  String get seeGarden => _('See the garden', 'ดูในสวน');
+  String get dailyLimit =>
+      _('The sprout grew 3 times today. More tomorrow!', 'วันนี้ต้นอ่อนโตครบ 3 ครั้งแล้ว พรุ่งนี้มาต่อนะ');
+  String get newItemTitle => _('Something new for Zeep!', 'Zeep ได้ของใหม่!');
+  String newItemBody(String item, int days) => _(
+    days == 1 ? '$item · unlocked after 1 day of practice' : '$item · unlocked after $days days of practice',
+    '$item · ปลดล็อกเมื่อฝึกครบ $days วัน',
+  );
+  String get tryItOn => _('Try it on', 'ลองใส่เลย');
+  String get later => _('Later', 'ไว้ทีหลัง');
+  String get summaryTitle => _('Zeep has gifts for you', 'Zeep มีของรอคุณอยู่');
+  String summaryBody(int level, int items) => _(
+    'From the practice you have done so far: level $level and $items ${items == 1 ? 'item' : 'items'} unlocked.',
+    'จากที่ฝึกมาแล้ว: เลเวล $level และปลดล็อกของ $items ชิ้น',
+  );
 }

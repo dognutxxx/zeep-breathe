@@ -9,10 +9,15 @@
 // frame-exact with the timer.
 
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 
+import '../wardrobe/flowers.dart';
+import '../wardrobe/outfits.dart';
 import 'zeep_colors.dart';
+
+part 'zeep_outfit_paint.dart';
 
 const _tau = math.pi * 2;
 
@@ -170,7 +175,12 @@ void drawZeep(
   double shadowY,
   List<double> ripples, {
   bool reduceMotion = false,
+  Outfit outfit = Outfit.none,
+  SproutGrowth growth = SproutGrowth.none,
 }) {
+  // an empty or squashed box (e.g. a short screen): nothing to draw. Several
+  // loops below step by a multiple of s, so s must be positive.
+  if (!(s > 0) || !s.isFinite) return;
   final br = pose.breath.clamp(-0.1, 1.1);
   final float = reduceMotion ? 0.0 : math.sin(time * _tau / 3.8);
   final cx = center.dx;
@@ -236,12 +246,38 @@ void drawZeep(
   // sprout (behind the body top)
   final top = Offset(cx, cy - b * 0.97);
   final sway = reduceMotion ? 0.0 : math.sin(time * 1.7) * 2 * s;
-  final tip = Offset(cx + sway, cy - b - (15 + 4 * br) * s);
-  _quadLine(p, top, Offset(cx - 3 * s, (top.dy + tip.dy) * 0.5), tip, 2.2 * s, ZeepColors.ink);
+  // the stem gets a little taller for every grown leaf and for a flower
+  final tip = sproutTipAt(cx + sway, cy, b, s, br, growth);
+  final stemCtl = Offset(cx - 3 * s, (top.dy + tip.dy) * 0.5);
   final open = 0.55 + 0.25 * br + 0.1 * math.sin(time * 1.3);
-  const leaf = Color(0xFFB5E3C2);
-  _ellipse(p, tip + Offset(-7 * s, -1 * s), 8 * s, 4.2 * s, -open, leaf, ZeepColors.ink, 1.8 * s);
-  _ellipse(p, tip + Offset(6.5 * s, -2.5 * s), 7 * s, 3.8 * s, open * 0.9, leaf, ZeepColors.ink, 1.8 * s);
+  void sprout() {
+    _quadLine(p, top, stemCtl, tip, 2.2 * s, ZeepColors.ink);
+    const leaf = Color(0xFFB5E3C2);
+    // grown leaves along the stem, alternating sides, oldest lowest
+    final len = top.dy - tip.dy;
+    for (var i = 0; i < growth.leaves; i++) {
+      final t = ((11 + 6.0 * i) * s / len).clamp(0.0, 0.88);
+      final u = 1 - t;
+      final pt = top * (u * u) + stemCtl * (2 * u * t) + tip * (t * t);
+      final side = i.isEven ? 1.0 : -1.0;
+      _ellipse(p, pt + Offset(side * 5 * s, -1.5 * s), 5.5 * s, 3 * s, side * -0.5, leaf, ZeepColors.ink, 1.6 * s);
+    }
+    _ellipse(p, tip + Offset(-7 * s, -1 * s), 8 * s, 4.2 * s, -open, leaf, ZeepColors.ink, 1.8 * s);
+    _ellipse(p, tip + Offset(6.5 * s, -2.5 * s), 7 * s, 3.8 * s, open * 0.9, leaf, ZeepColors.ink, 1.8 * s);
+    final f = growth.flower;
+    if (f != null) {
+      // the flower sits on a short stalk above the two sprout leaves
+      final (centre: fc, k: k) = flowerOnTip(tip, s, f);
+      p.drawLine(tip, fc, _stroke(ZeepColors.ink, 2.2 * s));
+      if (growth.open >= 1 && growth.colour >= 1 && growth.rock == 0) {
+        drawBloom(p, f, fc, k);
+      } else {
+        drawGrowingBloom(p, f, fc, k, growth);
+      }
+    }
+  }
+
+  sprout();
 
   // body fill
   p.drawPath(body, _fill(ZeepColors.shell));
@@ -398,6 +434,18 @@ void drawZeep(
       p.drawLine(pos - Offset(0, r), pos + Offset(0, r), paint);
     }
   }
+
+  // ---- wardrobe: extra layers on top; the character itself is unchanged
+  if (!outfit.isEmpty) {
+    _drawOutfit(
+      p,
+      outfit,
+      _Geo(cx: cx, cy: cy, a: a, b: b, s: s, ey: ey, edx: edx, top: top, stemCtl: stemCtl, tip: tip),
+      time,
+      reduceMotion,
+      sprout,
+    );
+  }
 }
 
 /// Paints Zeep inside a box. The design is laid out for a 395-pt-wide phone;
@@ -407,15 +455,35 @@ class ZeepPainter extends CustomPainter {
   final double time;
   final List<double> ripples;
   final bool reduceMotion;
+  final Outfit outfit;
 
-  ZeepPainter({required this.pose, required this.time, required this.ripples, this.reduceMotion = false});
+  ZeepPainter({
+    required this.pose,
+    required this.time,
+    required this.ripples,
+    this.reduceMotion = false,
+    this.outfit = Outfit.none,
+    this.growth = SproutGrowth.none,
+  });
+  final SproutGrowth growth;
 
   @override
   void paint(Canvas canvas, Size size) {
     // ~1.35x the desktop size on a 393-pt iPhone; shrinks on short screens
     final s = math.min(size.width / 290, size.height / 225);
     final center = Offset(size.width / 2, size.height * 0.52);
-    drawZeep(canvas, center, s, pose, time, center.dy + 92 * s, ripples, reduceMotion: reduceMotion);
+    drawZeep(
+      canvas,
+      center,
+      s,
+      pose,
+      time,
+      center.dy + 92 * s,
+      ripples,
+      reduceMotion: reduceMotion,
+      outfit: outfit,
+      growth: growth,
+    );
   }
 
   @override
@@ -487,7 +555,22 @@ class ZeepAvatar extends StatelessWidget {
   final double size;
   final double breath;
   final double hold;
-  const ZeepAvatar({super.key, required this.tint, this.size = 64, this.breath = 0.55, this.hold = 0});
+  final Outfit outfit;
+  final SproutGrowth growth;
+  const ZeepAvatar({
+    super.key,
+    required this.tint,
+    this.size = 64,
+    this.breath = 0.55,
+    this.hold = 0,
+    this.outfit = Outfit.none,
+    this.growth = SproutGrowth.none,
+    this.roomy = false,
+  });
+
+  /// Shrink Zeep a little when it wears an outfit so hats and friends fit
+  /// inside the box (menus and results; not on the game board).
+  final bool roomy;
 
   @override
   Widget build(BuildContext context) {
@@ -495,7 +578,7 @@ class ZeepAvatar extends StatelessWidget {
       child: SizedBox(
         width: size,
         height: size,
-        child: CustomPaint(painter: _AvatarPainter(tint, breath, hold)),
+        child: CustomPaint(painter: _AvatarPainter(tint, breath, hold, outfit, growth, roomy)),
       ),
     );
   }
@@ -504,12 +587,17 @@ class ZeepAvatar extends StatelessWidget {
 class _AvatarPainter extends CustomPainter {
   final Color tint;
   final double breath, hold;
-  _AvatarPainter(this.tint, this.breath, this.hold);
+  final Outfit outfit;
+  final SproutGrowth growth;
+  final bool roomy;
+  _AvatarPainter(this.tint, this.breath, this.hold, this.outfit, this.growth, this.roomy);
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Zeep spans ~190 x 175 design units (arms, sprout, legs, shadow)
-    final s = size.shortestSide / 160;
+    // Zeep spans ~190 x 175 design units (arms, sprout, legs, shadow); with
+    // an outfit, hats and friends need more room around it
+    final dressed = !outfit.isEmpty || !growth.isNone;
+    final s = size.shortestSide / (dressed && roomy ? 200 : 160);
     final pose = Pose(
       breath: breath,
       armLift: breath,
@@ -529,9 +617,17 @@ class _AvatarPainter extends CustomPainter {
       size.height * 0.52 + 75 * s,
       const [],
       reduceMotion: true,
+      outfit: outfit,
+      growth: growth,
     );
   }
 
   @override
-  bool shouldRepaint(covariant _AvatarPainter old) => old.tint != tint || old.breath != breath || old.hold != hold;
+  bool shouldRepaint(covariant _AvatarPainter old) =>
+      old.tint != tint ||
+      old.breath != breath ||
+      old.hold != hold ||
+      old.outfit != outfit ||
+      old.growth.leaves != growth.leaves ||
+      old.growth.flower != growth.flower;
 }

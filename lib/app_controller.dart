@@ -14,6 +14,7 @@ import 'haptics/haptics_service.dart';
 import 'history/session_history.dart';
 import 'settings/settings_controller.dart';
 import 'ui/zeep_character.dart';
+import 'wardrobe/wardrobe_controller.dart';
 
 enum Screen { setup, session }
 
@@ -25,6 +26,7 @@ class AppController extends ChangeNotifier {
   final HapticsService haptics;
   final MusicService music;
   final SessionHistory history;
+  final WardrobeController wardrobe;
   late final BreathingEngine engine;
   final Animator anim = Animator();
 
@@ -43,12 +45,22 @@ class AppController extends ChangeNotifier {
 
   /// Streak right after the last finished session (for the finish card).
   int lastStreak = 0;
+
+  /// What the last saved session grew or unlocked (S.9, card N); null when
+  /// the last session was too short to save.
+  GrowthEvent? lastGrowth;
   double time = 0;
   bool reduceMotion = false;
   bool _wakelock = false;
 
-  AppController({required this.settings, required this.haptics, required this.music, SessionHistory? history})
-    : history = history ?? SessionHistory() {
+  AppController({
+    required this.settings,
+    required this.haptics,
+    required this.music,
+    SessionHistory? history,
+    WardrobeController? wardrobe,
+  }) : history = history ?? SessionHistory(),
+       wardrobe = wardrobe ?? WardrobeController() {
     engine = BreathingEngine(settings.durations, settings.sessionMinutes * 60.0);
     haptics.enabled = settings.vibration;
     settings.addListener(_onSettingsChanged);
@@ -129,15 +141,15 @@ class AppController extends ChangeNotifier {
   void _log({required bool completed}) {
     if (_logged) return;
     _logged = true;
-    final saved = history.add(
-      SessionRecord(
-        start: _sessionStart,
-        seconds: engine.sessionElapsed.round(),
-        breaths: engine.breaths,
-        exercise: exerciseId(engine.durations),
-        completed: completed,
-      ),
+    final record = SessionRecord(
+      start: _sessionStart,
+      seconds: engine.sessionElapsed.round(),
+      breaths: engine.breaths,
+      exercise: exerciseId(engine.durations),
+      completed: completed,
     );
+    final saved = history.add(record);
+    lastGrowth = saved ? wardrobe.onSessionSaved(record) : null;
     lastStreak = history.stats(clock()).currentStreak;
     // a session was just saved: the Progress tab should show it, so the
     // calendar goes back to today. Short sessions are not saved, so a picked
@@ -161,16 +173,16 @@ class AppController extends ChangeNotifier {
     if (completed && score > settings.gameBest[level.index]) {
       settings.update((s) => s.gameBest = [...s.gameBest]..[level.index] = score);
     }
-    final saved = history.add(
-      SessionRecord(
-        start: start,
-        seconds: seconds,
-        breaths: 0,
-        exercise: gameHistoryId(level),
-        completed: completed,
-        score: score,
-      ),
+    final record = SessionRecord(
+      start: start,
+      seconds: seconds,
+      breaths: 0,
+      exercise: gameHistoryId(level),
+      completed: completed,
+      score: score,
     );
+    final saved = history.add(record);
+    lastGrowth = saved ? wardrobe.onSessionSaved(record) : null;
     lastStreak = history.stats(clock()).currentStreak;
     if (saved) {
       progressDay = null;

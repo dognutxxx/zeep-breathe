@@ -10,6 +10,8 @@ import '../ui/widgets.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
 import 'sheets.dart';
+import 'wardrobe_cards.dart';
+import 'wardrobe_screen.dart';
 
 class SetupScreen extends StatelessWidget {
   final AppController app;
@@ -40,6 +42,8 @@ class SetupScreen extends StatelessWidget {
                     style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: ZeepColors.text),
                   ),
                 ),
+                HangerButton(app: app),
+                const SizedBox(width: 8),
                 _CircleButton(
                   icon: Icons.settings_rounded,
                   tooltip: l.breathingSettings,
@@ -58,16 +62,25 @@ class SetupScreen extends StatelessWidget {
               _TrackChip(app: app),
             ],
           ),
-          // character (idle)
+          // character (idle); tap Zeep to open the wardrobe
           Expanded(
-            child: ExcludeSemantics(
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: ZeepPainter(
-                  pose: app.anim.pose,
-                  time: app.anim.time,
-                  ripples: app.haptics.ripples(app.time),
-                  reduceMotion: app.reduceMotion,
+            child: Semantics(
+              button: true,
+              label: l.openWardrobe,
+              excludeSemantics: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => openWardrobe(context, app),
+                child: CustomPaint(
+                  size: Size.infinite,
+                  painter: ZeepPainter(
+                    pose: app.anim.pose,
+                    time: app.anim.time,
+                    ripples: app.haptics.ripples(app.time),
+                    reduceMotion: app.reduceMotion,
+                    outfit: app.wardrobe.outfit,
+                    growth: app.wardrobe.growth,
+                  ),
                 ),
               ),
             ),

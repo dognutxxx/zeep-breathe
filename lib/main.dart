@@ -12,10 +12,12 @@ import 'screens/exercises_screen.dart';
 import 'screens/progress_screen.dart';
 import 'screens/session_screen.dart';
 import 'screens/setup_screen.dart';
+import 'screens/wardrobe_cards.dart';
 import 'settings/settings_controller.dart';
 import 'ui/beta_banner.dart';
 import 'ui/widgets.dart';
 import 'ui/zeep_colors.dart';
+import 'wardrobe/wardrobe_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,10 +29,18 @@ Future<void> main() async {
   final music = MusicService();
   final history = SessionHistory();
   await Future.wait([haptics.init(), music.init(), history.load()]);
+  final wardrobe = WardrobeController();
+  await wardrobe.load(history.records);
 
   runApp(
     ZeepBreatheApp(
-      controller: AppController(settings: settings, haptics: haptics, music: music, history: history),
+      controller: AppController(
+        settings: settings,
+        haptics: haptics,
+        music: music,
+        history: history,
+        wardrobe: wardrobe,
+      ),
     ),
   );
 }
@@ -73,6 +83,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // people who practised before the wardrobe existed: one summary card
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.app.wardrobe.summaryPending) showSummaryCard(context, widget.app);
+    });
     // One ticker drives engine, character, bar, label, haptics and music.
     _ticker = createTicker((elapsed) {
       final dt = (elapsed - _last).inMicroseconds / 1e6;
