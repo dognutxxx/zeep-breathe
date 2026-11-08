@@ -94,11 +94,46 @@ void main() {
     expect(exercises.firstWhere((e) => e.id == 'belly').phases, [Phase.inhale, Phase.exhale]);
   });
 
-  test('history names are localised; legacy names pass through', () {
+  test('history names are localised; legacy English names are mapped', () {
     expect(exerciseDisplayName('478', S.thai), 'หายใจแบบ 4-7-8');
     expect(exerciseDisplayName('478', S.en), '4-7-8 breathing');
     expect(exerciseDisplayName('default', S.thai), 'ค่าเริ่มต้น');
-    expect(exerciseDisplayName('Calm tide', S.en), 'Calm tide');
+    // saved before 1.2 as English names
+    expect(exerciseDisplayName('Calm tide', S.thai), 'ค่าเริ่มต้น');
+    expect(exerciseDisplayName('Box breathing', S.thai), 'หายใจสี่เหลี่ยม');
+    expect(exerciseDisplayName('4-7-8 Sleep', S.thai), 'หายใจแบบ 4-7-8');
+    expect(exerciseDisplayName('Custom', S.thai), 'กำหนดเอง');
+    expect(exerciseDisplayName('Morning wake', S.en), 'Custom');
+    // the same mapping drives the timeline colour
+    expect(historyExerciseId('Box breathing'), 'box');
+    expect(historyExerciseId('Calm tide'), 'default');
+    expect(historyExerciseId('4-7-8 Sleep'), '478');
+    expect(historyExerciseId('Balance'), 'custom');
+    expect(historyExerciseId('belly'), 'belly');
+    expect(SessionRecord.fromJson({'t': '2026-11-01T08:00:00.000', 's': 60})!.exercise, 'custom');
     expect(S.thai.monthYear(DateTime(2026, 11)), 'พฤศจิกายน 2569');
+  });
+
+  test('durations show minutes and seconds', () {
+    expect(S.en.duration(45), '45 s');
+    expect(S.en.duration(60), '1 min');
+    expect(S.en.duration(95), '1 min 35 s');
+    expect(S.thai.duration(95), '1 นาที 35 วิ');
+    expect(S.thai.duration(600), '10 นาที');
+  });
+
+  test('onDay returns only that day, earliest first', () {
+    final h = SessionHistory();
+    // ignore: invalid_use_of_visible_for_testing_member
+    h.seed([
+      rec(DateTime(2026, 11, 20, 21, 50), 600),
+      rec(DateTime(2026, 11, 19, 23, 59), 120),
+      rec(DateTime(2026, 11, 20, 7, 15), 300),
+      rec(DateTime(2026, 11, 21, 0, 0), 60),
+      rec(DateTime(2026, 11, 20, 12, 30), 95),
+    ]);
+    final day = h.onDay(DateTime(2026, 11, 20, 18));
+    expect(day.map((r) => r.start.hour), [7, 12, 21]);
+    expect(h.onDay(DateTime(2026, 11, 18)), isEmpty);
   });
 }

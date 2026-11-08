@@ -9,8 +9,7 @@ import '../ui/zeep_colors.dart';
 
 class ProgressScreen extends StatefulWidget {
   final AppController app;
-  final DateTime Function() clock;
-  const ProgressScreen({super.key, required this.app, this.clock = DateTime.now});
+  const ProgressScreen({super.key, required this.app});
 
   @override
   State<ProgressScreen> createState() => _ProgressScreenState();
@@ -19,19 +18,36 @@ class ProgressScreen extends StatefulWidget {
 class _ProgressScreenState extends State<ProgressScreen> {
   late DateTime _month;
 
-  /// Day shown in the timeline; null = today.
+  /// Day shown in the timeline; null = today. Both are mirrored in the
+  /// controller so switching tabs keeps them until the app closes.
   DateTime? _day;
+
+  void _setMonth(DateTime m) {
+    final now = widget.app.clock();
+    final current = m.year == now.year && m.month == now.month;
+    setState(() => _month = m);
+    widget.app.progressMonth = current ? null : m;
+  }
+
+  /// Picking today stores null, so "today" keeps following the real date even
+  /// if the app stays open past midnight.
+  void _setDay(DateTime d) {
+    final picked = d == dayOf(widget.app.clock()) ? null : d;
+    setState(() => _day = picked);
+    widget.app.progressDay = picked;
+  }
 
   @override
   void initState() {
     super.initState();
-    final now = widget.clock();
-    _month = DateTime(now.year, now.month);
+    final now = widget.app.clock();
+    _month = widget.app.progressMonth ?? DateTime(now.year, now.month);
+    _day = widget.app.progressDay;
   }
 
   @override
   Widget build(BuildContext context) {
-    final now = widget.clock();
+    final now = widget.app.clock();
     final h = widget.app.history;
     final st = h.stats(now);
     final l = S.of(context);
@@ -75,7 +91,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   children: [
                     IconButton(
                       tooltip: l.prevMonth,
-                      onPressed: () => setState(() => _month = DateTime(_month.year, _month.month - 1)),
+                      onPressed: () => _setMonth(DateTime(_month.year, _month.month - 1)),
                       icon: const Icon(Icons.chevron_left_rounded),
                     ),
                     Expanded(
@@ -89,19 +105,13 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       tooltip: l.nextMonth,
                       onPressed: (_month.year == now.year && _month.month == now.month)
                           ? null
-                          : () => setState(() => _month = DateTime(_month.year, _month.month + 1)),
+                          : () => _setMonth(DateTime(_month.year, _month.month + 1)),
                       icon: const Icon(Icons.chevron_right_rounded),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                _MonthGrid(
-                  month: _month,
-                  stats: st,
-                  today: today,
-                  selected: selected,
-                  onSelect: (d) => setState(() => _day = d),
-                ),
+                _MonthGrid(month: _month, stats: st, today: today, selected: selected, onSelect: _setDay),
                 const SizedBox(height: 10),
                 Text(
                   l.lastSevenDays(st.minutesThisWeek(now)),
@@ -387,8 +397,9 @@ class _TimelineEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = S.of(context);
-    final ex = exercises.where((e) => e.id == r.exercise).firstOrNull;
-    final tint = ex?.tint ?? (r.exercise == 'default' ? const Color(0xFFBDDEF7) : const Color(0xFFDCE3EC));
+    final id = historyExerciseId(r.exercise);
+    final ex = exercises.where((e) => e.id == id).firstOrNull;
+    final tint = ex?.tint ?? (id == 'default' ? const Color(0xFFBDDEF7) : const Color(0xFFDCE3EC));
     final time = '${r.start.hour.toString().padLeft(2, '0')}:${r.start.minute.toString().padLeft(2, '0')}';
     const lineColor = Color(0xFFD9E3EE);
     final status = r.completed ? l.completedLabel : l.stoppedEarly;
@@ -519,6 +530,12 @@ class _EmptyDay extends StatelessWidget {
             isToday ? l.noSessionsToday : l.noSessionsThisDay,
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 13.5, color: ZeepColors.textSoft),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            l.loggingRule,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, color: ZeepColors.textFaint),
           ),
           if (isToday) ...[
             const SizedBox(height: 8),

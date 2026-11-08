@@ -13,13 +13,17 @@ import 'package:zeep_breathe/l10n/strings.dart';
 import 'package:zeep_breathe/main.dart';
 import 'package:zeep_breathe/settings/settings_controller.dart';
 
+/// Every screenshot run uses this "now" (a Friday late in the month), so the
+/// images do not depend on the day the tests run.
+final fixedNow = DateTime(2026, 11, 20, 22, 30);
+
 Future<AppController> makeApp() async {
   // ignore: invalid_use_of_visible_for_testing_member
   SharedPreferences.setMockInitialValues({});
   final settings = SettingsController();
   await settings.load();
   final music = MusicService()..available = true; // not initialised: silent in tests
-  return AppController(settings: settings, haptics: HapticsService(), music: music);
+  return AppController(settings: settings, haptics: HapticsService(), music: music)..clock = () => fixedNow;
 }
 
 Future<void> advance(WidgetTester t, double seconds) async {
@@ -37,7 +41,7 @@ void phone(WidgetTester t) {
 }
 
 void seedHistory(AppController app) {
-  final now = DateTime.now();
+  final now = fixedNow;
   // (days ago, hour, minute, seconds, mode id, completed)
   // ignore: invalid_use_of_visible_for_testing_member
   app.history.seed([
@@ -69,7 +73,7 @@ void seedHistory(AppController app) {
 
 /// Taps a day number in the Progress calendar (days ago from today).
 Future<void> tapCalendarDay(WidgetTester t, int daysAgo) async {
-  final now = DateTime.now();
+  final now = fixedNow;
   final d = DateTime(now.year, now.month, now.day - daysAgo);
   final cell = find.widgetWithText(InkResponse, '${d.day}');
   await t.ensureVisible(cell.first);
@@ -118,22 +122,44 @@ Future<void> tabsFlow(WidgetTester t, String p, S s) async {
   await t.drag(find.byType(ListView), const Offset(0, -2000));
   await advance(t, 0.5);
   await shot('screens/${p}12_progress_scrolled.png');
-  // another day with two sessions, then a day with none (same month only)
-  final now = DateTime.now();
-  if (now.day > 5) {
-    await tapCalendarDay(t, 1);
-    await advance(t, 0.3);
-    await t.drag(find.byType(ListView), const Offset(0, -2000));
-    await advance(t, 0.3);
-    await shot('screens/${p}16_timeline_yesterday.png');
-    await tapCalendarDay(t, 5);
-    await advance(t, 0.3);
-    await t.drag(find.byType(ListView), const Offset(0, -2000));
-    await advance(t, 0.3);
-    await shot('screens/${p}17_timeline_empty_day.png');
-  }
+  // another day with two sessions, then a day with none
+  await tapCalendarDay(t, 1);
+  await advance(t, 0.3);
+  await t.drag(find.byType(ListView), const Offset(0, -2000));
+  await advance(t, 0.3);
+  await shot('screens/${p}16_timeline_yesterday.png');
+  await tapCalendarDay(t, 5);
+  await advance(t, 0.3);
+  await t.drag(find.byType(ListView), const Offset(0, -2000));
+  await advance(t, 0.3);
+  await shot('screens/${p}17_timeline_empty_day.png');
 
-  // finish a 1-minute session -> streak badge on the finish card
+  // the picked day survives a tab switch
+  await t.tap(find.text(s.tabBreathe).last);
+  await advance(t, 0.3);
+  await t.tap(find.text(s.tabProgress).last);
+  await advance(t, 0.3);
+  final picked = DateTime(fixedNow.year, fixedNow.month, fixedNow.day - 5);
+  expect(app.progressDay, picked);
+  await t.drag(find.byType(ListView), const Offset(0, -2000));
+  await advance(t, 0.3);
+  expect(find.text(s.dayHeading(picked)), findsOneWidget);
+
+  // the next morning: today has no sessions yet -> "Breathe now" button
+  app.clock = () => DateTime(fixedNow.year, fixedNow.month, fixedNow.day + 1, 8, 0);
+  app.progressDay = null;
+  app.setTab(HomeTab.breathe);
+  await advance(t, 0.2);
+  await t.tap(find.text(s.tabProgress).last);
+  await advance(t, 0.3);
+  await t.drag(find.byType(ListView), const Offset(0, -2000));
+  await advance(t, 0.3);
+  await shot('screens/${p}18_timeline_today_empty.png');
+  app.clock = () => fixedNow;
+
+  // finish a 1-minute session -> streak badge on the finish card; a picked
+  // day goes back to today once the session is saved
+  app.progressDay = DateTime(fixedNow.year, fixedNow.month, fixedNow.day - 3);
   app.settings.update((x) => x.sessionMinutes = 1, persist: false);
   app.setTab(HomeTab.breathe);
   app.startSession();
@@ -141,6 +167,7 @@ Future<void> tabsFlow(WidgetTester t, String p, S s) async {
   app.engine.sessionElapsed = 59.8;
   await advance(t, 0.6);
   await shot('screens/${p}13_finished_streak.png');
+  expect(app.progressDay, isNull);
   await t.pumpWidget(const SizedBox());
   await t.pump(const Duration(seconds: 1));
 }

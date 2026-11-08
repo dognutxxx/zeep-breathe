@@ -29,6 +29,13 @@ class AppController extends ChangeNotifier {
 
   Screen screen = Screen.setup;
   HomeTab tab = HomeTab.breathe;
+
+  /// Current time. Tests replace it so dates in screenshots are fixed.
+  DateTime Function() clock = DateTime.now;
+
+  /// Month and day picked in the Progress tab; kept while the app is open.
+  DateTime? progressMonth;
+  DateTime? progressDay;
   bool bannerVisible = true;
   DateTime _sessionStart = DateTime.now();
   bool _logged = false;
@@ -52,7 +59,7 @@ class AppController extends ChangeNotifier {
     engine.durations = settings.durations;
     engine.sessionLength = settings.sessionMinutes * 60.0;
     final ev = engine.start();
-    _sessionStart = DateTime.now();
+    _sessionStart = clock();
     _logged = false;
     screen = Screen.session;
     _handle(ev);
@@ -118,7 +125,7 @@ class AppController extends ChangeNotifier {
   void _log({required bool completed}) {
     if (_logged) return;
     _logged = true;
-    history.add(
+    final saved = history.add(
       SessionRecord(
         start: _sessionStart,
         seconds: engine.sessionElapsed.round(),
@@ -127,7 +134,14 @@ class AppController extends ChangeNotifier {
         completed: completed,
       ),
     );
-    lastStreak = history.stats(DateTime.now()).currentStreak;
+    lastStreak = history.stats(clock()).currentStreak;
+    // a session was just saved: the Progress tab should show it, so the
+    // calendar goes back to today. Short sessions are not saved, so a picked
+    // day stays.
+    if (saved) {
+      progressDay = null;
+      progressMonth = null;
+    }
   }
 
   void toggleMusic() => settings.update((s) => s.music = !s.music);
