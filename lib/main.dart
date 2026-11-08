@@ -26,6 +26,21 @@ import 'wardrobe/wardrobe_controller.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  // Draw behind the status and navigation bars on every Android version, as
+  // on iOS: the view then fills the whole window, so the splash logo sits
+  // exactly where the native launch screen drew it (no jump, no grey bars).
+  // Screens keep clear of the bars with SafeArea.
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Color(0x00000000),
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0x00000000),
+      systemNavigationBarIconBrightness: Brightness.dark,
+      systemNavigationBarContrastEnforced: false,
+    ),
+  );
   // Show the splash at once and load while it plays (it waits for this).
   final boot = loadApp();
   final logo = await loadSplashLogo();
@@ -39,7 +54,12 @@ Future<AppController> loadApp() async {
   final haptics = HapticsService(enabled: settings.vibration);
   final music = MusicService();
   final history = SessionHistory();
-  await Future.wait([haptics.init(), music.init(), history.load()]);
+  // a stuck platform channel must not keep the splash waiting forever
+  await Future.wait([
+    haptics.init().timeout(const Duration(seconds: 3), onTimeout: () {}),
+    music.init().timeout(const Duration(seconds: 3), onTimeout: () {}),
+    history.load(),
+  ]);
   final wardrobe = WardrobeController();
   await wardrobe.load(history.records);
   return AppController(settings: settings, haptics: haptics, music: music, history: history, wardrobe: wardrobe);
@@ -100,9 +120,14 @@ class _LaunchGateState extends State<LaunchGate> {
   @override
   void initState() {
     super.initState();
-    widget.boot.then((app) {
-      if (mounted) setState(() => _app = app);
-    });
+    widget.boot.then(
+      (app) {
+        if (mounted) setState(() => _app = app);
+      },
+      onError: (Object e, StackTrace st) {
+        FlutterError.reportError(FlutterErrorDetails(exception: e, stack: st, library: 'zeep launch'));
+      },
+    );
   }
 
   @override
@@ -123,6 +148,11 @@ class _LaunchGateState extends State<LaunchGate> {
             onDone: () {
               if (!_splashGone.isCompleted) _splashGone.complete();
               setState(() => _splashDone = true);
+              // the splash never comes back in this run: free its images
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                evictSplashImages();
+                widget.logo?.dispose();
+              });
             },
           ),
       ],

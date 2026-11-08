@@ -63,6 +63,16 @@ Future<ui.Image?> loadSplashLogo() async {
   }
 }
 
+/// Drops the splash images from the image cache (about 13 MB decoded); the
+/// splash is shown once per run.
+void evictSplashImages() {
+  for (final f in splashFriends) {
+    AssetImage('assets/splash/${f.name}_0.png').evict();
+    AssetImage('assets/splash/${f.name}_1.png').evict();
+  }
+  const AssetImage('assets/splash/logo.png').evict();
+}
+
 double _seg(double t, double a, double b, Curve c) => c.transform(((t - a) / (b - a)).clamp(0.0, 1.0));
 double _lerp(double a, double b, double k) => a + (b - a) * k;
 
@@ -118,9 +128,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     for (var r = 0; r < order.length; r++) {
       _rank[order[r]] = r;
     }
-    widget.ready.then((_) {
-      if (mounted) _ready = true;
-    });
+    widget.ready.then(
+      (_) {
+        if (mounted) _ready = true;
+      },
+      onError: (Object _) {}, // reported by the launch gate
+    );
     _ticker = createTicker(_tick)..start();
   }
 
@@ -134,7 +147,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       precacheImage(AssetImage('assets/splash/${f.name}_0.png'), context);
       precacheImage(AssetImage('assets/splash/${f.name}_1.png'), context);
     }
-    precacheImage(const AssetImage('assets/splash/logo.png'), context);
+    if (widget.logo == null) precacheImage(const AssetImage('assets/splash/logo.png'), context);
   }
 
   void _tick(Duration elapsed) {
@@ -325,28 +338,28 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       lv = waiting ? 0.5 + 0.5 * w : 0.5 * kHold * (1 - kBack);
       tilt = f.tilt * kOut;
     }
+    final o = opacity.clamp(0.0, 1.0);
     return Positioned(
       left: px - box / 2,
       top: py - box / 2,
       width: box,
       height: box,
-      child: Opacity(
-        opacity: opacity.clamp(0.0, 1.0),
-        child: Transform.rotate(
-          angle: tilt * math.pi / 180,
-          child: Transform.scale(
-            scale: scale,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.asset('assets/splash/${f.name}_0.png', gaplessPlayback: true),
-                // its own breath: blend towards the "breathed in" pose
-                Opacity(
-                  opacity: lv.clamp(0.0, 1.0),
-                  child: Image.asset('assets/splash/${f.name}_1.png', gaplessPlayback: true),
-                ),
-              ],
-            ),
+      child: Transform.rotate(
+        angle: tilt * math.pi / 180,
+        child: Transform.scale(
+          scale: scale,
+          // alpha on the images themselves: no extra layer per friend
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset('assets/splash/${f.name}_0.png', gaplessPlayback: true, opacity: AlwaysStoppedAnimation(o)),
+              // its own breath: blend towards the "breathed in" pose
+              Image.asset(
+                'assets/splash/${f.name}_1.png',
+                gaplessPlayback: true,
+                opacity: AlwaysStoppedAnimation(o * lv.clamp(0.0, 1.0)),
+              ),
+            ],
           ),
         ),
       ),

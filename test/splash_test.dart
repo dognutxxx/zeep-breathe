@@ -42,7 +42,6 @@ Future<void> frames(WidgetTester t, double seconds) async {
   }
 }
 
-
 void main() {
   testWidgets('first frame: the logo 180 x 58, centred on the whole screen, on the launch colour', (t) async {
     phone(t);
@@ -142,6 +141,45 @@ void main() {
     await frames(t, 0.7);
     expect(find.byType(SplashScreen), findsNothing);
     expect(find.byType(HomePage), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  double friendOpacity(WidgetTester t, String name) {
+    final img = t.widget<Image>(
+      find.byWidgetPredicate((w) => w is Image && w.image == AssetImage('assets/splash/${name}_0.png')),
+    );
+    return img.opacity?.value ?? 1;
+  }
+
+  testWidgets('first frame: no friends showing yet; nearest come out first, farthest last', (t) async {
+    phone(t);
+    final app = await makeApp();
+    await t.pumpWidget(ZeepBreatheApp(boot: Future.value(app)));
+    for (final f in splashFriends) {
+      expect(friendOpacity(t, f.name), 0, reason: f.name);
+    }
+    // half speed: design 300 ms = 0.6 s; the acorn (next to the logo) is out,
+    // the pancakes (bottom edge, farthest) are not yet
+    await frames(t, 0.6);
+    expect(friendOpacity(t, 'ok'), greaterThan(0));
+    expect(friendOpacity(t, 'panpan'), 0);
+    await frames(t, 1.4);
+    expect(friendOpacity(t, 'panpan'), greaterThan(0));
+    await frames(t, 3);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('the one-off summary card waits until the splash is gone', (t) async {
+    phone(t);
+    final app = await makeApp();
+    app.wardrobe.summaryPending = true;
+    await t.pumpWidget(ZeepBreatheApp(boot: Future.value(app)));
+    await frames(t, 3.3); // fading: the app is underneath now
+    expect(find.byType(HomePage), findsOneWidget);
+    expect(find.text(S.en.summaryTitle), findsNothing);
+    await frames(t, 1.2);
+    expect(find.byType(SplashScreen), findsNothing);
+    expect(find.text(S.en.summaryTitle), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
 }
