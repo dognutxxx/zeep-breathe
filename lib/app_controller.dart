@@ -54,6 +54,9 @@ class AppController extends ChangeNotifier {
     settings.addListener(_onSettingsChanged);
   }
 
+  /// When the current / last session started (its history record's time).
+  DateTime get sessionStart => _sessionStart;
+
   bool get finished => screen == Screen.session && engine.state == RunState.finished;
 
   void startSession() {

@@ -281,6 +281,9 @@ void main() {
     expect(testApp.settings.gameBest, [100, 0, 0]);
     expect(find.text(S.en.streakBadge(1)), findsOneWidget);
 
+    // Community phase 1: a finished game can be shared as a card
+    expect(find.text(S.en.shareScore), findsOneWidget);
+
     // play again: a fresh countdown and score
     await t.tap(find.text(S.en.playAgain));
     await frames(t, 0.2);
@@ -324,6 +327,7 @@ void main() {
     expect(find.text(S.en.gameStopped), findsOneWidget);
     expect(find.text(S.en.gameNotSaved), findsOneWidget);
     expect(find.byIcon(Icons.star_rounded), findsNothing);
+    expect(find.text(S.en.shareScore), findsNothing); // only finished games
     expect(testApp.history.records, isEmpty);
     expect(testApp.settings.gameBest, [0, 0, 0]);
     await t.pumpWidget(const SizedBox());

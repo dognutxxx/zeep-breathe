@@ -106,6 +106,15 @@ void main() {
     }
   });
 
+  testWidgets('share cards', (t) async {
+    debugDisableShadows = false;
+    try {
+      await shareFlow(t, '', S.en);
+    } finally {
+      debugDisableShadows = true;
+    }
+  });
+
   testWidgets('app icon', (t) async {
     await _icon(t);
   });

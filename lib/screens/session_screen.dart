@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../breathing/breathing_engine.dart';
+import '../exercises/exercises.dart';
 import '../l10n/strings.dart';
+import '../share/share_card.dart';
 import '../ui/widgets.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
+import 'share_screen.dart';
 import 'sheets.dart';
 
 String fmtClock(double secs) {
@@ -306,7 +309,30 @@ class _FinishedCard extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 18),
+                const SizedBox(height: 8),
+                // Community phase 1: share this session as a picture card
+                TextButton.icon(
+                  onPressed: () {
+                    // HomePage's ticker stops under the new route: end the fade now
+                    app.music.stopNow();
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ShareScreen(
+                          achievement: SessionAchievement(
+                            app.sessionStart,
+                            exerciseName: shareModeName(app.engine.durations, l),
+                            minutes: mins,
+                            breaths: app.engine.breaths,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.ios_share_rounded, size: 18),
+                  label: Text(l.share, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  style: TextButton.styleFrom(foregroundColor: ZeepColors.blue),
+                ),
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     Expanded(
@@ -342,3 +368,7 @@ class _FinishedCard extends StatelessWidget {
     );
   }
 }
+
+/// Mode line on a session share card: the preset's name, or the rhythm for
+/// the default / a custom rhythm.
+String shareModeName(BreathDurations d, S s) => exerciseFor(d)?.name(s) ?? s.cardRhythm(patternOf(d));

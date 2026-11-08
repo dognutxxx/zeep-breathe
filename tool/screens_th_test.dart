@@ -57,6 +57,17 @@ void main() {
     }
   });
 
+  testWidgets('share cards (th)', (t) async {
+    debugDisableShadows = false;
+    try {
+      thai(t);
+      await shareFlow(t, 'th_', S.thai);
+    } finally {
+      debugDisableShadows = true;
+      t.platformDispatcher.clearAllTestValues();
+    }
+  });
+
   testWidgets('sheets (th)', (t) async {
     debugDisableShadows = false;
     try {

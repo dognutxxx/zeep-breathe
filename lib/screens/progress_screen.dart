@@ -5,8 +5,10 @@ import '../exercises/exercises.dart';
 import '../game/balance_game.dart';
 import '../history/session_history.dart';
 import '../l10n/strings.dart';
+import '../share/share_card.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
+import 'share_screen.dart';
 
 class ProgressScreen extends StatefulWidget {
   final AppController app;
@@ -67,7 +69,19 @@ class _ProgressScreenState extends State<ProgressScreen> {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: ZeepColors.text),
           ),
           const SizedBox(height: 16),
-          _StreakCard(stats: st, practisedToday: st.practisedOn(now)),
+          _StreakCard(
+            stats: st,
+            practisedToday: st.practisedOn(now),
+            onShare: st.currentStreak > 0
+                ? () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => ShareScreen(
+                        achievement: StreakAchievement(now, days: st.currentStreak, totalMinutes: st.totalMinutes),
+                      ),
+                    ),
+                  )
+                : null,
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -155,7 +169,10 @@ class _Card extends StatelessWidget {
 class _StreakCard extends StatelessWidget {
   final HistoryStats stats;
   final bool practisedToday;
-  const _StreakCard({required this.stats, required this.practisedToday});
+
+  /// Community phase 1: share the streak as a picture card (null = no streak).
+  final VoidCallback? onShare;
+  const _StreakCard({required this.stats, required this.practisedToday, this.onShare});
 
   @override
   Widget build(BuildContext context) {
@@ -166,9 +183,10 @@ class _StreakCard extends StatelessWidget {
         : practisedToday
         ? l.streakToday
         : l.streakKeep;
+    // the card reads as one sentence; the Share button stays its own node
     return Semantics(
+      container: true,
       label: l.streakSemantics(n, msg),
-      excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
         decoration: BoxDecoration(
@@ -181,33 +199,86 @@ class _StreakCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    l.currentStreak,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF3463CC)),
+                  ExcludeSemantics(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l.currentStreak,
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF3463CC)),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              '$n',
+                              style: const TextStyle(
+                                fontSize: 40,
+                                fontWeight: FontWeight.w800,
+                                color: ZeepColors.text,
+                                height: 1.1,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              l.dayUnit(n),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: ZeepColors.textSoft,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(msg, style: const TextStyle(fontSize: 12.5, color: Color(0xFF4A4E58))),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 2),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        '$n',
-                        style: const TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.w800,
-                          color: ZeepColors.text,
-                          height: 1.1,
+                  if (onShare != null)
+                    Semantics(
+                      container: true, // its own node, not merged into the card's sentence
+                      button: true,
+                      label: l.shareStreak,
+                      onTap: onShare, // screen readers activate it (excludeSemantics hides InkWell's)
+                      excludeSemantics: true,
+                      child: InkWell(
+                        onTap: onShare,
+                        borderRadius: BorderRadius.circular(14),
+                        // 48 high to tap (platform minimum); the pill looks the same
+                        child: SizedBox(
+                          height: 48,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: 1,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: withAlpha(Colors.white, 0.75),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.ios_share_rounded, size: 15, color: Color(0xFF3463CC)),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    l.share,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF3463CC),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        l.dayUnit(n),
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: ZeepColors.textSoft),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(msg, style: const TextStyle(fontSize: 12.5, color: Color(0xFF4A4E58))),
+                    ),
                 ],
               ),
             ),
