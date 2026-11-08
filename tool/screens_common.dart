@@ -38,30 +38,42 @@ void phone(WidgetTester t) {
 
 void seedHistory(AppController app) {
   final now = DateTime.now();
-  DateTime ago(int d, int h) => DateTime(now.year, now.month, now.day - d, h, 15);
+  // (days ago, hour, minute, seconds, mode id, completed)
   // ignore: invalid_use_of_visible_for_testing_member
   app.history.seed([
-    for (final (d, secs, ex) in [
-      (16, 180, 'default'),
-      (15, 240, 'box'),
-      (14, 300, 'belly'),
-      (13, 180, 'default'),
-      (9, 120, 'custom'),
-      (6, 600, '478'),
-      (4, 300, 'belly'),
-      (3, 420, 'box'),
-      (2, 300, 'belly'),
-      (1, 600, '478'),
-      (0, 300, 'box'),
+    for (final (d, h, m, secs, ex, done) in [
+      (16, 7, 15, 180, 'default', true),
+      (15, 22, 0, 240, 'box', true),
+      (14, 7, 15, 300, 'belly', true),
+      (13, 21, 40, 180, 'default', true),
+      (9, 8, 5, 120, 'custom', false),
+      (6, 22, 15, 600, '478', true),
+      (4, 7, 15, 300, 'belly', true),
+      (3, 22, 15, 420, 'box', true),
+      (2, 7, 15, 300, 'belly', true),
+      (1, 12, 40, 300, 'box', true),
+      (1, 22, 15, 600, '478', true),
+      (0, 7, 15, 300, 'box', true),
+      (0, 12, 30, 95, 'belly', false),
+      (0, 21, 50, 600, '478', true),
     ])
       SessionRecord(
-        start: ago(d, d.isEven ? 7 : 22),
+        start: DateTime(now.year, now.month, now.day - d, h, m),
         seconds: secs,
         breaths: secs ~/ 12,
         exercise: ex,
-        completed: d != 9,
+        completed: done,
       ),
   ]);
+}
+
+/// Taps a day number in the Progress calendar (days ago from today).
+Future<void> tapCalendarDay(WidgetTester t, int daysAgo) async {
+  final now = DateTime.now();
+  final d = DateTime(now.year, now.month, now.day - daysAgo);
+  final cell = find.widgetWithText(InkResponse, '${d.day}');
+  await t.ensureVisible(cell.first);
+  await t.tap(cell.first);
 }
 
 Future<void> shot(String name) => expectLater(find.byType(MaterialApp), matchesGoldenFile(name));
@@ -103,9 +115,23 @@ Future<void> tabsFlow(WidgetTester t, String p, S s) async {
   await t.tap(find.text(s.tabProgress).last);
   await advance(t, 0.5);
   await shot('screens/${p}11_progress.png');
-  await t.drag(find.byType(ListView), const Offset(0, -600));
+  await t.drag(find.byType(ListView), const Offset(0, -2000));
   await advance(t, 0.5);
   await shot('screens/${p}12_progress_scrolled.png');
+  // another day with two sessions, then a day with none (same month only)
+  final now = DateTime.now();
+  if (now.day > 5) {
+    await tapCalendarDay(t, 1);
+    await advance(t, 0.3);
+    await t.drag(find.byType(ListView), const Offset(0, -2000));
+    await advance(t, 0.3);
+    await shot('screens/${p}16_timeline_yesterday.png');
+    await tapCalendarDay(t, 5);
+    await advance(t, 0.3);
+    await t.drag(find.byType(ListView), const Offset(0, -2000));
+    await advance(t, 0.3);
+    await shot('screens/${p}17_timeline_empty_day.png');
+  }
 
   // finish a 1-minute session -> streak badge on the finish card
   app.settings.update((x) => x.sessionMinutes = 1, persist: false);

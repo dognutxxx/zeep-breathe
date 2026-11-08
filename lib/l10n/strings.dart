@@ -168,6 +168,28 @@ class S {
     'การฝึกของคุณจะแสดงที่นี่ ฝึกตั้งแต่ 30 วินาทีขึ้นไปจึงจะถูกบันทึก',
   );
   String get today => _('Today', 'วันนี้');
+  // day timeline (Progress tab)
+  List<String> get weekdayNames => th
+      ? const ['วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์', 'วันอาทิตย์']
+      : const ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  /// "วันเสาร์ที่ 8 พ.ย." / "Saturday 8 Nov" (DateTime.weekday: Monday = 1).
+  String dayHeading(DateTime d) => th
+      ? '${weekdayNames[d.weekday - 1]}ที่ ${d.day} ${monthShort[d.month - 1]}'
+      : '${weekdayNames[d.weekday - 1]} ${d.day} ${monthShort[d.month - 1]}';
+  String daySummary(int sessions, int seconds) => _(
+    '$sessions ${sessions == 1 ? 'session' : 'sessions'} · ${duration(seconds)}',
+    '$sessions ครั้ง · ${duration(seconds)}',
+  );
+  String get completedLabel => _('Completed', 'ฝึกจนจบ');
+  String get stoppedEarly => _('Stopped early', 'หยุดก่อนจบ');
+  String get noSessionsThisDay => _('No breathing sessions on this day.', 'ไม่มีการฝึกในวันนั้น');
+  String get noSessionsToday => _("You haven't breathed with Zeep today yet.", 'วันนี้ยังไม่ได้ฝึกกับ Zeep');
+  String get breatheNow => _('Breathe now', 'ไปฝึกหายใจ');
+  String get dayTimelineHint =>
+      _('Tap a day in the calendar to see its sessions.', 'แตะวันในปฏิทินเพื่อดูการฝึกของวันนั้น');
+  String daySemantics(int day, String month, int? mins, bool selected) =>
+      '$day $month${mins != null ? ', ${minutes(mins)}' : ''}${selected ? _(', selected', ', เลือกอยู่') : ''}';
   String get yesterday => _('Yesterday', 'เมื่อวาน');
   String duration(int seconds) => seconds >= 60 ? minutes((seconds / 60).round()) : secs(seconds);
 

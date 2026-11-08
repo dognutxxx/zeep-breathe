@@ -19,6 +19,9 @@ class ProgressScreen extends StatefulWidget {
 class _ProgressScreenState extends State<ProgressScreen> {
   late DateTime _month;
 
+  /// Day shown in the timeline; null = today.
+  DateTime? _day;
+
   @override
   void initState() {
     super.initState();
@@ -31,8 +34,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
     final now = widget.clock();
     final h = widget.app.history;
     final st = h.stats(now);
-    final recent = h.records.reversed.take(5).toList();
     final l = S.of(context);
+    final today = dayOf(now);
+    final selected = _day ?? today;
 
     return SafeArea(
       top: !widget.app.bannerVisible,
@@ -91,7 +95,13 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                _MonthGrid(month: _month, stats: st, today: dayOf(now)),
+                _MonthGrid(
+                  month: _month,
+                  stats: st,
+                  today: today,
+                  selected: selected,
+                  onSelect: (d) => setState(() => _day = d),
+                ),
                 const SizedBox(height: 10),
                 Text(
                   l.lastSevenDays(st.minutesThisWeek(now)),
@@ -101,23 +111,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _Card(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l.recentSessions,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: ZeepColors.text),
-                ),
-                const SizedBox(height: 6),
-                if (recent.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Text(l.noSessions, style: const TextStyle(fontSize: 13, color: ZeepColors.textSoft)),
-                  ),
-                for (final r in recent) _RecentRow(r: r, now: now),
-              ],
-            ),
+          _DayTimeline(
+            day: selected,
+            isToday: selected == today,
+            records: h.onDay(selected),
+            onBreathe: () => widget.app.setTab(HomeTab.breathe),
           ),
         ],
       ),
@@ -247,8 +245,15 @@ class _Tile extends StatelessWidget {
 class _MonthGrid extends StatelessWidget {
   final DateTime month;
   final HistoryStats stats;
-  final DateTime today;
-  const _MonthGrid({required this.month, required this.stats, required this.today});
+  final DateTime today, selected;
+  final ValueChanged<DateTime> onSelect;
+  const _MonthGrid({
+    required this.month,
+    required this.stats,
+    required this.today,
+    required this.selected,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -288,11 +293,12 @@ class _MonthGrid extends StatelessWidget {
   }
 
   Widget _dayCell(int day, int daysInMonth, S l) {
-    if (day < 1 || day > daysInMonth) return const SizedBox(height: 36);
+    if (day < 1 || day > daysInMonth) return const SizedBox(height: 40);
     final date = DateTime(month.year, month.month, day);
     final secs = stats.secondsByDay[date] ?? 0;
     final done = secs >= 30;
     final isToday = date == today;
+    final isSelected = date == selected;
     final future = date.isAfter(today);
     // more minutes -> deeper colour (1, 3, 6+ min)
     final depth = secs >= 360
@@ -300,89 +306,228 @@ class _MonthGrid extends StatelessWidget {
         : secs >= 180
         ? 0.75
         : 0.5;
+    final circle = Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: done ? Color.lerp(const Color(0xFFD6E9FB), const Color(0xFF8DB8F2), depth) : null,
+        border: isSelected
+            ? Border.all(color: ZeepColors.text, width: 2.5)
+            : isToday
+            ? Border.all(color: ZeepColors.blue, width: 2)
+            : null,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        '$day',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: done || isToday || isSelected ? FontWeight.w700 : FontWeight.w400,
+          color: future ? ZeepColors.textFaint.withValues(alpha: 0.5) : (done ? ZeepColors.text : ZeepColors.textSoft),
+        ),
+      ),
+    );
     return Semantics(
-      label: '$day ${l.monthShort[month.month - 1]}${done ? ', ${l.minutes((secs / 60).round())}' : ''}',
+      button: !future,
+      selected: isSelected,
+      label: l.daySemantics(day, l.monthShort[month.month - 1], done ? (secs / 60).round() : null, isSelected),
       excludeSemantics: true,
       child: SizedBox(
-        height: 36,
+        height: 40,
         child: Center(
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: done ? Color.lerp(const Color(0xFFD6E9FB), const Color(0xFF8DB8F2), depth) : null,
-              border: isToday ? Border.all(color: ZeepColors.blue, width: 2) : null,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '$day',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: done || isToday ? FontWeight.w700 : FontWeight.w400,
-                color: future
-                    ? ZeepColors.textFaint.withValues(alpha: 0.5)
-                    : (done ? ZeepColors.text : ZeepColors.textSoft),
-              ),
-            ),
-          ),
+          child: future ? circle : InkResponse(onTap: () => onSelect(date), radius: 22, child: circle),
         ),
       ),
     );
   }
 }
 
-class _RecentRow extends StatelessWidget {
-  final SessionRecord r;
-  final DateTime now;
-  const _RecentRow({required this.r, required this.now});
+/// One day's sessions as a vertical timeline: time on the left, a dot in the
+/// mode's colour on the line, and a card with mode, duration and status.
+class _DayTimeline extends StatelessWidget {
+  final DateTime day;
+  final bool isToday;
+  final List<SessionRecord> records;
+  final VoidCallback onBreathe;
+  const _DayTimeline({required this.day, required this.isToday, required this.records, required this.onBreathe});
 
   @override
   Widget build(BuildContext context) {
     final l = S.of(context);
-    final d = dayOf(r.start);
-    final today = dayOf(now);
-    final when = d == today
-        ? l.today
-        : d == DateTime(today.year, today.month, today.day - 1)
-        ? l.yesterday
-        : '${r.start.day} ${l.monthShort[r.start.month - 1]}';
-    final time = '${r.start.hour.toString().padLeft(2, '0')}:${r.start.minute.toString().padLeft(2, '0')}';
-    final mins = l.duration(r.seconds);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
+    final total = records.fold<int>(0, (a, r) => a + r.seconds);
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: r.completed ? const Color(0xFFE3F5EF) : ZeepColors.btnBg,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              r.completed ? Icons.check_rounded : Icons.timelapse_rounded,
-              size: 18,
-              color: r.completed ? ZeepColors.mintDark : ZeepColors.textSoft,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  exerciseDisplayName(r.exercise, l),
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: ZeepColors.text),
-                ),
-                Text('$when · $time', style: const TextStyle(fontSize: 12, color: ZeepColors.textSoft)),
-              ],
-            ),
-          ),
           Text(
-            mins,
-            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: ZeepColors.text),
+            isToday ? '${l.today} · ${l.dayHeading(day)}' : l.dayHeading(day),
+            style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, color: ZeepColors.text),
           ),
+          if (records.isNotEmpty)
+            Text(l.daySummary(records.length, total), style: const TextStyle(fontSize: 13, color: ZeepColors.textSoft)),
+          const SizedBox(height: 12),
+          if (records.isEmpty)
+            _EmptyDay(isToday: isToday, onBreathe: onBreathe)
+          else
+            for (final (i, r) in records.indexed) _TimelineEntry(r: r, first: i == 0, last: i == records.length - 1),
+          const SizedBox(height: 6),
+          Text(l.dayTimelineHint, style: const TextStyle(fontSize: 12, color: ZeepColors.textFaint)),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimelineEntry extends StatelessWidget {
+  final SessionRecord r;
+  final bool first, last;
+  const _TimelineEntry({required this.r, required this.first, required this.last});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = S.of(context);
+    final ex = exercises.where((e) => e.id == r.exercise).firstOrNull;
+    final tint = ex?.tint ?? (r.exercise == 'default' ? const Color(0xFFBDDEF7) : const Color(0xFFDCE3EC));
+    final time = '${r.start.hour.toString().padLeft(2, '0')}:${r.start.minute.toString().padLeft(2, '0')}';
+    const lineColor = Color(0xFFD9E3EE);
+    final status = r.completed ? l.completedLabel : l.stoppedEarly;
+    final statusColor = r.completed ? ZeepColors.mintDark : ZeepColors.textSoft;
+    return Semantics(
+      label: '$time, ${exerciseDisplayName(r.exercise, l)}, ${l.duration(r.seconds)}, $status',
+      excludeSemantics: true,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: 46,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  time,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: ZeepColors.textSoft,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ),
+            // the line and the dot
+            SizedBox(
+              width: 22,
+              child: Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  if (!(first && last))
+                    Positioned(
+                      top: first ? 17 : 0,
+                      bottom: last ? null : 0,
+                      height: last ? 17 : null,
+                      child: Container(width: 2, color: lineColor),
+                    ),
+                  Positioned(
+                    top: 10,
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: mix(tint, const Color(0xFF6F8FBF), 0.3),
+                        border: Border.all(color: Colors.white, width: 2.5),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  decoration: BoxDecoration(
+                    color: withAlpha(tint, 0.30),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: withAlpha(tint, 0.9)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              exerciseDisplayName(r.exercise, l),
+                              style: const TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                                color: ZeepColors.text,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Icon(
+                                  r.completed ? Icons.check_circle_rounded : Icons.timelapse_rounded,
+                                  size: 14,
+                                  color: statusColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(status, style: TextStyle(fontSize: 12, color: statusColor)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        l.duration(r.seconds),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: ZeepColors.text),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyDay extends StatelessWidget {
+  final bool isToday;
+  final VoidCallback onBreathe;
+  const _EmptyDay({required this.isToday, required this.onBreathe});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = S.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+      decoration: BoxDecoration(color: ZeepColors.bgTop, borderRadius: BorderRadius.circular(14)),
+      child: Column(
+        children: [
+          const ZeepAvatar(tint: Color(0xFFDCE3EC), size: 64, breath: 0.2),
+          const SizedBox(height: 4),
+          Text(
+            isToday ? l.noSessionsToday : l.noSessionsThisDay,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13.5, color: ZeepColors.textSoft),
+          ),
+          if (isToday) ...[
+            const SizedBox(height: 8),
+            FilledButton(
+              onPressed: onBreathe,
+              style: FilledButton.styleFrom(backgroundColor: ZeepColors.mint, foregroundColor: ZeepColors.mintDark),
+              child: Text(l.breatheNow, style: const TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ],
         ],
       ),
     );

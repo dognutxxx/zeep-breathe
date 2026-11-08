@@ -138,6 +138,12 @@ class SessionHistory extends ChangeNotifier {
     return _stats!;
   }
 
+  /// Sessions that started on [day], earliest first.
+  List<SessionRecord> onDay(DateTime day) {
+    final d = dayOf(day);
+    return records.where((r) => dayOf(r.start) == d).toList()..sort((a, b) => a.start.compareTo(b.start));
+  }
+
   void add(SessionRecord r) {
     if (r.seconds < minLoggedSeconds) return;
     records.add(r);
