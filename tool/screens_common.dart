@@ -18,6 +18,7 @@ import 'package:zeep_breathe/main.dart';
 import 'package:zeep_breathe/screens/balance_game_screen.dart';
 import 'package:zeep_breathe/screens/balance_menu_screen.dart';
 import 'package:zeep_breathe/screens/share_screen.dart';
+import 'package:zeep_breathe/screens/splash_screen.dart';
 import 'package:zeep_breathe/settings/settings_controller.dart';
 import 'package:zeep_breathe/share/share_card.dart';
 import 'package:zeep_breathe/tilt/tilt_physics.dart';
@@ -307,4 +308,21 @@ Future<void> shareFlow(WidgetTester t, String p, S s) async {
     await shot('screens/$p$name.png');
   }
   await t.pumpWidget(const SizedBox());
+}
+
+/// Launch splash (1.6.0): frames at the start, mid-inhale, the hold and the
+/// exhale (half speed, so the hold is at about 2.3 s).
+Future<void> splashFlow(WidgetTester t, String p) async {
+  phone(t);
+  final app = await makeApp();
+  final logo = await t.runAsync(loadSplashLogo);
+  await t.pumpWidget(ZeepBreatheApp(boot: Future.value(app), splashLogo: logo));
+  await shot('screens/${p}36_splash_start.png');
+  for (final (name, secs) in [('37_splash_out', 1.2), ('38_splash_hold', 1.1), ('39_splash_back', 0.9)]) {
+    await advance(t, secs);
+    await shot('screens/$p$name.png');
+  }
+  await advance(t, 2);
+  await t.pumpWidget(const SizedBox());
+  await t.pump(const Duration(seconds: 1));
 }

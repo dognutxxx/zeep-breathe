@@ -1,16 +1,58 @@
 package com.pillarsnova.zeep_breathe
 
 import android.content.Context
+import android.graphics.Color
 import android.os.Build
+import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.view.Surface
+import android.view.View
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    // Edge-to-edge on every Android version the app supports, so the Flutter
+    // view fills the window like the native launch screen (the splash logo
+    // stays put) and screens keep clear of the bars with SafeArea.
+    // Flutter's own edgeToEdge mode only covers Android 10+.
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        applyEdgeToEdge()
+    }
+
+    // Flutter re-applies its default system UI flags on resume (Android 9 and
+    // older): put the edge-to-edge layout flags back.
+    override fun onPostResume() {
+        super.onPostResume()
+        applyEdgeToEdge()
+    }
+
+    private fun applyEdgeToEdge() {
+        val w = window
+        if (Build.VERSION.SDK_INT >= 30) {
+            w.setDecorFitsSystemWindows(false)
+        } else {
+            // Android 7 can't draw dark navigation icons: it gets a dim scrim
+            // behind its white icons instead of a clear bar (set below).
+            val nav = View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                if (Build.VERSION.SDK_INT >= 26) View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR else 0
+            @Suppress("DEPRECATION")
+            w.decorView.systemUiVisibility = w.decorView.systemUiVisibility or
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+                nav
+        }
+        @Suppress("DEPRECATION")
+        w.statusBarColor = Color.TRANSPARENT
+        @Suppress("DEPRECATION")
+        w.navigationBarColor = if (Build.VERSION.SDK_INT >= 26) Color.TRANSPARENT else 0x66000000
+        if (Build.VERSION.SDK_INT >= 29) w.isNavigationBarContrastEnforced = false
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "zeep/haptics")

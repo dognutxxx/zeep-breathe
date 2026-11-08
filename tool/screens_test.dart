@@ -115,6 +115,15 @@ void main() {
     }
   });
 
+  testWidgets('splash', (t) async {
+    debugDisableShadows = false;
+    try {
+      await splashFlow(t, '');
+    } finally {
+      debugDisableShadows = true;
+    }
+  });
+
   testWidgets('app icon', (t) async {
     await _icon(t);
   });
