@@ -81,7 +81,7 @@ const exercises = <Exercise>[
     tipTh: _sleepTipTh,
     durations: BreathDurations(4, 4, 4, 4),
     minutes: 5,
-    tint: Color(0xFFBDDEF7),
+    tint: Color(0xFFF4E4A6),
   ),
 ];
 
