@@ -29,6 +29,7 @@ class AppController extends ChangeNotifier {
 
   Screen screen = Screen.setup;
   HomeTab tab = HomeTab.breathe;
+  bool bannerVisible = true;
   DateTime _sessionStart = DateTime.now();
   bool _logged = false;
 
@@ -86,22 +87,32 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  void hideBanner() {
+    bannerVisible = false;
+    notifyListeners();
+  }
+
   void setTab(HomeTab t) {
     tab = t;
     notifyListeners();
   }
 
-  /// Use a ready-made exercise and jump back to the Breathe tab.
-  void chooseExercise(Exercise e) {
+  /// Apply a breathing mode's rhythm and session length.
+  void applyExercise(Exercise e, {int? minutes}) {
     settings.update((s) {
       s.inhale = e.durations.inhale.round();
       s.hold = e.durations.hold.round();
       s.exhale = e.durations.exhale.round();
       s.rest = e.durations.rest.round();
-      s.sessionMinutes = e.minutes;
+      s.sessionMinutes = minutes ?? e.minutes;
     });
+  }
+
+  /// "Start breathing" on a mode's screen.
+  void startExercise(Exercise e, int minutes) {
+    applyExercise(e, minutes: minutes);
     tab = HomeTab.breathe;
-    notifyListeners();
+    startSession();
   }
 
   void _log({required bool completed}) {
@@ -112,7 +123,7 @@ class AppController extends ChangeNotifier {
         start: _sessionStart,
         seconds: engine.sessionElapsed.round(),
         breaths: engine.breaths,
-        exercise: exerciseName(engine.durations),
+        exercise: exerciseId(engine.durations),
         completed: completed,
       ),
     );

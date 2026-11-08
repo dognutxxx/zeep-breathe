@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../breathing/breathing_engine.dart';
+import '../l10n/strings.dart';
 import '../settings/settings_controller.dart';
 import '../ui/widgets.dart';
 import '../ui/zeep_character.dart';
@@ -37,7 +38,7 @@ class _SheetHeader extends StatelessWidget {
               foregroundColor: ZeepColors.text,
               shape: const StadiumBorder(),
             ),
-            child: const Text('Close', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w400)),
+            child: Text(S.of(context).close, style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w400)),
           ),
           const Spacer(),
           Text(
@@ -72,20 +73,21 @@ class _SettingsContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = app.settings;
     final e = app.engine;
+    final l = S.of(context);
     final rows = <(String, AnimState, Phase, int, int, int, void Function(SettingsController, int))>[
-      ('Inhale seconds', AnimState.inhale, Phase.inhale, s.inhale, 1, 15, (x, v) => x.inhale = v),
-      ('Hold seconds', AnimState.hold, Phase.hold, s.hold, 0, 15, (x, v) => x.hold = v),
-      ('Exhale seconds', AnimState.exhale, Phase.exhale, s.exhale, 1, 15, (x, v) => x.exhale = v),
-      ('Rest after exhale', AnimState.rest, Phase.rest, s.rest, 0, 15, (x, v) => x.rest = v),
+      (l.inhaleSeconds, AnimState.inhale, Phase.inhale, s.inhale, 1, 15, (x, v) => x.inhale = v),
+      (l.holdSeconds, AnimState.hold, Phase.hold, s.hold, 0, 15, (x, v) => x.hold = v),
+      (l.exhaleSeconds, AnimState.exhale, Phase.exhale, s.exhale, 1, 15, (x, v) => x.exhale = v),
+      (l.restSeconds, AnimState.rest, Phase.rest, s.rest, 0, 15, (x, v) => x.rest = v),
     ];
     final cyc = s.durations.cycle;
     final per = (s.sessionMinutes * 60 / cyc).floor();
-    final trackName = tracks[s.track];
+    final trackName = l.tracks[s.track];
     final musicSub = !app.music.available
-        ? 'Audio unavailable'
+        ? l.audioUnavailable
         : app.music.isAudible
-        ? 'Playing · $trackName'
-        : '$trackName · plays during sessions';
+        ? l.playing(trackName)
+        : l.playsDuringSessions(trackName);
 
     return SingleChildScrollView(
       child: Padding(
@@ -93,7 +95,7 @@ class _SettingsContent extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const _SheetHeader('Breathing settings'),
+            _SheetHeader(l.breathingSettings),
             for (final (label, kind, phase, value, min, max, set) in rows)
               AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
@@ -120,7 +122,7 @@ class _SettingsContent extends StatelessWidget {
                           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: ZeepColors.text),
                         ),
                         const SizedBox(width: 3),
-                        const Text('s', style: TextStyle(fontSize: 14, color: ZeepColors.textSoft)),
+                        Text(l.secUnit, style: const TextStyle(fontSize: 14, color: ZeepColors.textSoft)),
                       ],
                     ),
                     ZeepSlider(
@@ -144,12 +146,12 @@ class _SettingsContent extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   foregroundColor: ZeepColors.text,
                 ),
-                child: const Column(
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Reset to default', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                    SizedBox(height: 2),
-                    Text('Inhale 4s · Hold 2s · Exhale 6s', style: TextStyle(fontSize: 12, color: ZeepColors.textSoft)),
+                    Text(l.resetToDefault, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(l.resetHint, style: const TextStyle(fontSize: 12, color: ZeepColors.textSoft)),
                   ],
                 ),
               ),
@@ -157,19 +159,19 @@ class _SettingsContent extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Text(
-                'One breath = ${cyc.round()}s · about $per breaths in ${s.sessionMinutes} min',
+                l.cycleSummary(cyc.round(), per, s.sessionMinutes),
                 style: const TextStyle(fontSize: 12, color: ZeepColors.textFaint),
               ),
             ),
             _ToggleRow(
-              title: 'Background music',
+              title: l.backgroundMusic,
               subtitle: musicSub,
               value: s.music,
               onChanged: (v) => s.update((x) => x.music = v),
             ),
             _ToggleRow(
-              title: 'Phone vibration',
-              subtitle: 'Pulse at inhale, hold (×2) and exhale',
+              title: l.phoneVibration,
+              subtitle: l.vibrationHint,
               value: s.vibration,
               onChanged: app.setVibration,
             ),
@@ -178,15 +180,12 @@ class _SettingsContent extends StatelessWidget {
                 margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(color: const Color(0xFFF2F6FD), borderRadius: BorderRadius.circular(10)),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.vibration_rounded, size: 16, color: Color(0xFF6D88C4)),
-                    SizedBox(width: 10),
+                    const Icon(Icons.vibration_rounded, size: 16, color: Color(0xFF6D88C4)),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        'This device has no haptic engine, so pulses show as ripples around Zeep.',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF56698F)),
-                      ),
+                      child: Text(l.noHapticEngine, style: const TextStyle(fontSize: 12, color: Color(0xFF56698F))),
                     ),
                   ],
                 ),
@@ -241,17 +240,10 @@ class _Instructions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const steps = [
-      (AnimState.inhale, 'Inhale', 'Zeep fills up and grows. Breathe in through your nose.'),
-      (AnimState.hold, 'Hold', 'Zeep glows softly. Keep the breath gently, no strain.'),
-      (AnimState.exhale, 'Exhale', 'Zeep shrinks and sighs. Let the air drift out slowly.'),
-    ];
-    const bullets = [
-      'The bar under Zeep fills with your breath; the thin line under it shows how far into the current step you are.',
-      "Change each step's length in Breathing settings, even mid-session. Zeep adjusts smoothly.",
-      'Your phone gives a gentle pulse when inhale and exhale start, and two short pulses for hold.',
-      'The screen stays on during a session. Leaving the app pauses it.',
-    ];
+    final l = S.of(context);
+    const kinds = [AnimState.inhale, AnimState.hold, AnimState.exhale];
+    final steps = [for (final (i, (t, b)) in l.instructionSteps.indexed) (kinds[i], t, b)];
+    final bullets = l.instructionBullets;
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 20),
@@ -259,7 +251,7 @@ class _Instructions extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const _SheetHeader('How it works'),
+            _SheetHeader(l.howItWorks),
             const SizedBox(height: 8),
             for (final (kind, title, body) in steps)
               Padding(

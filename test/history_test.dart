@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:zeep_breathe/breathing/breathing_engine.dart';
 import 'package:zeep_breathe/exercises/exercises.dart';
 import 'package:zeep_breathe/history/session_history.dart';
+import 'package:zeep_breathe/l10n/strings.dart';
 
 SessionRecord rec(DateTime t, int seconds) =>
     SessionRecord(start: t, seconds: seconds, breaths: 5, exercise: 'Calm tide', completed: true);
@@ -82,10 +83,22 @@ void main() {
   });
 
   test('exercise matching', () {
-    expect(exerciseFor(const BreathDurations(4, 2, 6, 0))?.id, 'calm');
+    expect(exerciseFor(const BreathDurations(4, 0, 6, 0))?.id, 'belly');
+    expect(exerciseFor(const BreathDurations(4, 7, 8, 0))?.id, '478');
     expect(exerciseFor(const BreathDurations(4, 4, 4, 4))?.id, 'box');
-    expect(exerciseName(const BreathDurations(9, 1, 4, 0)), 'Custom');
+    expect(exerciseId(const BreathDurations(4, 2, 6, 0)), 'default');
+    expect(exerciseId(const BreathDurations(9, 1, 4, 0)), 'custom');
     expect(exercises.map((e) => e.id).toSet().length, exercises.length);
-    expect(exercises.firstWhere((e) => e.id == 'sleep').pattern, '4 · 7 · 8');
+    expect(exercises.firstWhere((e) => e.id == '478').pattern, '4 · 7 · 8');
+    expect(exercises.firstWhere((e) => e.id == 'box').phases, Phase.values);
+    expect(exercises.firstWhere((e) => e.id == 'belly').phases, [Phase.inhale, Phase.exhale]);
+  });
+
+  test('history names are localised; legacy names pass through', () {
+    expect(exerciseDisplayName('478', S.thai), 'หายใจแบบ 4-7-8');
+    expect(exerciseDisplayName('478', S.en), '4-7-8 breathing');
+    expect(exerciseDisplayName('default', S.thai), 'ค่าเริ่มต้น');
+    expect(exerciseDisplayName('Calm tide', S.en), 'Calm tide');
+    expect(S.thai.monthYear(DateTime(2026, 11)), 'พฤศจิกายน 2569');
   });
 }

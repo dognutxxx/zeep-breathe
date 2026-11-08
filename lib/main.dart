@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
@@ -6,11 +7,13 @@ import 'app_controller.dart';
 import 'audio/music_service.dart';
 import 'haptics/haptics_service.dart';
 import 'history/session_history.dart';
+import 'l10n/strings.dart';
 import 'screens/exercises_screen.dart';
 import 'screens/progress_screen.dart';
 import 'screens/session_screen.dart';
 import 'screens/setup_screen.dart';
 import 'settings/settings_controller.dart';
+import 'ui/beta_banner.dart';
 import 'ui/widgets.dart';
 import 'ui/zeep_colors.dart';
 
@@ -41,6 +44,9 @@ class ZeepBreatheApp extends StatelessWidget {
     return MaterialApp(
       title: 'ZEEP Breathe',
       debugShowCheckedModeBanner: false,
+      // Thai when the phone is set to Thai, otherwise English
+      supportedLocales: S.supportedLocales,
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: ZeepColors.blue, surface: Colors.white),
@@ -102,6 +108,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       listenable: widget.app,
       builder: (context, _) {
         final app = widget.app;
+        final l = S.of(context);
         final inSession = app.screen == Screen.session;
         final Widget page = inSession
             ? SessionScreen(app: app)
@@ -113,8 +120,15 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         return Scaffold(
           body: ZeepBackground(
             // iPad / landscape: keep the phone-width column centred
-            child: Center(
-              child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: page),
+            child: Column(
+              children: [
+                if (!inSession) BetaBanner(app: app),
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: page),
+                  ),
+                ),
+              ],
             ),
           ),
           bottomNavigationBar: inSession
@@ -126,21 +140,21 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   surfaceTintColor: Colors.transparent,
                   selectedIndex: app.tab.index,
                   onDestinationSelected: (i) => app.setTab(HomeTab.values[i]),
-                  destinations: const [
+                  destinations: [
                     NavigationDestination(
-                      icon: Icon(Icons.spa_outlined),
-                      selectedIcon: Icon(Icons.spa_rounded),
-                      label: 'Breathe',
+                      icon: const Icon(Icons.spa_outlined),
+                      selectedIcon: const Icon(Icons.spa_rounded),
+                      label: l.tabBreathe,
                     ),
                     NavigationDestination(
-                      icon: Icon(Icons.grid_view_outlined),
-                      selectedIcon: Icon(Icons.grid_view_rounded),
-                      label: 'Exercises',
+                      icon: const Icon(Icons.grid_view_outlined),
+                      selectedIcon: const Icon(Icons.grid_view_rounded),
+                      label: l.tabExercises,
                     ),
                     NavigationDestination(
-                      icon: Icon(Icons.insights_outlined),
-                      selectedIcon: Icon(Icons.insights_rounded),
-                      label: 'Progress',
+                      icon: const Icon(Icons.insights_outlined),
+                      selectedIcon: const Icon(Icons.insights_rounded),
+                      label: l.tabProgress,
                     ),
                   ],
                 ),

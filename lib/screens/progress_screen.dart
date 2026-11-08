@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
+import '../exercises/exercises.dart';
 import '../history/session_history.dart';
+import '../l10n/strings.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
-
-const _months = [
-  'January', 'February', 'March', 'April', 'May', 'June', //
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-const _monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 class ProgressScreen extends StatefulWidget {
   final AppController app;
@@ -36,16 +32,18 @@ class _ProgressScreenState extends State<ProgressScreen> {
     final h = widget.app.history;
     final st = h.stats(now);
     final recent = h.records.reversed.take(5).toList();
+    final l = S.of(context);
 
     return SafeArea(
+      top: !widget.app.bannerVisible,
       bottom: false,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
         children: [
-          const Text(
-            'Progress',
+          Text(
+            l.progressTitle,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: ZeepColors.text),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: ZeepColors.text),
           ),
           const SizedBox(height: 16),
           _StreakCard(stats: st, practisedToday: st.practisedOn(now)),
@@ -53,15 +51,15 @@ class _ProgressScreenState extends State<ProgressScreen> {
           Row(
             children: [
               Expanded(
-                child: _Tile(value: '${st.totalMinutes}', label: 'total min', icon: Icons.schedule_rounded),
+                child: _Tile(value: '${st.totalMinutes}', label: l.totalMin, icon: Icons.schedule_rounded),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _Tile(value: '${st.sessions}', label: 'sessions', icon: Icons.self_improvement_rounded),
+                child: _Tile(value: '${st.sessions}', label: l.sessionsLabel, icon: Icons.self_improvement_rounded),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _Tile(value: '${st.longestStreak}', label: 'best streak', icon: Icons.emoji_events_rounded),
+                child: _Tile(value: '${st.longestStreak}', label: l.bestStreak, icon: Icons.emoji_events_rounded),
               ),
             ],
           ),
@@ -72,19 +70,19 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 Row(
                   children: [
                     IconButton(
-                      tooltip: 'Previous month',
+                      tooltip: l.prevMonth,
                       onPressed: () => setState(() => _month = DateTime(_month.year, _month.month - 1)),
                       icon: const Icon(Icons.chevron_left_rounded),
                     ),
                     Expanded(
                       child: Text(
-                        '${_months[_month.month - 1]} ${_month.year}',
+                        l.monthYear(_month),
                         textAlign: TextAlign.center,
                         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: ZeepColors.text),
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Next month',
+                      tooltip: l.nextMonth,
                       onPressed: (_month.year == now.year && _month.month == now.month)
                           ? null
                           : () => setState(() => _month = DateTime(_month.year, _month.month + 1)),
@@ -96,7 +94,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 _MonthGrid(month: _month, stats: st, today: dayOf(now)),
                 const SizedBox(height: 10),
                 Text(
-                  '${st.minutesThisWeek(now)} min in the last 7 days',
+                  l.lastSevenDays(st.minutesThisWeek(now)),
                   style: const TextStyle(fontSize: 12.5, color: ZeepColors.textSoft),
                 ),
               ],
@@ -107,18 +105,15 @@ class _ProgressScreenState extends State<ProgressScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Recent sessions',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: ZeepColors.text),
+                Text(
+                  l.recentSessions,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: ZeepColors.text),
                 ),
                 const SizedBox(height: 6),
                 if (recent.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 10),
-                    child: Text(
-                      'Your sessions will show up here. Breathe for 30 seconds or more to log one.',
-                      style: TextStyle(fontSize: 13, color: ZeepColors.textSoft),
-                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Text(l.noSessions, style: const TextStyle(fontSize: 13, color: ZeepColors.textSoft)),
                   ),
                 for (final r in recent) _RecentRow(r: r, now: now),
               ],
@@ -156,13 +151,14 @@ class _StreakCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final n = stats.currentStreak;
+    final l = S.of(context);
     final msg = n == 0
-        ? 'Start a session today to begin a streak.'
+        ? l.streakStart
         : practisedToday
-        ? 'Lovely. You breathed with Zeep today.'
-        : 'Breathe today to keep it going.';
+        ? l.streakToday
+        : l.streakKeep;
     return Semantics(
-      label: '$n day streak. $msg',
+      label: l.streakSemantics(n, msg),
       excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
@@ -176,9 +172,9 @@ class _StreakCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Current streak',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF3463CC)),
+                  Text(
+                    l.currentStreak,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF3463CC)),
                   ),
                   const SizedBox(height: 2),
                   Row(
@@ -196,7 +192,7 @@ class _StreakCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        n == 1 ? 'day' : 'days',
+                        l.dayUnit(n),
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: ZeepColors.textSoft),
                       ),
                     ],
@@ -261,7 +257,8 @@ class _MonthGrid extends StatelessWidget {
     final lead = first.weekday % 7; // Sunday-first grid
     final cells = lead + daysInMonth;
     final rows = (cells / 7).ceil();
-    const head = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    final l = S.of(context);
+    final head = l.weekdayHeads;
 
     return Column(
       children: [
@@ -283,14 +280,14 @@ class _MonthGrid extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
             child: Row(
-              children: [for (var c = 0; c < 7; c++) Expanded(child: _dayCell(r * 7 + c - lead + 1, daysInMonth))],
+              children: [for (var c = 0; c < 7; c++) Expanded(child: _dayCell(r * 7 + c - lead + 1, daysInMonth, l))],
             ),
           ),
       ],
     );
   }
 
-  Widget _dayCell(int day, int daysInMonth) {
+  Widget _dayCell(int day, int daysInMonth, S l) {
     if (day < 1 || day > daysInMonth) return const SizedBox(height: 36);
     final date = DateTime(month.year, month.month, day);
     final secs = stats.secondsByDay[date] ?? 0;
@@ -304,7 +301,7 @@ class _MonthGrid extends StatelessWidget {
         ? 0.75
         : 0.5;
     return Semantics(
-      label: '${_monthsShort[month.month - 1]} $day${done ? ', ${(secs / 60).round()} minutes' : ''}',
+      label: '$day ${l.monthShort[month.month - 1]}${done ? ', ${l.minutes((secs / 60).round())}' : ''}',
       excludeSemantics: true,
       child: SizedBox(
         height: 36,
@@ -342,15 +339,16 @@ class _RecentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = S.of(context);
     final d = dayOf(r.start);
     final today = dayOf(now);
     final when = d == today
-        ? 'Today'
+        ? l.today
         : d == DateTime(today.year, today.month, today.day - 1)
-        ? 'Yesterday'
-        : '${r.start.day} ${_monthsShort[r.start.month - 1]}';
+        ? l.yesterday
+        : '${r.start.day} ${l.monthShort[r.start.month - 1]}';
     final time = '${r.start.hour.toString().padLeft(2, '0')}:${r.start.minute.toString().padLeft(2, '0')}';
-    final mins = r.seconds >= 60 ? '${(r.seconds / 60).round()} min' : '${r.seconds} s';
+    final mins = l.duration(r.seconds);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
@@ -374,7 +372,7 @@ class _RecentRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  r.exercise,
+                  exerciseDisplayName(r.exercise, l),
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: ZeepColors.text),
                 ),
                 Text('$when · $time', style: const TextStyle(fontSize: 12, color: ZeepColors.textSoft)),

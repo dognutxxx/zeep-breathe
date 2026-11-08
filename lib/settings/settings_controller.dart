@@ -7,8 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../breathing/breathing_engine.dart';
 
 const defaultInhale = 4, defaultHold = 2, defaultExhale = 6, defaultRest = 0;
-const tracks = ['Soft rain', 'Ocean drift', 'Warm hum'];
-const durationPresets = [1, 2, 3, 5, 10];
+
+/// Number of background tracks (names are localised in S.tracks).
+const trackCount = 3;
+const durationPresets = [1, 2, 3, 5, 10, 15];
+const maxSessionMinutes = 15;
 
 class SettingsController extends ChangeNotifier {
   SharedPreferences? _prefs;
@@ -31,8 +34,8 @@ class SettingsController extends ChangeNotifier {
       rest = (p.getInt('zeep.rest') ?? rest).clamp(0, 15);
       music = p.getBool('zeep.music') ?? music;
       vibration = p.getBool('zeep.vibration') ?? vibration;
-      sessionMinutes = (p.getInt('zeep.sessionMinutes') ?? sessionMinutes).clamp(1, 10);
-      track = (p.getInt('zeep.track') ?? track).clamp(0, tracks.length - 1);
+      sessionMinutes = (p.getInt('zeep.sessionMinutes') ?? sessionMinutes).clamp(1, maxSessionMinutes);
+      track = (p.getInt('zeep.track') ?? track).clamp(0, trackCount - 1);
     } catch (_) {
       // storage unavailable: run with defaults
     }
@@ -60,8 +63,8 @@ class SettingsController extends ChangeNotifier {
     hold = hold.clamp(0, 15);
     exhale = exhale.clamp(1, 15);
     rest = rest.clamp(0, 15);
-    sessionMinutes = sessionMinutes.clamp(1, 10);
-    track = track.clamp(0, tracks.length - 1);
+    sessionMinutes = sessionMinutes.clamp(1, maxSessionMinutes);
+    track = track.clamp(0, trackCount - 1);
     notifyListeners();
     if (persist) save();
   }

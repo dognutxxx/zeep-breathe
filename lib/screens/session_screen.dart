@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../breathing/breathing_engine.dart';
-import '../haptics/haptics_service.dart';
+import '../l10n/strings.dart';
 import '../ui/widgets.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
@@ -22,11 +22,12 @@ class SessionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = app.engine;
+    final l = S.of(context);
     final remaining = e.state == RunState.ready ? e.sessionLength : e.sessionRemaining;
     final label = switch (e.state) {
-      RunState.paused => 'Paused',
+      RunState.paused => l.paused,
       RunState.finished => '',
-      _ => e.phase.label,
+      _ => l.phase(e.phase),
     };
 
     return Stack(
@@ -36,7 +37,7 @@ class SessionScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 36),
               Semantics(
-                label: 'Time remaining ${fmtClock(remaining)}',
+                label: l.timeRemaining(fmtClock(remaining)),
                 excludeSemantics: true,
                 child: Text(
                   fmtClock(remaining),
@@ -110,7 +111,7 @@ class SessionScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   ControlButton(
-                    tooltip: e.state == RunState.running ? 'Pause' : 'Play',
+                    tooltip: e.state == RunState.running ? l.pause : l.play,
                     onTap: app.togglePause,
                     icon: Icon(
                       e.state == RunState.running ? Icons.pause_rounded : Icons.play_arrow_rounded,
@@ -120,13 +121,13 @@ class SessionScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 16),
                   ControlButton(
-                    tooltip: 'Stop',
+                    tooltip: l.stop,
                     onTap: app.stopSession,
                     icon: const Icon(Icons.stop_rounded, color: Color(0xFF4E4A48), size: 28),
                   ),
                   const SizedBox(width: 16),
                   ControlButton(
-                    tooltip: app.settings.music ? 'Music on' : 'Music off',
+                    tooltip: app.settings.music ? l.musicOn : l.musicOff,
                     onTap: app.toggleMusic,
                     icon: SlashedIcon(
                       icon: Icons.music_note_rounded,
@@ -136,7 +137,7 @@ class SessionScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 16),
                   ControlButton(
-                    tooltip: app.settings.vibration ? 'Vibration on' : 'Vibration off',
+                    tooltip: app.settings.vibration ? l.vibrationOn : l.vibrationOff,
                     onTap: app.toggleVibration,
                     icon: Transform.translate(
                       offset: Offset(_shake(app), 0),
@@ -152,7 +153,7 @@ class SessionScreen extends StatelessWidget {
               const SizedBox(height: 12),
               LinkButton(
                 icon: Icons.settings_rounded,
-                label: 'breathing settings',
+                label: l.breathingSettingsLink,
                 onTap: () => showSettingsSheet(context, app),
               ),
               const SizedBox(height: 8),
@@ -199,7 +200,7 @@ class _HapticBadge extends StatelessWidget {
             const Icon(Icons.vibration_rounded, size: 14, color: fg),
             const SizedBox(width: 6),
             Text(
-              'Haptic · ${last.pattern.label}',
+              S.of(context).hapticBadge(last.pattern),
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg),
             ),
           ],
@@ -261,6 +262,7 @@ class _FinishedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mins = (app.engine.sessionLength / 60).round();
+    final l = S.of(context);
     return Positioned.fill(
       child: ColoredBox(
         color: withAlpha(const Color(0xFF1E2430), 0.12),
@@ -277,13 +279,13 @@ class _FinishedCard extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Session complete',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: ZeepColors.text),
+                Text(
+                  l.sessionComplete,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: ZeepColors.text),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${app.engine.breaths} full breaths · $mins min',
+                  l.sessionSummary(app.engine.breaths, mins),
                   style: const TextStyle(fontSize: 14, color: ZeepColors.textSoft),
                 ),
                 if (app.lastStreak > 0) ...[
@@ -297,7 +299,7 @@ class _FinishedCard extends StatelessWidget {
                         const Icon(Icons.auto_awesome_rounded, size: 15, color: Color(0xFF5B4FC4)),
                         const SizedBox(width: 6),
                         Text(
-                          app.lastStreak == 1 ? 'Day 1 of your streak' : '${app.lastStreak}-day streak',
+                          l.streakBadge(app.lastStreak),
                           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5B4FC4)),
                         ),
                       ],
@@ -315,7 +317,7 @@ class _FinishedCard extends StatelessWidget {
                           foregroundColor: ZeepColors.text,
                           minimumSize: const Size.fromHeight(44),
                         ),
-                        child: const Text('Again', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        child: Text(l.again, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -327,7 +329,7 @@ class _FinishedCard extends StatelessWidget {
                           foregroundColor: ZeepColors.mintDark,
                           minimumSize: const Size.fromHeight(44),
                         ),
-                        child: const Text('Done', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        child: Text(l.done, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                       ),
                     ),
                   ],
