@@ -16,26 +16,26 @@ class Pulse {
 
 extension HapticPatternInfo on HapticPattern {
   List<Pulse> get pulses => switch (this) {
-        HapticPattern.inhaleStart => const [Pulse(0, 0.09, 0.45, 0.2)],
-        HapticPattern.holdStart => const [Pulse(0, 0.04, 0.6, 0.5), Pulse(0.14, 0.04, 0.6, 0.5)],
-        HapticPattern.exhaleStart => const [Pulse(0, 0.12, 0.35, 0.1)],
-        HapticPattern.confirm => const [Pulse(0, 0.03, 0.4, 0.6)],
-      };
+    HapticPattern.inhaleStart => const [Pulse(0, 0.09, 0.45, 0.2)],
+    HapticPattern.holdStart => const [Pulse(0, 0.04, 0.6, 0.5), Pulse(0.14, 0.04, 0.6, 0.5)],
+    HapticPattern.exhaleStart => const [Pulse(0, 0.12, 0.35, 0.1)],
+    HapticPattern.confirm => const [Pulse(0, 0.03, 0.4, 0.6)],
+  };
 
   String get label => switch (this) {
-        HapticPattern.inhaleStart => 'inhale pulse',
-        HapticPattern.holdStart => 'hold · double pulse',
-        HapticPattern.exhaleStart => 'exhale pulse',
-        HapticPattern.confirm => 'vibration on',
-      };
+    HapticPattern.inhaleStart => 'inhale pulse',
+    HapticPattern.holdStart => 'hold · double pulse',
+    HapticPattern.exhaleStart => 'exhale pulse',
+    HapticPattern.confirm => 'vibration on',
+  };
 
   /// Name understood by the native side.
   String get channelName => switch (this) {
-        HapticPattern.inhaleStart => 'inhale',
-        HapticPattern.holdStart => 'hold',
-        HapticPattern.exhaleStart => 'exhale',
-        HapticPattern.confirm => 'confirm',
-      };
+    HapticPattern.inhaleStart => 'inhale',
+    HapticPattern.holdStart => 'hold',
+    HapticPattern.exhaleStart => 'exhale',
+    HapticPattern.confirm => 'confirm',
+  };
 }
 
 class HapticEvent {

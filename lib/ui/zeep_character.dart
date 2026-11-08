@@ -10,7 +10,7 @@
 
 import 'dart:math' as math;
 
-import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 
 import 'zeep_colors.dart';
 
@@ -32,14 +32,14 @@ class Pose {
   });
 
   static Pose lerp(Pose a, Pose b, double t) => Pose(
-        breath: lerpD(a.breath, b.breath, t),
-        armLift: lerpD(a.armLift, b.armLift, t),
-        cheekPuff: lerpD(a.cheekPuff, b.cheekPuff, t),
-        eyeSqueeze: lerpD(a.eyeSqueeze, b.eyeSqueeze, t),
-        mouthOpen: lerpD(a.mouthOpen, b.mouthOpen, t),
-        hold: lerpD(a.hold, b.hold, t),
-        tint: Color.lerp(a.tint, b.tint, t)!,
-      );
+    breath: lerpD(a.breath, b.breath, t),
+    armLift: lerpD(a.armLift, b.armLift, t),
+    cheekPuff: lerpD(a.cheekPuff, b.cheekPuff, t),
+    eyeSqueeze: lerpD(a.eyeSqueeze, b.eyeSqueeze, t),
+    mouthOpen: lerpD(a.mouthOpen, b.mouthOpen, t),
+    hold: lerpD(a.hold, b.hold, t),
+    tint: Color.lerp(a.tint, b.tint, t)!,
+  );
 }
 
 const tintInhale = Color.fromARGB(255, 189, 222, 247);
@@ -78,31 +78,48 @@ class Animator {
     switch (state) {
       case AnimState.idle:
         final b = 0.22 + 0.10 * math.sin(t * _tau / 5);
-        return Pose(breath: b, armLift: b * 0.5, cheekPuff: 0.12, eyeSqueeze: 0, mouthOpen: 0, hold: 0, tint: tintInhale);
+        return Pose(
+          breath: b,
+          armLift: b * 0.5,
+          cheekPuff: 0.12,
+          eyeSqueeze: 0,
+          mouthOpen: 0,
+          hold: 0,
+          tint: tintInhale,
+        );
       case AnimState.inhale:
         return Pose(
-            breath: level,
-            armLift: level,
-            cheekPuff: 0.15 + 0.3 * level,
-            eyeSqueeze: 0.25 * level,
-            mouthOpen: 0,
-            hold: 0,
-            tint: tintInhale);
+          breath: level,
+          armLift: level,
+          cheekPuff: 0.15 + 0.3 * level,
+          eyeSqueeze: 0.25 * level,
+          mouthOpen: 0,
+          hold: 0,
+          tint: tintInhale,
+        );
       case AnimState.hold:
         final shimmer = paused ? 0.0 : 0.012 * math.sin(t * _tau * 0.9);
         return Pose(
-            breath: level + shimmer, armLift: 1, cheekPuff: 0.7, eyeSqueeze: 0.45, mouthOpen: 0, hold: 1, tint: tintHold);
+          breath: level + shimmer,
+          armLift: 1,
+          cheekPuff: 0.7,
+          eyeSqueeze: 0.45,
+          mouthOpen: 0,
+          hold: 1,
+          tint: tintHold,
+        );
       case AnimState.exhale:
         final pt = phaseT.clamp(0.0, 1.0);
         final m = math.pow(math.sin(pt * math.pi), 0.5) * (1 - pt * 0.35);
         return Pose(
-            breath: level,
-            armLift: level,
-            cheekPuff: 0.1 * level,
-            eyeSqueeze: 0,
-            mouthOpen: m.toDouble(),
-            hold: 0,
-            tint: tintExhale);
+          breath: level,
+          armLift: level,
+          cheekPuff: 0.1 * level,
+          eyeSqueeze: 0,
+          mouthOpen: m.toDouble(),
+          hold: 0,
+          tint: tintExhale,
+        );
       case AnimState.rest:
         final b = 0.03 * math.sin(t * _tau / 4).abs();
         return Pose(breath: b, armLift: 0, cheekPuff: 0.1, eyeSqueeze: 0, mouthOpen: 0, hold: 0, tint: tintInhale);
@@ -144,8 +161,16 @@ void _quadLine(Canvas c, Offset p0, Offset ctl, Offset p1, double w, Color col) 
 /// Draws Zeep. `center` is the resting body centre, `s` the scale (1.0 at a
 /// 395 px wide phone layout), `shadowY` where the floor shadow sits.
 /// `ripples` are ages (seconds) of haptic pulses to visualise.
-void drawZeep(Canvas p, Offset center, double s, Pose pose, double time, double shadowY, List<double> ripples,
-    {bool reduceMotion = false}) {
+void drawZeep(
+  Canvas p,
+  Offset center,
+  double s,
+  Pose pose,
+  double time,
+  double shadowY,
+  List<double> ripples, {
+  bool reduceMotion = false,
+}) {
   final br = pose.breath.clamp(-0.1, 1.1);
   final float = reduceMotion ? 0.0 : math.sin(time * _tau / 3.8);
   final cx = center.dx;
@@ -156,8 +181,14 @@ void drawZeep(Canvas p, Offset center, double s, Pose pose, double time, double 
 
   // floor shadow: smaller + lighter when the character floats higher
   final lift = (-float * 0.5 + 0.5) * 0.6 + br * 0.4;
-  _ellipse(p, Offset(cx, shadowY), 22 * s * (1 - 0.18 * lift), 4.5 * s * (1 - 0.1 * lift), 0,
-      withAlpha(const Color(0xFF9C8574), 0.62 - 0.2 * lift));
+  _ellipse(
+    p,
+    Offset(cx, shadowY),
+    22 * s * (1 - 0.18 * lift),
+    4.5 * s * (1 - 0.1 * lift),
+    0,
+    withAlpha(const Color(0xFF9C8574), 0.62 - 0.2 * lift),
+  );
 
   // hold halo
   if (pose.hold > 0.01) {
@@ -176,8 +207,11 @@ void drawZeep(Canvas p, Offset center, double s, Pose pose, double time, double 
   for (final age in ripples) {
     final u = (age / 0.7).clamp(0.0, 1.0);
     final r = a * 1.1 + u * 46 * s;
-    p.drawCircle(Offset(cx, cy + 4 * s), r,
-        _stroke(withAlpha(const Color(0xFF7FA6F2), (1 - u) * 0.75), (2.5 - 1.5 * u) * s));
+    p.drawCircle(
+      Offset(cx, cy + 4 * s),
+      r,
+      _stroke(withAlpha(const Color(0xFF7FA6F2), (1 - u) * 0.75), (2.5 - 1.5 * u) * s),
+    );
   }
 
   // ---- body outline (soft squircle, slightly wider at the base)
@@ -278,13 +312,27 @@ void drawZeep(Canvas p, Offset center, double s, Pose pose, double time, double 
   final mw = 4.5 * s;
   if (pose.mouthOpen < 0.6) {
     final k = 1 - pose.mouthOpen / 0.6;
-    _quadLine(p, Offset(mc.dx - mw, mc.dy), Offset(mc.dx, mc.dy + 4.5 * s * smile), Offset(mc.dx + mw, mc.dy), 2 * s,
-        withAlpha(ZeepColors.ink, k));
+    _quadLine(
+      p,
+      Offset(mc.dx - mw, mc.dy),
+      Offset(mc.dx, mc.dy + 4.5 * s * smile),
+      Offset(mc.dx + mw, mc.dy),
+      2 * s,
+      withAlpha(ZeepColors.ink, k),
+    );
   }
   if (pose.mouthOpen > 0.05) {
     final m = pose.mouthOpen;
-    _ellipse(p, mc + Offset(0, 1 * s), 2 * s + 2 * s * m, 2 * s + 3 * s * m, 0, const Color(0xFF8A4E48), ZeepColors.ink,
-        1.8 * s);
+    _ellipse(
+      p,
+      mc + Offset(0, 1 * s),
+      2 * s + 2 * s * m,
+      2 * s + 3 * s * m,
+      0,
+      const Color(0xFF8A4E48),
+      ZeepColors.ink,
+      1.8 * s,
+    );
     // exhaled breath puffs drifting away
     for (var i = 0; i < 4; i++) {
       final u = (time * 0.8 + i * 0.25) % 1.0;
@@ -297,8 +345,16 @@ void drawZeep(Canvas p, Offset center, double s, Pose pose, double time, double 
   // ---- crossed legs (lotus)
   final legY = cy + b * 0.86;
   for (final sign in const [1.0, -1.0]) {
-    _ellipse(p, Offset(cx + sign * a * 0.34, legY), a * 0.44, 8.5 * s, sign * -0.06, ZeepColors.shell, ZeepColors.ink,
-        2.2 * s);
+    _ellipse(
+      p,
+      Offset(cx + sign * a * 0.34, legY),
+      a * 0.44,
+      8.5 * s,
+      sign * -0.06,
+      ZeepColors.shell,
+      ZeepColors.ink,
+      2.2 * s,
+    );
   }
 
   // ---- arms (noodle arms, lift with the breath)
@@ -316,8 +372,16 @@ void drawZeep(Canvas p, Offset center, double s, Pose pose, double time, double 
   }
   // namaste hands
   for (final sign in const [-1.0, 1.0]) {
-    _ellipse(p, Offset(cx + sign * 4.2 * s, handsY), 4.6 * s, 8.5 * s, sign * -0.32, ZeepColors.shell, ZeepColors.ink,
-        2 * s);
+    _ellipse(
+      p,
+      Offset(cx + sign * 4.2 * s, handsY),
+      4.6 * s,
+      8.5 * s,
+      sign * -0.32,
+      ZeepColors.shell,
+      ZeepColors.ink,
+      2 * s,
+    );
   }
 
   // hold sparkles
@@ -390,20 +454,22 @@ class MiniFacePainter extends CustomPainter {
     switch (kind) {
       case AnimState.inhale:
         p.drawPath(
-            Path()
-              ..moveTo(ac.dx, ac.dy - 3.5 * s)
-              ..lineTo(ac.dx + 3.2 * s, ac.dy + 1.5 * s)
-              ..lineTo(ac.dx - 3.2 * s, ac.dy + 1.5 * s)
-              ..close(),
-            _fill(ZeepColors.blue));
+          Path()
+            ..moveTo(ac.dx, ac.dy - 3.5 * s)
+            ..lineTo(ac.dx + 3.2 * s, ac.dy + 1.5 * s)
+            ..lineTo(ac.dx - 3.2 * s, ac.dy + 1.5 * s)
+            ..close(),
+          _fill(ZeepColors.blue),
+        );
       case AnimState.exhale:
         p.drawPath(
-            Path()
-              ..moveTo(ac.dx, ac.dy + 3.5 * s)
-              ..lineTo(ac.dx - 3.2 * s, ac.dy - 1.5 * s)
-              ..lineTo(ac.dx + 3.2 * s, ac.dy - 1.5 * s)
-              ..close(),
-            _fill(ZeepColors.blue));
+          Path()
+            ..moveTo(ac.dx, ac.dy + 3.5 * s)
+            ..lineTo(ac.dx - 3.2 * s, ac.dy - 1.5 * s)
+            ..lineTo(ac.dx + 3.2 * s, ac.dy - 1.5 * s)
+            ..close(),
+          _fill(ZeepColors.blue),
+        );
       case AnimState.hold:
         p.drawCircle(ac, 2.4 * s, _fill(const Color(0xFFA996F0)));
       default:
@@ -413,4 +479,59 @@ class MiniFacePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant MiniFacePainter old) => old.kind != kind;
+}
+
+/// Small, still Zeep used on cards (exercise list, progress header).
+class ZeepAvatar extends StatelessWidget {
+  final Color tint;
+  final double size;
+  final double breath;
+  final double hold;
+  const ZeepAvatar({super.key, required this.tint, this.size = 64, this.breath = 0.55, this.hold = 0});
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: CustomPaint(painter: _AvatarPainter(tint, breath, hold)),
+      ),
+    );
+  }
+}
+
+class _AvatarPainter extends CustomPainter {
+  final Color tint;
+  final double breath, hold;
+  _AvatarPainter(this.tint, this.breath, this.hold);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Zeep spans ~190 x 175 design units (arms, sprout, legs, shadow)
+    final s = size.shortestSide / 160;
+    final pose = Pose(
+      breath: breath,
+      armLift: breath,
+      cheekPuff: 0.3,
+      eyeSqueeze: 0.1,
+      mouthOpen: 0,
+      hold: hold,
+      tint: tint,
+    );
+    // time 0.95: float near rest, leaves open (same as the app icon)
+    drawZeep(
+      canvas,
+      Offset(size.width / 2, size.height * 0.52),
+      s,
+      pose,
+      0.95,
+      size.height * 0.52 + 75 * s,
+      const [],
+      reduceMotion: true,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _AvatarPainter old) => old.tint != tint || old.breath != breath || old.hold != hold;
 }

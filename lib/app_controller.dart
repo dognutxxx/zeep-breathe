@@ -8,25 +8,38 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'audio/music_service.dart';
 import 'breathing/breathing_engine.dart';
+import 'exercises/exercises.dart';
 import 'haptics/haptics_service.dart';
+import 'history/session_history.dart';
 import 'settings/settings_controller.dart';
 import 'ui/zeep_character.dart';
 
 enum Screen { setup, session }
 
+/// Bottom tabs shown outside a session.
+enum HomeTab { breathe, exercises, progress }
+
 class AppController extends ChangeNotifier {
   final SettingsController settings;
   final HapticsService haptics;
   final MusicService music;
+  final SessionHistory history;
   late final BreathingEngine engine;
   final Animator anim = Animator();
 
   Screen screen = Screen.setup;
+  HomeTab tab = HomeTab.breathe;
+  DateTime _sessionStart = DateTime.now();
+  bool _logged = false;
+
+  /// Streak right after the last finished session (for the finish card).
+  int lastStreak = 0;
   double time = 0;
   bool reduceMotion = false;
   bool _wakelock = false;
 
-  AppController({required this.settings, required this.haptics, required this.music}) {
+  AppController({required this.settings, required this.haptics, required this.music, SessionHistory? history})
+    : history = history ?? SessionHistory() {
     engine = BreathingEngine(settings.durations, settings.sessionMinutes * 60.0);
     haptics.enabled = settings.vibration;
     settings.addListener(_onSettingsChanged);
@@ -38,12 +51,15 @@ class AppController extends ChangeNotifier {
     engine.durations = settings.durations;
     engine.sessionLength = settings.sessionMinutes * 60.0;
     final ev = engine.start();
+    _sessionStart = DateTime.now();
+    _logged = false;
     screen = Screen.session;
     _handle(ev);
     notifyListeners();
   }
 
   void stopSession() {
+    if (engine.isActive) _log(completed: false);
     engine.stop();
     screen = Screen.setup;
     notifyListeners();
@@ -70,6 +86,39 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  void setTab(HomeTab t) {
+    tab = t;
+    notifyListeners();
+  }
+
+  /// Use a ready-made exercise and jump back to the Breathe tab.
+  void chooseExercise(Exercise e) {
+    settings.update((s) {
+      s.inhale = e.durations.inhale.round();
+      s.hold = e.durations.hold.round();
+      s.exhale = e.durations.exhale.round();
+      s.rest = e.durations.rest.round();
+      s.sessionMinutes = e.minutes;
+    });
+    tab = HomeTab.breathe;
+    notifyListeners();
+  }
+
+  void _log({required bool completed}) {
+    if (_logged) return;
+    _logged = true;
+    history.add(
+      SessionRecord(
+        start: _sessionStart,
+        seconds: engine.sessionElapsed.round(),
+        breaths: engine.breaths,
+        exercise: exerciseName(engine.durations),
+        completed: completed,
+      ),
+    );
+    lastStreak = history.stats(DateTime.now()).currentStreak;
+  }
+
   void toggleMusic() => settings.update((s) => s.music = !s.music);
 
   void toggleVibration() => setVibration(!settings.vibration);
@@ -92,6 +141,7 @@ class AppController extends ChangeNotifier {
 
   void _handle(List<EngineEvent> evs) {
     for (final e in evs) {
+      if (e is SessionFinished) _log(completed: true);
       if (e is PhaseStarted && engine.state == RunState.running) {
         final pat = switch (e.phase) {
           Phase.inhale => HapticPattern.inhaleStart,

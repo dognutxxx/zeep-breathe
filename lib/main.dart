@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'app_controller.dart';
 import 'audio/music_service.dart';
 import 'haptics/haptics_service.dart';
+import 'history/session_history.dart';
+import 'screens/exercises_screen.dart';
+import 'screens/progress_screen.dart';
 import 'screens/session_screen.dart';
 import 'screens/setup_screen.dart';
 import 'settings/settings_controller.dart';
@@ -19,9 +22,14 @@ Future<void> main() async {
   await settings.load();
   final haptics = HapticsService(enabled: settings.vibration);
   final music = MusicService();
-  await Future.wait([haptics.init(), music.init()]);
+  final history = SessionHistory();
+  await Future.wait([haptics.init(), music.init(), history.load()]);
 
-  runApp(ZeepBreatheApp(controller: AppController(settings: settings, haptics: haptics, music: music)));
+  runApp(
+    ZeepBreatheApp(
+      controller: AppController(settings: settings, haptics: haptics, music: music, history: history),
+    ),
+  );
 }
 
 class ZeepBreatheApp extends StatelessWidget {
@@ -64,8 +72,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       final dt = (elapsed - _last).inMicroseconds / 1e6;
       _last = elapsed;
       widget.app.tick(dt);
-    })
-      ..start();
+    })..start();
   }
 
   @override
@@ -91,22 +98,54 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: ZeepBackground(
-        // iPad / landscape: keep the phone-width column centred
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: ListenableBuilder(
-              listenable: widget.app,
-              builder: (context, _) => switch (widget.app.screen) {
-                Screen.setup => SetupScreen(app: widget.app),
-                Screen.session => SessionScreen(app: widget.app),
-              },
+    return ListenableBuilder(
+      listenable: widget.app,
+      builder: (context, _) {
+        final app = widget.app;
+        final inSession = app.screen == Screen.session;
+        final Widget page = inSession
+            ? SessionScreen(app: app)
+            : switch (app.tab) {
+                HomeTab.breathe => SetupScreen(app: app),
+                HomeTab.exercises => ExercisesScreen(app: app),
+                HomeTab.progress => ProgressScreen(app: app),
+              };
+        return Scaffold(
+          body: ZeepBackground(
+            // iPad / landscape: keep the phone-width column centred
+            child: Center(
+              child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: page),
             ),
           ),
-        ),
-      ),
+          bottomNavigationBar: inSession
+              ? null
+              : NavigationBar(
+                  height: 64,
+                  backgroundColor: Colors.white,
+                  indicatorColor: ZeepColors.blueSoft,
+                  surfaceTintColor: Colors.transparent,
+                  selectedIndex: app.tab.index,
+                  onDestinationSelected: (i) => app.setTab(HomeTab.values[i]),
+                  destinations: const [
+                    NavigationDestination(
+                      icon: Icon(Icons.spa_outlined),
+                      selectedIcon: Icon(Icons.spa_rounded),
+                      label: 'Breathe',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.grid_view_outlined),
+                      selectedIcon: Icon(Icons.grid_view_rounded),
+                      label: 'Exercises',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.insights_outlined),
+                      selectedIcon: Icon(Icons.insights_rounded),
+                      label: 'Progress',
+                    ),
+                  ],
+                ),
+        );
+      },
     );
   }
 }

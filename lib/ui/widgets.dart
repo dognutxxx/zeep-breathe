@@ -103,21 +103,24 @@ class SlashedIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(alignment: Alignment.center, children: [
-      Icon(icon, color: color, size: 24),
-      if (!on)
-        Transform.rotate(
-          angle: 0.785,
-          child: Container(
-            width: 2.2,
-            height: 28,
-            decoration: BoxDecoration(
-              color: color,
-              border: Border.symmetric(vertical: BorderSide(color: ZeepColors.btnBg, width: 1.5)),
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Icon(icon, color: color, size: 24),
+        if (!on)
+          Transform.rotate(
+            angle: 0.785,
+            child: Container(
+              width: 2.2,
+              height: 28,
+              decoration: BoxDecoration(
+                color: color,
+                border: Border.symmetric(vertical: BorderSide(color: ZeepColors.btnBg, width: 1.5)),
+              ),
             ),
           ),
-        ),
-    ]);
+      ],
+    );
   }
 }
 

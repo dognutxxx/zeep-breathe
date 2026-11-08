@@ -29,119 +29,139 @@ class SessionScreen extends StatelessWidget {
       _ => e.phase.label,
     };
 
-    return Stack(children: [
-      SafeArea(
-        child: Column(children: [
-          const SizedBox(height: 36),
-          Semantics(
-            label: 'Time remaining ${fmtClock(remaining)}',
-            excludeSemantics: true,
-            child: Text(fmtClock(remaining),
-                style: const TextStyle(
+    return Stack(
+      children: [
+        SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 36),
+              Semantics(
+                label: 'Time remaining ${fmtClock(remaining)}',
+                excludeSemantics: true,
+                child: Text(
+                  fmtClock(remaining),
+                  style: const TextStyle(
                     fontSize: 34,
                     fontWeight: FontWeight.w700,
                     color: ZeepColors.text,
-                    fontFeatures: [FontFeature.tabularFigures()])),
-          ),
-          SizedBox(height: 32, child: Center(child: _HapticBadge(app: app))),
-          Expanded(
-            flex: 5,
-            child: ExcludeSemantics(
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: ZeepPainter(
-                  pose: app.anim.pose,
-                  time: app.anim.time,
-                  ripples: app.haptics.ripples(app.time),
-                  reduceMotion: app.reduceMotion,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          ExcludeSemantics(
-            child: SizedBox(width: 190, height: 26, child: CustomPaint(painter: _BreathBar(app))),
-          ),
-          const SizedBox(height: 10),
-          // instruction label with cross-fade
-          Semantics(
-            liveRegion: true,
-            label: label,
-            excludeSemantics: true,
-            child: SizedBox(
-              height: 26,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 350),
-                transitionBuilder: (child, anim) => FadeTransition(
-                  opacity: anim,
-                  child: SlideTransition(
-                    position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(anim),
-                    child: child,
+                    fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
-                child: Text(label,
-                    key: ValueKey(label),
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: ZeepColors.label)),
               ),
-            ),
-          ),
-          SizedBox(
-            height: 20,
-            child: e.isActive
-                ? Text('${math.max(1, e.phaseRemaining.ceil())}',
-                    style: TextStyle(fontSize: 13.5, color: withAlpha(ZeepColors.textFaint, 0.9)))
-                : null,
-          ),
-          const Spacer(flex: 2),
-          // playback controls
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            ControlButton(
-              tooltip: e.state == RunState.running ? 'Pause' : 'Play',
-              onTap: app.togglePause,
-              icon: Icon(e.state == RunState.running ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  color: const Color(0xFF4E4A48), size: 28),
-            ),
-            const SizedBox(width: 16),
-            ControlButton(
-              tooltip: 'Stop',
-              onTap: app.stopSession,
-              icon: const Icon(Icons.stop_rounded, color: Color(0xFF4E4A48), size: 28),
-            ),
-            const SizedBox(width: 16),
-            ControlButton(
-              tooltip: app.settings.music ? 'Music on' : 'Music off',
-              onTap: app.toggleMusic,
-              icon: SlashedIcon(
-                icon: Icons.music_note_rounded,
-                on: app.settings.music,
-                color: app.settings.music ? const Color(0xFF4E4A48) : ZeepColors.textFaint,
+              SizedBox(
+                height: 32,
+                child: Center(child: _HapticBadge(app: app)),
               ),
-            ),
-            const SizedBox(width: 16),
-            ControlButton(
-              tooltip: app.settings.vibration ? 'Vibration on' : 'Vibration off',
-              onTap: app.toggleVibration,
-              icon: Transform.translate(
-                offset: Offset(_shake(app), 0),
-                child: SlashedIcon(
-                  icon: Icons.vibration_rounded,
-                  on: app.settings.vibration,
-                  color: app.settings.vibration ? const Color(0xFF4E4A48) : ZeepColors.textFaint,
+              Expanded(
+                flex: 5,
+                child: ExcludeSemantics(
+                  child: CustomPaint(
+                    size: Size.infinite,
+                    painter: ZeepPainter(
+                      pose: app.anim.pose,
+                      time: app.anim.time,
+                      ripples: app.haptics.ripples(app.time),
+                      reduceMotion: app.reduceMotion,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ]),
-          const SizedBox(height: 12),
-          LinkButton(
-            icon: Icons.settings_rounded,
-            label: 'breathing settings',
-            onTap: () => showSettingsSheet(context, app),
+              const SizedBox(height: 12),
+              ExcludeSemantics(
+                child: SizedBox(width: 190, height: 26, child: CustomPaint(painter: _BreathBar(app))),
+              ),
+              const SizedBox(height: 10),
+              // instruction label with cross-fade
+              Semantics(
+                liveRegion: true,
+                label: label,
+                excludeSemantics: true,
+                child: SizedBox(
+                  height: 26,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 350),
+                    transitionBuilder: (child, anim) => FadeTransition(
+                      opacity: anim,
+                      child: SlideTransition(
+                        position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(anim),
+                        child: child,
+                      ),
+                    ),
+                    child: Text(
+                      label,
+                      key: ValueKey(label),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: ZeepColors.label),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: 20,
+                child: e.isActive
+                    ? Text(
+                        '${math.max(1, e.phaseRemaining.ceil())}',
+                        style: TextStyle(fontSize: 13.5, color: withAlpha(ZeepColors.textFaint, 0.9)),
+                      )
+                    : null,
+              ),
+              const Spacer(flex: 2),
+              // playback controls
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ControlButton(
+                    tooltip: e.state == RunState.running ? 'Pause' : 'Play',
+                    onTap: app.togglePause,
+                    icon: Icon(
+                      e.state == RunState.running ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                      color: const Color(0xFF4E4A48),
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  ControlButton(
+                    tooltip: 'Stop',
+                    onTap: app.stopSession,
+                    icon: const Icon(Icons.stop_rounded, color: Color(0xFF4E4A48), size: 28),
+                  ),
+                  const SizedBox(width: 16),
+                  ControlButton(
+                    tooltip: app.settings.music ? 'Music on' : 'Music off',
+                    onTap: app.toggleMusic,
+                    icon: SlashedIcon(
+                      icon: Icons.music_note_rounded,
+                      on: app.settings.music,
+                      color: app.settings.music ? const Color(0xFF4E4A48) : ZeepColors.textFaint,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  ControlButton(
+                    tooltip: app.settings.vibration ? 'Vibration on' : 'Vibration off',
+                    onTap: app.toggleVibration,
+                    icon: Transform.translate(
+                      offset: Offset(_shake(app), 0),
+                      child: SlashedIcon(
+                        icon: Icons.vibration_rounded,
+                        on: app.settings.vibration,
+                        color: app.settings.vibration ? const Color(0xFF4E4A48) : ZeepColors.textFaint,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              LinkButton(
+                icon: Icons.settings_rounded,
+                label: 'breathing settings',
+                onTap: () => showSettingsSheet(context, app),
+              ),
+              const SizedBox(height: 8),
+            ],
           ),
-          const SizedBox(height: 8),
-        ]),
-      ),
-      if (app.finished) _FinishedCard(app: app),
-    ]);
+        ),
+        if (app.finished) _FinishedCard(app: app),
+      ],
+    );
   }
 
   /// Shake the vibration icon when a haptic fires.
@@ -173,12 +193,17 @@ class _HapticBadge extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(color: const Color(0xFFE2ECFC), borderRadius: BorderRadius.circular(12)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.vibration_rounded, size: 14, color: fg),
-          const SizedBox(width: 6),
-          Text('Haptic · ${last.pattern.label}',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg)),
-        ]),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.vibration_rounded, size: 14, color: fg),
+            const SizedBox(width: 6),
+            Text(
+              'Haptic · ${last.pattern.label}',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -196,8 +221,10 @@ class _BreathBar extends CustomPainter {
     final bw = size.width;
     final center = Offset(size.width / 2, bh / 2);
     final track = Rect.fromCenter(center: center, width: bw, height: bh);
-    canvas.drawRRect(RRect.fromRectAndRadius(track, const Radius.circular(bh / 2)),
-        Paint()..color = const Color(0xFFE4EFF9));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(track, const Radius.circular(bh / 2)),
+      Paint()..color = const Color(0xFFE4EFF9),
+    );
     final pose = app.anim.pose;
     final lvl = pose.breath.clamp(0.0, 1.0);
     final fw = bh + (bw - bh) * lvl;
@@ -205,16 +232,21 @@ class _BreathBar extends CustomPainter {
     final tint = pose.tint;
     if (pose.hold > 0.05) {
       final pulse = 0.5 + 0.5 * math.sin(app.anim.time * math.pi * 2 * 0.8);
-      canvas.drawRRect(RRect.fromRectAndRadius(fill.inflate(2.5 * pulse), const Radius.circular(bh / 2 + 2)),
-          Paint()..color = withAlpha(const Color(0xFFB9AEF0), 0.25 * pose.hold));
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(fill.inflate(2.5 * pulse), const Radius.circular(bh / 2 + 2)),
+        Paint()..color = withAlpha(const Color(0xFFB9AEF0), 0.25 * pose.hold),
+      );
     }
-    canvas.drawRRect(RRect.fromRectAndRadius(fill, const Radius.circular(bh / 2)),
-        Paint()..color = mix(tint, const Color(0xFF7FA9E8), 0.30));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(fill, const Radius.circular(bh / 2)),
+      Paint()..color = mix(tint, const Color(0xFF7FA9E8), 0.30),
+    );
     if (app.engine.isActive) {
       final mw = (bw - 12) * app.engine.phaseProgress;
       canvas.drawRRect(
-          RRect.fromRectAndRadius(Rect.fromLTWH(6, bh + 6, math.max(0, mw), 2.2), const Radius.circular(1)),
-          Paint()..color = withAlpha(mix(tint, const Color(0xFF6F9FD8), 0.5), 0.6));
+        RRect.fromRectAndRadius(Rect.fromLTWH(6, bh + 6, math.max(0, mw), 2.2), const Radius.circular(1)),
+        Paint()..color = withAlpha(mix(tint, const Color(0xFF6F9FD8), 0.5), 0.6),
+      );
     }
   }
 
@@ -242,37 +274,66 @@ class _FinishedCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(22),
               boxShadow: [BoxShadow(color: withAlpha(Colors.black, 0.14), blurRadius: 24, offset: const Offset(0, 8))],
             ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Text('Session complete',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: ZeepColors.text)),
-              const SizedBox(height: 6),
-              Text('${app.engine.breaths} full breaths · $mins min',
-                  style: const TextStyle(fontSize: 14, color: ZeepColors.textSoft)),
-              const SizedBox(height: 18),
-              Row(children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: app.startSession,
-                    style: FilledButton.styleFrom(
-                        backgroundColor: ZeepColors.btnBg,
-                        foregroundColor: ZeepColors.text,
-                        minimumSize: const Size.fromHeight(44)),
-                    child: const Text('Again', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Session complete',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: ZeepColors.text),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: app.stopSession,
-                    style: FilledButton.styleFrom(
-                        backgroundColor: ZeepColors.mint,
-                        foregroundColor: ZeepColors.mintDark,
-                        minimumSize: const Size.fromHeight(44)),
-                    child: const Text('Done', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  ),
+                const SizedBox(height: 6),
+                Text(
+                  '${app.engine.breaths} full breaths · $mins min',
+                  style: const TextStyle(fontSize: 14, color: ZeepColors.textSoft),
                 ),
-              ]),
-            ]),
+                if (app.lastStreak > 0) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(color: const Color(0xFFE6E1FA), borderRadius: BorderRadius.circular(12)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.auto_awesome_rounded, size: 15, color: Color(0xFF5B4FC4)),
+                        const SizedBox(width: 6),
+                        Text(
+                          app.lastStreak == 1 ? 'Day 1 of your streak' : '${app.lastStreak}-day streak',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5B4FC4)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: app.startSession,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: ZeepColors.btnBg,
+                          foregroundColor: ZeepColors.text,
+                          minimumSize: const Size.fromHeight(44),
+                        ),
+                        child: const Text('Again', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: app.stopSession,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: ZeepColors.mint,
+                          foregroundColor: ZeepColors.mintDark,
+                          minimumSize: const Size.fromHeight(44),
+                        ),
+                        child: const Text('Done', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

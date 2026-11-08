@@ -12,11 +12,11 @@ enum Phase { inhale, hold, exhale, rest }
 
 extension PhaseLabel on Phase {
   String get label => switch (this) {
-        Phase.inhale => 'Inhale',
-        Phase.hold => 'Hold',
-        Phase.exhale => 'Exhale',
-        Phase.rest => 'Rest',
-      };
+    Phase.inhale => 'Inhale',
+    Phase.hold => 'Hold',
+    Phase.exhale => 'Exhale',
+    Phase.rest => 'Rest',
+  };
 }
 
 enum RunState { ready, running, paused, finished }
@@ -26,11 +26,11 @@ class BreathDurations {
   const BreathDurations(this.inhale, this.hold, this.exhale, [this.rest = 0]);
 
   double of(Phase p) => switch (p) {
-        Phase.inhale => inhale,
-        Phase.hold => hold,
-        Phase.exhale => exhale,
-        Phase.rest => rest,
-      };
+    Phase.inhale => inhale,
+    Phase.hold => hold,
+    Phase.exhale => exhale,
+    Phase.rest => rest,
+  };
 
   double get cycle => inhale + hold + exhale + rest;
 

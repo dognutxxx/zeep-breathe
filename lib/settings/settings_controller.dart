@@ -67,9 +67,9 @@ class SettingsController extends ChangeNotifier {
   }
 
   void resetBreathing() => update((s) {
-        s.inhale = defaultInhale;
-        s.hold = defaultHold;
-        s.exhale = defaultExhale;
-        s.rest = defaultRest;
-      });
+    s.inhale = defaultInhale;
+    s.hold = defaultHold;
+    s.exhale = defaultExhale;
+    s.rest = defaultRest;
+  });
 }

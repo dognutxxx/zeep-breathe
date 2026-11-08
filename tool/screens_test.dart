@@ -15,6 +15,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zeep_breathe/app_controller.dart';
 import 'package:zeep_breathe/audio/music_service.dart';
 import 'package:zeep_breathe/haptics/haptics_service.dart';
+import 'package:zeep_breathe/history/session_history.dart';
+import 'package:zeep_breathe/exercises/exercises.dart';
 import 'package:zeep_breathe/main.dart';
 import 'package:zeep_breathe/screens/sheets.dart';
 import 'package:zeep_breathe/settings/settings_controller.dart';
@@ -83,6 +85,66 @@ void main() {
       }
     });
   }
+
+  testWidgets('tabs', (t) async {
+    debugDisableShadows = false;
+    try {
+      phone(t);
+      final app = await _makeApp();
+      final now = DateTime.now();
+      DateTime ago(int d, int h) => DateTime(now.year, now.month, now.day - d, h, 15);
+      // ignore: invalid_use_of_visible_for_testing_member
+      app.history.seed([
+        for (final (d, secs, ex) in [
+          (16, 180, 'Calm tide'),
+          (15, 240, 'Box breathing'),
+          (14, 300, 'Calm tide'),
+          (13, 180, 'Calm tide'),
+          (9, 120, 'Morning wake'),
+          (6, 300, '4-7-8 Sleep'),
+          (4, 180, 'Calm tide'),
+          (3, 420, 'Balance'),
+          (2, 180, 'Calm tide'),
+          (1, 300, '4-7-8 Sleep'),
+          (0, 180, 'Box breathing'),
+        ])
+          SessionRecord(
+            start: ago(d, d.isEven ? 7 : 22),
+            seconds: secs,
+            breaths: secs ~/ 12,
+            exercise: ex,
+            completed: d != 9,
+          ),
+      ]);
+      await t.pumpWidget(ZeepBreatheApp(controller: app));
+      await _advance(t, 0.8);
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('screens/8_breathe_tab.png'));
+      app.setTab(HomeTab.exercises);
+      await _advance(t, 0.5);
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('screens/9_exercises.png'));
+      app.chooseExercise(exercises[1]); // box breathing -> back to Breathe tab
+      await _advance(t, 0.5);
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('screens/10_breathe_box.png'));
+      app.setTab(HomeTab.progress);
+      await _advance(t, 0.5);
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('screens/11_progress.png'));
+      await t.drag(find.byType(ListView), const Offset(0, -600));
+      await _advance(t, 0.5);
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('screens/12_progress_scrolled.png'));
+      // finish a 1-minute session -> streak badge on the finish card
+      app.settings.update((x) => x.sessionMinutes = 1, persist: false);
+      app.setTab(HomeTab.breathe);
+      app.startSession();
+      await _advance(t, 0.3);
+      app.engine.sessionElapsed = 59.8;
+      await _advance(t, 0.6);
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('screens/13_finished_streak.png'));
+      await t.pumpWidget(const SizedBox());
+      await t.pump(const Duration(seconds: 1));
+    } finally {
+      debugDisableShadows = true;
+    }
+  });
 
   testWidgets('app icon', (t) async {
     await _icon(t);

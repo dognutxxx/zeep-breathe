@@ -28,19 +28,24 @@ class _SheetHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 18, 20, 8),
-      child: Row(children: [
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(),
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFF2F0EE),
-            foregroundColor: ZeepColors.text,
-            shape: const StadiumBorder(),
+      child: Row(
+        children: [
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFF2F0EE),
+              foregroundColor: ZeepColors.text,
+              shape: const StadiumBorder(),
+            ),
+            child: const Text('Close', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w400)),
           ),
-          child: const Text('Close', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w400)),
-        ),
-        const Spacer(),
-        Text(title, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: ZeepColors.textSoft)),
-      ]),
+          const Spacer(),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: ZeepColors.textSoft),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -52,7 +57,10 @@ class _SheetHeader extends StatelessWidget {
 Future<void> showSettingsSheet(BuildContext context, AppController app) {
   return _showSheet(
     context,
-    (ctx) => ListenableBuilder(listenable: app, builder: (ctx, _) => _SettingsContent(app: app)),
+    (ctx) => ListenableBuilder(
+      listenable: app,
+      builder: (ctx, _) => _SettingsContent(app: app),
+    ),
   );
 }
 
@@ -76,95 +84,115 @@ class _SettingsContent extends StatelessWidget {
     final musicSub = !app.music.available
         ? 'Audio unavailable'
         : app.music.isAudible
-            ? 'Playing · $trackName'
-            : '$trackName · plays during sessions';
+        ? 'Playing · $trackName'
+        : '$trackName · plays during sessions';
 
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 12),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const _SheetHeader('Breathing settings'),
-          for (final (label, kind, phase, value, min, max, set) in rows)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-              decoration: BoxDecoration(
-                color: e.isActive && e.phase == phase ? withAlpha(app.anim.pose.tint, 0.5) : Colors.transparent,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(children: [
-                Row(children: [
-                  SizedBox(width: 26, height: 26, child: CustomPaint(painter: MiniFacePainter(kind))),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(label,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF3A3A3E))),
-                  ),
-                  Text('$value',
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: ZeepColors.text)),
-                  const SizedBox(width: 3),
-                  const Text('s', style: TextStyle(fontSize: 14, color: ZeepColors.textSoft)),
-                ]),
-                ZeepSlider(
-                  value: value,
-                  min: min,
-                  max: max,
-                  semanticLabel: label,
-                  onChanged: (v) => s.update((x) => set(x, v), persist: false),
-                  onChangeEnd: (_) => s.save(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const _SheetHeader('Breathing settings'),
+            for (final (label, kind, phase, value, min, max, set) in rows)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                decoration: BoxDecoration(
+                  color: e.isActive && e.phase == phase ? withAlpha(app.anim.pose.tint, 0.5) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-              ]),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-            child: OutlinedButton(
-              onPressed: s.resetBreathing,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(56),
-                side: const BorderSide(color: Color(0xFFEAE6E2)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                foregroundColor: ZeepColors.text,
-              ),
-              child: const Column(mainAxisSize: MainAxisSize.min, children: [
-                Text('Reset to default', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                SizedBox(height: 2),
-                Text('Inhale 4s · Hold 2s · Exhale 6s', style: TextStyle(fontSize: 12, color: ZeepColors.textSoft)),
-              ]),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Text('One breath = ${cyc.round()}s · about $per breaths in ${s.sessionMinutes} min',
-                style: const TextStyle(fontSize: 12, color: ZeepColors.textFaint)),
-          ),
-          _ToggleRow(
-            title: 'Background music',
-            subtitle: musicSub,
-            value: s.music,
-            onChanged: (v) => s.update((x) => x.music = v),
-          ),
-          _ToggleRow(
-            title: 'Phone vibration',
-            subtitle: 'Pulse at inhale, hold (×2) and exhale',
-            value: s.vibration,
-            onChanged: app.setVibration,
-          ),
-          if (!app.haptics.nativeSupported)
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(color: const Color(0xFFF2F6FD), borderRadius: BorderRadius.circular(10)),
-              child: const Row(children: [
-                Icon(Icons.vibration_rounded, size: 16, color: Color(0xFF6D88C4)),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text('This device has no haptic engine, so pulses show as ripples around Zeep.',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF56698F))),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(width: 26, height: 26, child: CustomPaint(painter: MiniFacePainter(kind))),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            label,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF3A3A3E)),
+                          ),
+                        ),
+                        Text(
+                          '$value',
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: ZeepColors.text),
+                        ),
+                        const SizedBox(width: 3),
+                        const Text('s', style: TextStyle(fontSize: 14, color: ZeepColors.textSoft)),
+                      ],
+                    ),
+                    ZeepSlider(
+                      value: value,
+                      min: min,
+                      max: max,
+                      semanticLabel: label,
+                      onChanged: (v) => s.update((x) => set(x, v), persist: false),
+                      onChangeEnd: (_) => s.save(),
+                    ),
+                  ],
                 ),
-              ]),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+              child: OutlinedButton(
+                onPressed: s.resetBreathing,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(56),
+                  side: const BorderSide(color: Color(0xFFEAE6E2)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  foregroundColor: ZeepColors.text,
+                ),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Reset to default', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    SizedBox(height: 2),
+                    Text('Inhale 4s · Hold 2s · Exhale 6s', style: TextStyle(fontSize: 12, color: ZeepColors.textSoft)),
+                  ],
+                ),
+              ),
             ),
-        ]),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(
+                'One breath = ${cyc.round()}s · about $per breaths in ${s.sessionMinutes} min',
+                style: const TextStyle(fontSize: 12, color: ZeepColors.textFaint),
+              ),
+            ),
+            _ToggleRow(
+              title: 'Background music',
+              subtitle: musicSub,
+              value: s.music,
+              onChanged: (v) => s.update((x) => x.music = v),
+            ),
+            _ToggleRow(
+              title: 'Phone vibration',
+              subtitle: 'Pulse at inhale, hold (×2) and exhale',
+              value: s.vibration,
+              onChanged: app.setVibration,
+            ),
+            if (!app.haptics.nativeSupported)
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(color: const Color(0xFFF2F6FD), borderRadius: BorderRadius.circular(10)),
+                child: const Row(
+                  children: [
+                    Icon(Icons.vibration_rounded, size: 16, color: Color(0xFF6D88C4)),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'This device has no haptic engine, so pulses show as ripples around Zeep.',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF56698F)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -181,16 +209,24 @@ class _ToggleRow extends StatelessWidget {
     return MergeSemantics(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 6),
-        child: Row(children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF3A3A3E))),
-              const SizedBox(height: 2),
-              Text(subtitle, style: const TextStyle(fontSize: 12, color: ZeepColors.textFaint)),
-            ]),
-          ),
-          CupertinoSwitch(value: value, activeTrackColor: ZeepColors.blue, onChanged: onChanged),
-        ]),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF3A3A3E)),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: const TextStyle(fontSize: 12, color: ZeepColors.textFaint)),
+                ],
+              ),
+            ),
+            CupertinoSwitch(value: value, activeTrackColor: ZeepColors.blue, onChanged: onChanged),
+          ],
+        ),
       ),
     );
   }
@@ -219,36 +255,52 @@ class _Instructions extends StatelessWidget {
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 20),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          const _SheetHeader('How it works'),
-          const SizedBox(height: 8),
-          for (final (kind, title, body) in steps)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 6, 24, 10),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                SizedBox(width: 30, height: 30, child: CustomPaint(painter: MiniFacePainter(kind))),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(title,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: ZeepColors.text)),
-                    const SizedBox(height: 2),
-                    Text(body, style: const TextStyle(fontSize: 13, color: ZeepColors.textSoft, height: 1.35)),
-                  ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const _SheetHeader('How it works'),
+            const SizedBox(height: 8),
+            for (final (kind, title, body) in steps)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 6, 24, 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 30, height: 30, child: CustomPaint(painter: MiniFacePainter(kind))),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: ZeepColors.text),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(body, style: const TextStyle(fontSize: 13, color: ZeepColors.textSoft, height: 1.35)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ]),
-            ),
-          const SizedBox(height: 6),
-          for (final b in bullets)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 4, 24, 4),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('•  ', style: TextStyle(fontSize: 13.5, color: Color(0xFF4A4E58))),
-                Expanded(
-                    child: Text(b, style: const TextStyle(fontSize: 13.5, color: Color(0xFF4A4E58), height: 1.4))),
-              ]),
-            ),
-        ]),
+              ),
+            const SizedBox(height: 6),
+            for (final b in bullets)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 4, 24, 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('•  ', style: TextStyle(fontSize: 13.5, color: Color(0xFF4A4E58))),
+                    Expanded(
+                      child: Text(b, style: const TextStyle(fontSize: 13.5, color: Color(0xFF4A4E58), height: 1.4)),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
