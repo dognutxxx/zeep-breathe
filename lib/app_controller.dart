@@ -1,0 +1,142 @@
+// Wiring between engine, animator, haptics, music and settings.
+// Port of the `ZeepApp::update` loop in `app/src/app.rs`: one ticker drives
+// everything, so character, progress bar, label and haptics read the same
+// engine state in the same frame.
+
+import 'package:flutter/foundation.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+
+import 'audio/music_service.dart';
+import 'breathing/breathing_engine.dart';
+import 'haptics/haptics_service.dart';
+import 'settings/settings_controller.dart';
+import 'ui/zeep_character.dart';
+
+enum Screen { setup, session }
+
+class AppController extends ChangeNotifier {
+  final SettingsController settings;
+  final HapticsService haptics;
+  final MusicService music;
+  late final BreathingEngine engine;
+  final Animator anim = Animator();
+
+  Screen screen = Screen.setup;
+  double time = 0;
+  bool reduceMotion = false;
+  bool _wakelock = false;
+
+  AppController({required this.settings, required this.haptics, required this.music}) {
+    engine = BreathingEngine(settings.durations, settings.sessionMinutes * 60.0);
+    haptics.enabled = settings.vibration;
+    settings.addListener(_onSettingsChanged);
+  }
+
+  bool get finished => screen == Screen.session && engine.state == RunState.finished;
+
+  void startSession() {
+    engine.durations = settings.durations;
+    engine.sessionLength = settings.sessionMinutes * 60.0;
+    final ev = engine.start();
+    screen = Screen.session;
+    _handle(ev);
+    notifyListeners();
+  }
+
+  void stopSession() {
+    engine.stop();
+    screen = Screen.setup;
+    notifyListeners();
+  }
+
+  void togglePause() {
+    switch (engine.state) {
+      case RunState.running:
+        engine.pause();
+      case RunState.paused:
+        engine.resume();
+      case RunState.finished:
+      case RunState.ready:
+        startSession();
+    }
+    notifyListeners();
+  }
+
+  /// Called when the app goes to the background.
+  void pauseIfRunning() {
+    if (engine.state == RunState.running) {
+      engine.pause();
+      notifyListeners();
+    }
+  }
+
+  void toggleMusic() => settings.update((s) => s.music = !s.music);
+
+  void toggleVibration() => setVibration(!settings.vibration);
+
+  void setVibration(bool on) {
+    settings.update((s) => s.vibration = on);
+    haptics.enabled = on;
+    if (on) haptics.fire(HapticPattern.confirm, time);
+  }
+
+  void _onSettingsChanged() {
+    haptics.enabled = settings.vibration;
+    if (settings.durations != engine.durations) {
+      _handle(engine.setDurations(settings.durations));
+    }
+    if (!engine.isActive && engine.state != RunState.finished) {
+      engine.sessionLength = settings.sessionMinutes * 60.0;
+    }
+  }
+
+  void _handle(List<EngineEvent> evs) {
+    for (final e in evs) {
+      if (e is PhaseStarted && engine.state == RunState.running) {
+        final pat = switch (e.phase) {
+          Phase.inhale => HapticPattern.inhaleStart,
+          Phase.hold => HapticPattern.holdStart,
+          Phase.exhale => HapticPattern.exhaleStart,
+          Phase.rest => null,
+        };
+        if (pat != null) haptics.fire(pat, time);
+      }
+    }
+  }
+
+  void tick(double dt) {
+    dt = dt.clamp(0.0, 0.1);
+    time += dt;
+    _handle(engine.update(dt));
+
+    final st = (screen == Screen.session && engine.isActive)
+        ? switch (engine.phase) {
+            Phase.inhale => AnimState.inhale,
+            Phase.hold => AnimState.hold,
+            Phase.exhale => AnimState.exhale,
+            Phase.rest => AnimState.rest,
+          }
+        : AnimState.idle;
+    anim.setState(st);
+    anim.update(dt, engine.level, engine.phaseProgress, engine.state == RunState.paused);
+
+    final wantMusic = settings.music && screen == Screen.session && engine.state == RunState.running;
+    music.update(dt, wantMusic, settings.track);
+
+    // keep the screen on while a session is active
+    final wantWake = screen == Screen.session && engine.isActive;
+    if (wantWake != _wakelock) {
+      _wakelock = wantWake;
+      WakelockPlus.toggle(enable: wantWake).catchError((_) {});
+    }
+
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    settings.removeListener(_onSettingsChanged);
+    music.dispose();
+    super.dispose();
+  }
+}

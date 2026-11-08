@@ -1,0 +1,79 @@
+# Codemagic CI: builds the iOS app on a cloud Mac, signs it automatically and
+# uploads it to TestFlight. No local Mac needed. Setup steps: TESTFLIGHT.md.
+#
+# Before the first run, replace the two placeholders below:
+#   - integrations.app_store_connect  -> name of your App Store Connect API key in Codemagic
+#   - APP_STORE_APPLE_ID              -> the app's numeric Apple ID (App Store Connect > App Information)
+
+workflows:
+  # Free path: unsigned IPA for Sideloadly / AltStore (no Apple Developer
+  # account needed). Start manually in Codemagic and download the .ipa
+  # from the build's Artifacts. Guide: SIDELOAD.md
+  ios-unsigned:
+    name: iOS unsigned IPA (Sideload)
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+      - name: Unit tests
+        script: flutter test test/
+      - name: Install pods
+        script: find . -name "Podfile" -execdir pod install \;
+      - name: Build unsigned app
+        script: flutter build ios --release --no-codesign
+      - name: Package IPA
+        script: |
+          rm -rf Payload && mkdir Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry ZeepBreathe-unsigned.ipa Payload
+          ls -la ZeepBreathe-unsigned.ipa
+    artifacts:
+      - ZeepBreathe-unsigned.ipa
+
+  # Paid path: needs Apple Developer Program. Start manually once the
+  # placeholders below are filled in. Guide: TESTFLIGHT.md
+  ios-testflight:
+    name: iOS → TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: ZEEP App Store Connect key   # <- your integration name
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.pillarsnova.zeepBreathe
+      vars:
+        APP_STORE_APPLE_ID: 0000000000                # <- your app's Apple ID
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+      - name: Unit tests
+        script: flutter test test/
+      - name: Install pods
+        script: find . -name "Podfile" -execdir pod install \;
+      - name: Set up code signing
+        script: xcode-project use-profiles
+      - name: Build IPA
+        script: |
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          flutter build ipa --release \
+            --build-name=1.0.0 \
+            --build-number=$((LATEST + 1)) \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # beta_groups:          # uncomment to auto-add external testers
+        #   - Zeep testers
