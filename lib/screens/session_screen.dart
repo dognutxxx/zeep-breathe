@@ -320,7 +320,7 @@ class _FinishedCard extends StatelessWidget {
                         builder: (_) => ShareScreen(
                           achievement: SessionAchievement(
                             app.sessionStart,
-                            exerciseName: exerciseLabel(app.engine.durations, l),
+                            exerciseName: shareModeName(app.engine.durations, l),
                             minutes: mins,
                             breaths: app.engine.breaths,
                           ),
@@ -368,3 +368,7 @@ class _FinishedCard extends StatelessWidget {
     );
   }
 }
+
+/// Mode line on a session share card: the preset's name, or the rhythm for
+/// the default / a custom rhythm.
+String shareModeName(BreathDurations d, S s) => exerciseFor(d)?.name(s) ?? s.cardRhythm(patternOf(d));

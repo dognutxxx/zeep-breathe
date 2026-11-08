@@ -222,6 +222,10 @@ class S {
   String get cardStreakLine => _('breathing in a row', 'ฝึกหายใจต่อเนื่อง');
   String cardTotal(int minutes) => _('$minutes min in total', 'รวม $minutes นาที');
   String cardBreaths(int n) => _('$n full breaths', 'หายใจครบ $n รอบ');
+
+  /// The card's mode line for the default or a custom rhythm ("Default"
+  /// alone reads oddly to someone else): "Breathing · 4 · 2 · 6".
+  String cardRhythm(String pattern) => _('Breathing · $pattern', 'ฝึกหายใจ · $pattern');
   String get cardFooter => _('Come breathe with me', 'มาหายใจด้วยกันนะ');
   String get shareText => _('Breathing with Zeep · ZEEP Breathe', 'หายใจไปกับ Zeep · ZEEP Breathe');
   String get shareFailed => _("Couldn't open sharing. Please try again.", 'เปิดเมนูแชร์ไม่ได้ ลองอีกครั้งนะ');

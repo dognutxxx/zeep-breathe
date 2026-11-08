@@ -238,36 +238,42 @@ class _StreakCard extends StatelessWidget {
                     ),
                   ),
                   if (onShare != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Semantics(
-                        container: true, // its own node, not merged into the card's sentence
-                        button: true,
-                        label: l.shareStreak,
-                        excludeSemantics: true,
-                        child: InkWell(
-                          onTap: onShare,
-                          borderRadius: BorderRadius.circular(14),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: withAlpha(Colors.white, 0.75),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.ios_share_rounded, size: 15, color: Color(0xFF3463CC)),
-                                const SizedBox(width: 5),
-                                Text(
-                                  l.share,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF3463CC),
+                    Semantics(
+                      container: true, // its own node, not merged into the card's sentence
+                      button: true,
+                      label: l.shareStreak,
+                      onTap: onShare, // screen readers activate it (excludeSemantics hides InkWell's)
+                      excludeSemantics: true,
+                      child: InkWell(
+                        onTap: onShare,
+                        borderRadius: BorderRadius.circular(14),
+                        // 48 high to tap (platform minimum); the pill looks the same
+                        child: SizedBox(
+                          height: 48,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: 1,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: withAlpha(Colors.white, 0.75),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.ios_share_rounded, size: 15, color: Color(0xFF3463CC)),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    l.share,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF3463CC),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),

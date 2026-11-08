@@ -3,6 +3,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -84,7 +85,7 @@ void main() {
     expect(find.byType(ShareScreen), findsOneWidget);
     expect(find.text(S.en.minutes(1)), findsOneWidget);
     expect(find.text(S.en.cardBreaths(app.engine.breaths)), findsOneWidget);
-    expect(find.text(S.en.defaultRhythm), findsOneWidget);
+    expect(find.text(S.en.cardRhythm('4 · 2 · 6')), findsOneWidget); // not just "Default"
     expect((app.music as CountingMusic).stops, greaterThan(0));
     await t.pumpWidget(const SizedBox());
   });
@@ -115,7 +116,11 @@ void main() {
     await t.pumpWidget(ZeepBreatheApp(controller: app));
     await t.tap(find.text(S.en.tabProgress).last);
     await frames(t, 0.5);
-    await t.tap(find.bySemanticsLabel(S.en.shareStreak));
+    // activate it the way TalkBack / VoiceOver do (QA #1), and it is 48 high
+    final node = t.getSemantics(find.bySemanticsLabel(S.en.shareStreak));
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    expect(node.rect.height, greaterThanOrEqualTo(48));
+    t.semantics.tap(find.semantics.byLabel(S.en.shareStreak));
     await frames(t, 1);
     expect(find.byType(ShareScreen), findsOneWidget);
     expect(find.text(S.en.cardDays(3)), findsOneWidget);
