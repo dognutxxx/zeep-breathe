@@ -23,6 +23,8 @@ import '../ui/widgets.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
 import 'share_screen.dart';
+import '../wardrobe/outfits.dart';
+import 'wardrobe_cards.dart';
 
 enum _Stage { waiting, countdown, playing, paused, finished, unavailable }
 
@@ -576,6 +578,8 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
                   tint: playing && !_inside ? tintInhale : tintExhale,
                   size: zeepSize,
                   breath: _breath.isActive ? 0.3 + 0.5 * _breath.level : 0.55,
+                  outfit: app.wardrobe.outfit,
+                  growth: app.wardrobe.growth,
                 ),
               ),
               if (!playing) Positioned.fill(child: _overlay(s)),
@@ -723,6 +727,7 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
                     _Pill(s.streakBadge(app.lastStreak), withAlpha(ZeepColors.mint, 0.4), ZeepColors.mintDark),
                 ],
               ),
+              if (_saved) GrowthStrip(app: app, event: app.lastGrowth),
               if (!_saved) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -761,7 +766,12 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
                     ),
                   OutlinedButton(onPressed: _playAgain, style: _outlined, child: Text(s.playAgain)),
                   FilledButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () {
+                      final nav = Navigator.of(context);
+                      final items = _saved ? app.lastGrowth?.newItems ?? const [] : const <OutfitItem>[];
+                      nav.pop();
+                      if (items.isNotEmpty) showNewItemCards(nav.context, app, items);
+                    },
                     style: FilledButton.styleFrom(
                       backgroundColor: ZeepColors.blue,
                       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),

@@ -11,6 +11,7 @@ import '../ui/widgets.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
 import 'share_screen.dart';
+import 'wardrobe_cards.dart';
 import 'sheets.dart';
 
 String fmtClock(double secs) {
@@ -66,6 +67,8 @@ class SessionScreen extends StatelessWidget {
                       time: app.anim.time,
                       ripples: app.haptics.ripples(app.time),
                       reduceMotion: app.reduceMotion,
+                      outfit: app.wardrobe.outfit,
+                      growth: app.wardrobe.growth,
                     ),
                   ),
                 ),
@@ -309,7 +312,8 @@ class _FinishedCard extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 8),
+                GrowthStrip(app: app, event: app.lastGrowth),
+                const SizedBox(height: 4),
                 // Community phase 1: share this session as a picture card
                 TextButton.icon(
                   onPressed: () {
@@ -349,7 +353,13 @@ class _FinishedCard extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton(
-                        onPressed: app.stopSession,
+                        onPressed: () {
+                          // this card goes away with the session: show N from the navigator
+                          final nav = Navigator.of(context);
+                          final items = app.lastGrowth?.newItems ?? const [];
+                          app.stopSession();
+                          if (items.isNotEmpty) showNewItemCards(nav.context, app, items);
+                        },
                         style: FilledButton.styleFrom(
                           backgroundColor: ZeepColors.mint,
                           foregroundColor: ZeepColors.mintDark,

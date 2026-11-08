@@ -549,7 +549,17 @@ class ZeepAvatar extends StatelessWidget {
   final double size;
   final double breath;
   final double hold;
-  const ZeepAvatar({super.key, required this.tint, this.size = 64, this.breath = 0.55, this.hold = 0});
+  final Outfit outfit;
+  final SproutGrowth growth;
+  const ZeepAvatar({
+    super.key,
+    required this.tint,
+    this.size = 64,
+    this.breath = 0.55,
+    this.hold = 0,
+    this.outfit = Outfit.none,
+    this.growth = SproutGrowth.none,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -557,7 +567,7 @@ class ZeepAvatar extends StatelessWidget {
       child: SizedBox(
         width: size,
         height: size,
-        child: CustomPaint(painter: _AvatarPainter(tint, breath, hold)),
+        child: CustomPaint(painter: _AvatarPainter(tint, breath, hold, outfit, growth)),
       ),
     );
   }
@@ -566,7 +576,9 @@ class ZeepAvatar extends StatelessWidget {
 class _AvatarPainter extends CustomPainter {
   final Color tint;
   final double breath, hold;
-  _AvatarPainter(this.tint, this.breath, this.hold);
+  final Outfit outfit;
+  final SproutGrowth growth;
+  _AvatarPainter(this.tint, this.breath, this.hold, this.outfit, this.growth);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -591,9 +603,17 @@ class _AvatarPainter extends CustomPainter {
       size.height * 0.52 + 75 * s,
       const [],
       reduceMotion: true,
+      outfit: outfit,
+      growth: growth,
     );
   }
 
   @override
-  bool shouldRepaint(covariant _AvatarPainter old) => old.tint != tint || old.breath != breath || old.hold != hold;
+  bool shouldRepaint(covariant _AvatarPainter old) =>
+      old.tint != tint ||
+      old.breath != breath ||
+      old.hold != hold ||
+      old.outfit != outfit ||
+      old.growth.leaves != growth.leaves ||
+      old.growth.flower != growth.flower;
 }

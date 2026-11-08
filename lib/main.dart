@@ -12,6 +12,7 @@ import 'screens/exercises_screen.dart';
 import 'screens/progress_screen.dart';
 import 'screens/session_screen.dart';
 import 'screens/setup_screen.dart';
+import 'screens/wardrobe_cards.dart';
 import 'settings/settings_controller.dart';
 import 'ui/beta_banner.dart';
 import 'ui/widgets.dart';
@@ -82,6 +83,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // people who practised before the wardrobe existed: one summary card
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.app.wardrobe.summaryPending) showSummaryCard(context, widget.app);
+    });
     // One ticker drives engine, character, bar, label, haptics and music.
     _ticker = createTicker((elapsed) {
       final dt = (elapsed - _last).inMicroseconds / 1e6;
