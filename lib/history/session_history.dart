@@ -38,7 +38,7 @@ class SessionRecord {
       start: t,
       seconds: (j['s'] as num?)?.toInt() ?? 0,
       breaths: (j['b'] as num?)?.toInt() ?? 0,
-      exercise: '${j['e'] ?? 'Custom'}',
+      exercise: '${j['e'] ?? 'custom'}',
       completed: j['c'] == true,
     );
   }

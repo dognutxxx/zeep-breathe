@@ -162,11 +162,6 @@ class S {
   String get prevMonth => _('Previous month', 'เดือนก่อน');
   String get nextMonth => _('Next month', 'เดือนถัดไป');
   String lastSevenDays(int m) => _('$m min in the last 7 days', '$m นาทีใน 7 วันที่ผ่านมา');
-  String get recentSessions => _('Recent sessions', 'การฝึกล่าสุด');
-  String get noSessions => _(
-    'Your sessions will show up here. Breathe for 30 seconds or more to log one.',
-    'การฝึกของคุณจะแสดงที่นี่ ฝึกตั้งแต่ 30 วินาทีขึ้นไปจึงจะถูกบันทึก',
-  );
   String get today => _('Today', 'วันนี้');
   // day timeline (Progress tab)
   List<String> get weekdayNames => th
@@ -190,8 +185,16 @@ class S {
       _('Tap a day in the calendar to see its sessions.', 'แตะวันในปฏิทินเพื่อดูการฝึกของวันนั้น');
   String daySemantics(int day, String month, int? mins, bool selected) =>
       '$day $month${mins != null ? ', ${minutes(mins)}' : ''}${selected ? _(', selected', ', เลือกอยู่') : ''}';
-  String get yesterday => _('Yesterday', 'เมื่อวาน');
-  String duration(int seconds) => seconds >= 60 ? minutes((seconds / 60).round()) : secs(seconds);
+
+  /// "1 min 35 s" / "1 นาที 35 วิ"; whole minutes stay "5 min".
+  String duration(int seconds) {
+    if (seconds < 60) return secs(seconds);
+    final m = seconds ~/ 60, r = seconds % 60;
+    return r == 0 ? minutes(m) : _('$m min $r s', '$m นาที $r วิ');
+  }
+
+  String get loggingRule =>
+      _('Sessions of 30 seconds or more are saved here.', 'การฝึกตั้งแต่ 30 วินาทีขึ้นไปจะถูกบันทึกไว้ที่นี่');
 
   List<String> get monthNames => th
       ? const [

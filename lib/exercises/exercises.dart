@@ -105,15 +105,15 @@ String exerciseId(BreathDurations d) => exerciseFor(d)?.id ?? (d == defaultDurat
 /// Display name for the current durations.
 String exerciseLabel(BreathDurations d, S s) => exerciseDisplayName(exerciseId(d), s);
 
-/// Display name for an id stored in the history. Older entries stored an
-/// English name instead of an id; those are shown as they are.
+/// History entries saved before 1.2 stored an English exercise name instead
+/// of an id. Names whose rhythm still exists map to it; the rest are custom.
+const _legacyNames = {'Calm tide': 'default', 'Box breathing': 'box', '4-7-8 Sleep': '478'};
+
+/// Display name for an id stored in the history, in the current language.
 String exerciseDisplayName(String stored, S s) {
+  final id = _legacyNames[stored] ?? stored;
   for (final e in exercises) {
-    if (e.id == stored) return e.name(s);
+    if (e.id == id) return e.name(s);
   }
-  return switch (stored) {
-    'default' => s.defaultRhythm,
-    'custom' => s.customRhythm,
-    _ => stored,
-  };
+  return id == 'default' ? s.defaultRhythm : s.customRhythm;
 }

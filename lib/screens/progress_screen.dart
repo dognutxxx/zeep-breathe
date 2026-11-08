@@ -9,8 +9,7 @@ import '../ui/zeep_colors.dart';
 
 class ProgressScreen extends StatefulWidget {
   final AppController app;
-  final DateTime Function() clock;
-  const ProgressScreen({super.key, required this.app, this.clock = DateTime.now});
+  const ProgressScreen({super.key, required this.app});
 
   @override
   State<ProgressScreen> createState() => _ProgressScreenState();
@@ -19,19 +18,25 @@ class ProgressScreen extends StatefulWidget {
 class _ProgressScreenState extends State<ProgressScreen> {
   late DateTime _month;
 
-  /// Day shown in the timeline; null = today.
+  /// Day shown in the timeline; null = today. Both are mirrored in the
+  /// controller so switching tabs keeps them until the app closes.
   DateTime? _day;
+
+  void _setMonth(DateTime m) => setState(() => _month = widget.app.progressMonth = m);
+
+  void _setDay(DateTime d) => setState(() => _day = widget.app.progressDay = d);
 
   @override
   void initState() {
     super.initState();
-    final now = widget.clock();
-    _month = DateTime(now.year, now.month);
+    final now = widget.app.clock();
+    _month = widget.app.progressMonth ?? DateTime(now.year, now.month);
+    _day = widget.app.progressDay;
   }
 
   @override
   Widget build(BuildContext context) {
-    final now = widget.clock();
+    final now = widget.app.clock();
     final h = widget.app.history;
     final st = h.stats(now);
     final l = S.of(context);
@@ -75,7 +80,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   children: [
                     IconButton(
                       tooltip: l.prevMonth,
-                      onPressed: () => setState(() => _month = DateTime(_month.year, _month.month - 1)),
+                      onPressed: () => _setMonth(DateTime(_month.year, _month.month - 1)),
                       icon: const Icon(Icons.chevron_left_rounded),
                     ),
                     Expanded(
@@ -89,19 +94,13 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       tooltip: l.nextMonth,
                       onPressed: (_month.year == now.year && _month.month == now.month)
                           ? null
-                          : () => setState(() => _month = DateTime(_month.year, _month.month + 1)),
+                          : () => _setMonth(DateTime(_month.year, _month.month + 1)),
                       icon: const Icon(Icons.chevron_right_rounded),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                _MonthGrid(
-                  month: _month,
-                  stats: st,
-                  today: today,
-                  selected: selected,
-                  onSelect: (d) => setState(() => _day = d),
-                ),
+                _MonthGrid(month: _month, stats: st, today: today, selected: selected, onSelect: _setDay),
                 const SizedBox(height: 10),
                 Text(
                   l.lastSevenDays(st.minutesThisWeek(now)),
@@ -519,6 +518,12 @@ class _EmptyDay extends StatelessWidget {
             isToday ? l.noSessionsToday : l.noSessionsThisDay,
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 13.5, color: ZeepColors.textSoft),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            l.loggingRule,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, color: ZeepColors.textFaint),
           ),
           if (isToday) ...[
             const SizedBox(height: 8),
