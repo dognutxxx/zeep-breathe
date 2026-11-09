@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../l10n/strings.dart';
+import '../ui/balanced_text.dart';
 import '../ui/zeep_colors.dart';
 import '../wardrobe/flowers.dart';
 import '../wardrobe/outfits.dart';
@@ -192,7 +193,8 @@ class _ZeepDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-      child: Padding(
+      // scrolls on a small screen with very large text instead of overflowing
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -206,17 +208,13 @@ class _ZeepDialog extends StatelessWidget {
                 ),
               ),
             ),
-            Text(
+            // balanced lines: no word left alone on the last line
+            BalancedText(
               title,
-              textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: ZeepColors.text),
             ),
             const SizedBox(height: 6),
-            Text(
-              body,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, height: 1.4, color: ZeepColors.textSoft),
-            ),
+            BalancedText(body, style: const TextStyle(fontSize: 14, height: 1.4, color: ZeepColors.textSoft)),
             const SizedBox(height: 16),
             // full-width buttons, one above the other: labels like
             // "เปิดตู้เสื้อผ้า" stay on one line even with wide fonts

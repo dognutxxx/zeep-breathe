@@ -813,8 +813,10 @@ void _cloud(Canvas p, _Geo g, double time, bool reduceMotion) {
 // ---------------------------------------------------------------- flowers
 
 /// Draws one flower of [kind] centred at [c]; [k] is the scale (Zeep's `s`).
-void drawBloom(Canvas p, FlowerKind kind, Offset c, double k) {
+void drawBloom(Canvas p, FlowerKind kind, Offset c, double k, {double colour = 1}) {
   if (!(k > 0) || !k.isFinite) return;
+  // fixed colours (stamens, green parts) also start grey while card L opens the bud
+  Color lit(Color x) => colour >= 1 ? x : Color.lerp(_budGrey, x, colour.clamp(0.0, 1.0))!;
   final ink = _stroke(ZeepColors.ink, 0.9 * k);
   switch (kind.style) {
     case FlowerStyle.tulip:
@@ -856,7 +858,7 @@ void drawBloom(Canvas p, FlowerKind kind, Offset c, double k) {
         for (var i = 0; i < 4; i++) {
           p.drawCircle(m + Offset.fromDirection(i * math.pi / 2 + 0.4, 1.5 * k), 1.6 * k, _fill(kind.petal));
         }
-        p.drawCircle(m, 0.7 * k, _fill(const Color(0xFFFFFFFF)));
+        p.drawCircle(m, 0.7 * k, _fill(lit(const Color(0xFFFFFFFF))));
       }
     case FlowerStyle.radial:
       _petalRing(p, kind, kind.petal, c, k, 0, 1);
@@ -879,7 +881,16 @@ void drawBloom(Canvas p, FlowerKind kind, Offset c, double k) {
       // a small white star with two closed buds beside it
       for (final sign in const [-1.0, 1.0]) {
         final bc = c + Offset(sign * 5.6 * k, 3.4 * k);
-        _ellipse(p, bc + Offset(0, 2.4 * k), 1.6 * k, 1.0 * k, 0, const Color(0xFFB5E3C2), ZeepColors.ink, 0.8 * k);
+        _ellipse(
+          p,
+          bc + Offset(0, 2.4 * k),
+          1.6 * k,
+          1.0 * k,
+          0,
+          lit(const Color(0xFFB5E3C2)),
+          ZeepColors.ink,
+          0.8 * k,
+        );
         _ellipse(p, bc, 1.7 * k, 3.2 * k, sign * 0.5, kind.petal, ZeepColors.ink, 0.9 * k);
       }
       _petalShapes(
@@ -909,7 +920,7 @@ void drawBloom(Canvas p, FlowerKind kind, Offset c, double k) {
         p.drawLine(c, d, _stroke(withAlpha(ZeepColors.ink, 0.8), 0.7 * k));
         p.drawCircle(d, 0.9 * k, _fill(kind.center));
       }
-      p.drawCircle(c, 1.3 * k, _fill(const Color(0xFFB5E3C2)));
+      p.drawCircle(c, 1.3 * k, _fill(lit(const Color(0xFFB5E3C2))));
     case FlowerStyle.pansy:
       // violet: two big petals behind, three in front, a little face in the middle
       _blob(
@@ -925,14 +936,14 @@ void drawBloom(Canvas p, FlowerKind kind, Offset c, double k) {
           (c + Offset(4.6 * k, 0.8 * k), 3.0 * k),
           (c + Offset(0, 3.6 * k), 3.6 * k),
         ],
-        Color.lerp(kind.petal, const Color(0xFFFFFFFF), 0.25)!,
+        Color.lerp(kind.petal, lit(const Color(0xFFFFFFFF)), 0.25)!,
         1.6 * k,
       );
       final vein = _stroke(withAlpha(ZeepColors.ink, 0.6), 0.7 * k);
       for (final d in const [(-3.2, 1.2), (3.2, 1.2), (-1.0, 4.0), (0.0, 4.6), (1.0, 4.0)]) {
         p.drawLine(c + Offset(0, 0.6 * k), c + Offset(d.$1 * k, d.$2 * k), vein);
       }
-      p.drawCircle(c + Offset(0, 0.6 * k), 1.2 * k, _fill(const Color(0xFFFFE08A)));
+      p.drawCircle(c + Offset(0, 0.6 * k), 1.2 * k, _fill(lit(const Color(0xFFFFE08A))));
     case FlowerStyle.hibiscus:
       // five wide petals with a long staminal column
       for (var i = 0; i < 5; i++) {
@@ -949,10 +960,10 @@ void drawBloom(Canvas p, FlowerKind kind, Offset c, double k) {
       p.drawCircle(c, 2.6 * k, _fill(kind.center));
       final top = c + Offset.fromDirection(-0.75, 8.4 * k);
       p.drawLine(c, top, _stroke(ZeepColors.ink, 1.6 * k));
-      p.drawLine(c, top, _stroke(const Color(0xFFFFE08A), 0.8 * k));
+      p.drawLine(c, top, _stroke(lit(const Color(0xFFFFE08A)), 0.8 * k));
       for (final o in const [(0.0, 0.0), (-1.2, 0.6), (0.6, 1.2)]) {
         final d = top + Offset(o.$1 * k, o.$2 * k);
-        p.drawCircle(d, 0.95 * k, _fill(const Color(0xFFFFE08A)));
+        p.drawCircle(d, 0.95 * k, _fill(lit(const Color(0xFFFFE08A))));
         p.drawCircle(d, 0.95 * k, _stroke(ZeepColors.ink, 0.6 * k));
       }
     case FlowerStyle.pinwheel:
@@ -990,8 +1001,14 @@ void drawBloom(Canvas p, FlowerKind kind, Offset c, double k) {
       }
       p.drawArc(Rect.fromCircle(center: c, radius: 1.1 * k), -1, 3.6, false, _stroke(ZeepColors.ink, 0.8 * k));
     case FlowerStyle.bell:
-      // bluebell: a bell hanging mouth-down, with a frilled rim
-      Offset q(double x, double y) => c + Offset(x * k, y * k);
+      // bluebell: a bell hanging mouth-down from an arched stem that grows
+      // out of the stalk (so the stalk never meets the open mouth)
+      Offset q(double x, double y) => c + Offset((x + 6.5) * k, (y + 1.5) * k);
+      final arch = Path()
+        ..moveTo(c.dx, c.dy)
+        ..cubicTo(c.dx, c.dy - 7 * k, c.dx + 1.5 * k, c.dy - 11 * k, c.dx + 4.5 * k, c.dy - 10.5 * k)
+        ..quadraticBezierTo(c.dx + 6.5 * k, c.dy - 10 * k, c.dx + 6.5 * k, c.dy - 6.6 * k);
+      p.drawPath(arch, _stroke(ZeepColors.ink, 1.5 * k)..strokeCap = StrokeCap.round);
       final bell = Path()
         ..moveTo(q(-3.2, -4.5).dx, q(-3.2, -4.5).dy)
         ..cubicTo(
@@ -1011,9 +1028,9 @@ void drawBloom(Canvas p, FlowerKind kind, Offset c, double k) {
         ..close();
       p.drawPath(bell, _fill(kind.petal));
       p.drawPath(bell, ink);
-      p.drawCircle(q(0, 5.8), 1.0 * k, _fill(const Color(0xFFFFFFFF)));
+      p.drawCircle(q(0, 5.8), 1.0 * k, _fill(lit(const Color(0xFFFFFFFF))));
       p.drawCircle(q(0, 5.8), 1.0 * k, _stroke(ZeepColors.ink, 0.7 * k));
-      _ellipse(p, q(0, -7.2), 1.8 * k, 1.1 * k, 0, const Color(0xFFB5E3C2), ZeepColors.ink, 0.8 * k);
+      _ellipse(p, q(0, -7.2), 1.8 * k, 1.1 * k, 0, lit(const Color(0xFFB5E3C2)), ZeepColors.ink, 0.8 * k);
     case FlowerStyle.carnation:
       // side view: a frilly fan of petals on a green tube
       for (final (lift, spread, color) in [(1.8, 0.8, kind.inner ?? kind.petal), (0.0, 1.0, kind.petal)]) {
@@ -1038,7 +1055,7 @@ void drawBloom(Canvas p, FlowerKind kind, Offset c, double k) {
         c.dy + 6.8 * k,
         Radius.circular(1.6 * k),
       );
-      p.drawRRect(tube, _fill(const Color(0xFFB5E3C2)));
+      p.drawRRect(tube, _fill(lit(const Color(0xFFB5E3C2))));
       p.drawRRect(tube, _stroke(ZeepColors.ink, 0.9 * k));
     case FlowerStyle.rosette:
       // camellia: rings of round petals laid one over another, golden stamens
@@ -1054,7 +1071,7 @@ void drawBloom(Canvas p, FlowerKind kind, Offset c, double k) {
       }
       for (final o in const [(0.0, -0.9), (0.8, 0.5), (-0.8, 0.5)]) {
         final d = c + Offset(o.$1 * k, o.$2 * k);
-        p.drawCircle(d, 0.9 * k, _fill(const Color(0xFFFFD34F)));
+        p.drawCircle(d, 0.9 * k, _fill(lit(const Color(0xFFFFD34F))));
         p.drawCircle(d, 0.9 * k, _stroke(ZeepColors.ink, 0.6 * k));
       }
     case FlowerStyle.sideLotus:
@@ -1109,7 +1126,7 @@ Rect bloomBounds(FlowerKind kind) {
     case FlowerStyle.gardenia:
       return circle(8.6);
     case FlowerStyle.bell:
-      return const Rect.fromLTRB(-6.6, -8.6, 6.6, 7.2);
+      return const Rect.fromLTRB(-1.2, -11.8, 13.2, 8.6);
     case FlowerStyle.carnation:
       return const Rect.fromLTRB(-7.2, -10.2, 7.2, 7.4);
     case FlowerStyle.sideLotus:
@@ -1284,7 +1301,7 @@ void drawGrowingBloom(Canvas p, FlowerKind kind, Offset c, double k, SproutGrowt
       inner: kind.inner == null ? null : tint(kind.inner!),
       size: kind.size,
     );
-    drawBloom(p, shown, Offset.zero, k);
+    drawBloom(p, shown, Offset.zero, k, colour: t);
   }
   p.restore();
 }
