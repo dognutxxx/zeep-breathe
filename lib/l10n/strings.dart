@@ -13,6 +13,11 @@ import '../share/share_card.dart';
 import '../wardrobe/flowers.dart';
 import '../wardrobe/outfits.dart';
 
+/// [text] without the invisible line-break hints (word joiner U+2060,
+/// zero-width space U+200B) that keep Thai words whole on screen: for text
+/// that leaves the app (the share text) and for screen-reader labels.
+String plainText(String text) => text.replaceAll('\u2060', '').replaceAll('\u200B', '');
+
 class S {
   final bool th;
   const S._(this.th);
@@ -235,8 +240,9 @@ class S {
   String get cardFooter => _('Come breathe with me', 'มาหายใจด้วยกันนะ');
 
   /// The text sent with a share card; [name] is the character on the card.
+  /// Plain text: no word joiners from the Thai names (Pim r3).
   String shareText(String name) =>
-      _('Breathing with $name · ZEEP Breathe', 'หายใจไปกับ${_latin(name) ? ' ' : ''}$name · ZEEP Breathe');
+      plainText(_('Breathing with $name · ZEEP Breathe', 'หายใจไปกับ${_latin(name) ? ' ' : ''}$name · ZEEP Breathe'));
 
   /// Thai puts a space before a Latin name ("กับ Zeep") but not a Thai one
   /// ("กับหมิว").

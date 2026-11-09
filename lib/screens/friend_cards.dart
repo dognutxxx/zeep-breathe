@@ -155,7 +155,7 @@ class _FriendTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = S.of(context);
     final name = l.characterName(character);
-    final label = '$name, ${l.characterTagline(character)}${selected ? ', ${l.selectedLabel}' : ''}';
+    final label = plainText('$name, ${l.characterTagline(character)}${selected ? ', ${l.selectedLabel}' : ''}');
     final style = TextStyle(
       fontSize: 15,
       fontWeight: FontWeight.w700,

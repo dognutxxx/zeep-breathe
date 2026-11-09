@@ -249,7 +249,7 @@ class _Row extends StatelessWidget {
       container: true,
       button: onTap != null,
       selected: active,
-      label: [title, subtitle, ?st].join(', '),
+      label: plainText([title, subtitle, ?st].join(', ')),
       excludeSemantics: true,
       child: Material(
         color: bg,

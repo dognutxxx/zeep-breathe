@@ -512,6 +512,33 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
+  testWidgets('Thai screen-reader labels have no word joiners (Pim r3)', (t) async {
+    final app = await makeApp(days: 210);
+    t.platformDispatcher.localesTestValue = const [Locale('th', 'TH')];
+    t.platformDispatcher.localeTestValue = const Locale('th', 'TH');
+    addTearDown(t.platformDispatcher.clearAllTestValues);
+    // a wide screen: the test font draws Thai wider than real fonts (Thai
+    // layout on phones is checked with a real font in card_text_test)
+    t.view.physicalSize = const Size(2048, 2732);
+    t.view.devicePixelRatio = 2;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(ZeepBreatheApp(controller: app));
+    await frames(t, app, 5);
+    await t.tap(find.text(S.thai.friendsChip));
+    await frames(t, app);
+    await t.drag(find.text(S.thai.friendsTitle), const Offset(0, -2000));
+    await frames(t, app);
+    final labels = [
+      for (final w in t.widgetList<Semantics>(find.byType(Semantics, skipOffstage: false)))
+        if (w.properties.label != null) w.properties.label!,
+    ];
+    expect(labels.where((l) => l.startsWith('ใสใส')), isNotEmpty);
+    for (final l in labels) {
+      expect(l.contains('\u2060') || l.contains('\u200B'), isFalse, reason: l);
+    }
+    await t.pumpWidget(const SizedBox());
+  });
+
   testWidgets('the share card draws the active character (E2)', (t) async {
     for (final c in const [Character.zeep, Character.lumi]) {
       await t.pumpWidget(

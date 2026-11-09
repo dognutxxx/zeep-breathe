@@ -142,6 +142,18 @@ void main() {
       expect(plain(t.moreFriendsTitle(2)), 'เพื่อนใหม่มาเพิ่มอีก 2\u00A0ตัว');
     });
 
+    test('no word joiners leave the app: share text and screen-reader text are plain (Pim r3)', () {
+      const t = S.thai;
+      expect(t.shareText(t.characterName(_sai)), 'หายใจไปกับใสใส · ZEEP Breathe');
+      expect(t.shareText(t.characterName(_ww)), 'หายใจไปกับวงวง · ZEEP Breathe');
+      expect(t.shareText('Zeep'), 'หายใจไปกับ Zeep · ZEEP Breathe');
+      for (final c in Character.values) {
+        final text = t.shareText(t.characterName(c));
+        expect(text.contains('\u2060') || text.contains('\u200B'), isFalse, reason: c.name);
+      }
+      expect(plainText('ลอย\u2060ขึ้น\u200Bแล้ว'), 'ลอยขึ้นแล้ว');
+    });
+
     test('more days never lock anyone again', () {
       for (final c in [null, _miu, _lumi]) {
         var before = unlockedCharacters(0, c);
