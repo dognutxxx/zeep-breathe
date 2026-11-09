@@ -88,7 +88,9 @@ class _FriendCardDialogState extends State<FriendCardDialog> {
       FriendCard.day3 => (l.newFriendTitle, l.chooseFriend(name)),
       FriendCard.day10 => (l.friendArrived(name), l.breatheWith(name)),
       FriendCard.both => (l.newFriendsTitle(2), l.breatheWith(name)),
-      FriendCard.later => (several ? l.newFriendsTitle(_friends.length) : l.friendArrived(name), l.breatheWith(name)),
+      // Miu and Lumi always came before: "N more friends", so it never reads
+      // like the Miu + Lumi card again (QA r2 #3)
+      FriendCard.later => (several ? l.moreFriendsTitle(_friends.length) : l.friendArrived(name), l.breatheWith(name)),
     };
     return ZeepDialog(
       art: Padding(
@@ -141,6 +143,11 @@ class _FriendTile extends StatelessWidget {
     final l = S.of(context);
     final name = l.characterName(character);
     final label = '$name, ${l.characterTagline(character)}${selected ? ', ${l.selectedLabel}' : ''}';
+    final style = TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w700,
+      color: selected || single ? ZeepColors.mintDark : ZeepColors.text,
+    );
     return Semantics(
       container: true,
       button: onTap != null,
@@ -170,14 +177,18 @@ class _FriendTile extends StatelessWidget {
                       size: box.maxWidth.clamp(40.0, single ? 130.0 : 100.0),
                     ),
                   ),
-                  Text(
-                    name,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: selected || single ? ZeepColors.mintDark : ZeepColors.text,
-                    ),
+                  // one line, shrunk to fit if needed ("หมุนหมุน" in bold on a
+                  // 320 px screen). The hidden full-size copy keeps the line
+                  // height, so every tile is the same height (QA r2 #1).
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Opacity(opacity: 0, child: Text(name, maxLines: 1, softWrap: false, style: style)),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(name, maxLines: 1, softWrap: false, textAlign: TextAlign.center, style: style),
+                      ),
+                    ],
                   ),
                 ],
               ),

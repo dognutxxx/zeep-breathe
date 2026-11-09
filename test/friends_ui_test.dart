@@ -330,7 +330,9 @@ void main() {
     while (find.text(s.newItemTitle).evaluate().isNotEmpty) {
       await tapText(t, app, s.later);
     }
-    expect(find.text(s.newFriendsTitle(2)), findsOneWidget);
+    // "two more", not the Miu + Lumi card's "two new" again (QA r2 #3)
+    expect(find.text(s.moreFriendsTitle(2)), findsOneWidget);
+    expect(find.text(s.newFriendsTitle(2)), findsNothing);
     expect(find.text(s.pickOneNow), findsOneWidget);
     expect(find.byType(LiveFriend), findsNWidgets(2));
     // Mun selected first; pick Tuntun

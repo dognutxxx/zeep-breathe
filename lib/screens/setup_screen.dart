@@ -6,6 +6,7 @@ import '../app_controller.dart';
 import '../exercises/exercises.dart';
 import '../l10n/strings.dart';
 import '../settings/settings_controller.dart';
+import '../ui/balanced_text.dart';
 import '../ui/friends/character_view.dart';
 import '../ui/widgets.dart';
 import '../ui/zeep_colors.dart';
@@ -108,9 +109,9 @@ class SetupScreen extends StatelessWidget {
                         color: const Color(0xFFF3EFEA),
                         borderRadius: BorderRadius.circular(18),
                       ),
-                      child: Text(
+                      // balanced: no lone last word ("นะ", "again.") (QA r2 #2)
+                      child: BalancedText(
                         l.greetingOf(app.wardrobe.activeCharacter),
-                        textAlign: TextAlign.center,
                         style: const TextStyle(fontSize: 14, color: Color(0xFF6A6560), height: 1.4),
                       ),
                     ),

@@ -62,7 +62,8 @@ class S {
   String get breathingSettings => _('Breathing settings', 'ตั้งค่าการหายใจ');
   String get breathingSettingsLink => _('breathing settings', 'ตั้งค่าการหายใจ');
   String get greeting => _(
-    "Hi, I'm Zeep. Let's fill up slowly like a rising tide, then let it all drift away.",
+    // a no-break space: "away." never sits alone on the last line (QA r2 #2)
+    "Hi, I'm Zeep. Let's fill up slowly like a rising tide, then let it all drift away.",
     'สวัสดี ฉันชื่อ Zeep มาค่อยๆ หายใจเข้าให้เต็มเหมือนน้ำขึ้น แล้วปล่อยออกไปช้าๆ ด้วยกันนะ',
   );
   String get howLong => _('How long would you like to breathe?', 'อยากฝึกหายใจนานแค่ไหน?');
@@ -491,11 +492,23 @@ class S {
 
   /// Several friends at once: "Two new friends are here" (day 10 without a
   /// pick), or the day-30/60/100 friends after a long break or an update.
-  String newFriendsTitle(int n) => _(switch (n) {
-    2 => 'Two new friends are here',
-    3 => 'Three new friends are here',
-    _ => '$n new friends are here',
-  }, 'เพื่อนใหม่ $n ตัวมาหาแล้ว');
+  String newFriendsTitle(int n) => _(
+    switch (n) {
+      2 => 'Two new friends are here',
+      3 => 'Three new friends are here',
+      _ => '$n\u00A0new friends are here',
+    },
+    // a no-break space and a word joiner keep "3 ตัว" together (QA r2 #1)
+    'เพื่อนใหม่ $n\u00A0ตัว\u2060มาหาแล้ว',
+  );
+
+  /// The day-30/60/100 card with several friends: Miu and Lumi came before,
+  /// so these are "more" (QA r2 #3).
+  String moreFriendsTitle(int n) => _(switch (n) {
+    2 => 'Two more friends have arrived',
+    3 => 'Three more friends have arrived',
+    _ => '$n\u00A0more friends have arrived',
+  }, 'เพื่อนใหม่มาเพิ่มอีก $n\u00A0ตัว');
   String get pickOneNow => _('Pick one to breathe with now', 'เลือกตัวที่จะฝึกด้วยตอนนี้');
   String get selectedLabel => _('selected', 'เลือกอยู่');
 }

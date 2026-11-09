@@ -23,6 +23,7 @@ import 'package:zeep_breathe/screens/wardrobe_screen.dart';
 import 'package:zeep_breathe/screens/wardrobe_cards.dart';
 import 'package:zeep_breathe/settings/settings_controller.dart';
 import 'package:zeep_breathe/ui/balanced_text.dart';
+import 'package:zeep_breathe/ui/friends/friend_painter.dart';
 import 'package:zeep_breathe/wardrobe/outfits.dart';
 
 const _thaiFont = r'C:\Windows\Fonts\LeelawUI.ttf';
@@ -63,6 +64,25 @@ void main() {
     if (hasFont) await loadFonts();
   });
 
+  test('balanced widths are cached: a rebuild every frame does no new layout (Pim r2 #1)', () {
+    const style = TextStyle(fontSize: 14);
+    const text = 'Hi, I am a greeting that wraps onto two lines in a narrow bubble.';
+    final before = balancedLayouts;
+    final a = balancedWidth(text, style, 180, TextScaler.noScaling, TextDirection.ltr);
+    expect(balancedLayouts, before + 1);
+    for (var i = 0; i < 60; i++) {
+      expect(balancedWidth(text, style, 180, TextScaler.noScaling, TextDirection.ltr), a);
+    }
+    expect(balancedLayouts, before + 1);
+    // any change in the key works it out again
+    balancedWidth(text, style, 200, TextScaler.noScaling, TextDirection.ltr);
+    balancedWidth(text, style, 180, const TextScaler.linear(1.3), TextDirection.ltr);
+    balancedWidth(text, style.copyWith(fontSize: 15), 180, TextScaler.noScaling, TextDirection.ltr);
+    balancedWidth(text, style, 180, TextScaler.noScaling, TextDirection.ltr, hug: true);
+    balancedWidth('$text!', style, 180, TextScaler.noScaling, TextDirection.ltr);
+    expect(balancedLayouts, before + 6);
+  });
+
   test('a hugging balanced text (picker badge) is as wide as its one line', () {
     const style = TextStyle(fontSize: 12.5);
     const scaler = TextScaler.noScaling;
@@ -91,6 +111,9 @@ void main() {
           'picker',
           'pickerDay100',
           'garden',
+          'greetMun',
+          'greetTuntun',
+          'greetNuan',
           'pickerDay0',
           'pickerDay5',
         ]) {
@@ -111,7 +134,7 @@ void main() {
             final days = switch (card) {
               'pickerDay0' => 0,
               'pickerDay5' => 5,
-              'pickerDay100' => 120,
+              'pickerDay100' || 'greetMun' || 'greetTuntun' || 'greetNuan' => 120,
               _ => 30,
             };
             app.wardrobe.setForTest(steps: 4 * 4 + 3, practiceDays: days);
@@ -124,6 +147,13 @@ void main() {
                 showSummaryCard(ctx, app);
               case 'newItem':
                 showNewItemCards(ctx, app, [OutfitItem.sleepCap]);
+              case 'greetMun' || 'greetTuntun' || 'greetNuan':
+                // the T1 greeting bubble of each new friend (QA r2 #2)
+                app.wardrobe.selectCharacter(switch (card) {
+                  'greetMun' => Character.mun,
+                  'greetTuntun' => Character.tuntun,
+                  _ => Character.nuan,
+                });
               case 'garden':
                 // the garden tab's hint (1.8.0 #8)
                 openWardrobe(ctx, app, tab: 1);
@@ -156,6 +186,39 @@ void main() {
             }
             expect(t.takeException(), isNull, reason: 'overflow');
             final l = lang == 'th' ? S.thai : S.en;
+            if (card.startsWith('greet')) {
+              final c = app.wardrobe.activeCharacter;
+              expect(c, isNot(Character.zeep));
+              // balanced, so the loop below checks it for a lone last word
+              expect(find.widgetWithText(BalancedText, l.greetingOf(c)), findsOneWidget);
+            }
+            if (card.startsWith('friend')) {
+              final dialog = find.byType(FriendCardDialog);
+              // every tile the same height, its name on one line (QA r2 #1)
+              final tiles = find.descendant(of: dialog, matching: find.byType(LiveFriend));
+              final heights = {
+                for (final e in tiles.evaluate())
+                  t.getSize(find.ancestor(of: find.byWidget(e.widget), matching: find.byType(Material)).first).height,
+              };
+              expect(heights.length, 1, reason: 'tile heights $heights');
+              for (final e in find.descendant(of: dialog, matching: find.byType(FittedBox)).evaluate()) {
+                final text = find.descendant(of: find.byWidget(e.widget), matching: find.byType(Text));
+                expect(t.renderObject<RenderParagraph>(text).didExceedMaxLines, isFalse);
+              }
+              // the number in the title stays with its word ("3 ตัว", "3 more")
+              final title = find.descendant(of: dialog, matching: find.byType(BalancedText)).first;
+              final text = find.descendant(of: title, matching: find.byType(Text));
+              final para = t.renderObject<RenderParagraph>(text);
+              final str = (t.widget<Text>(text)).data!;
+              final digit = str.indexOf(RegExp(r'[0-9]'));
+              if (digit >= 0) {
+                // the number, the space and the next word ("3 ตัว", "3 more"):
+                // one line, so every box has the same top
+                final end = str.indexOf(RegExp(r'[ ⁠]|$'), digit + 2);
+                final boxes = para.getBoxesForSelection(TextSelection(baseOffset: digit, extentOffset: end));
+                expect(boxes.map((b) => b.top).toSet(), hasLength(1), reason: '"$str" splits after the number');
+              }
+            }
             if (card == 'garden') {
               // balanced, so the loop below checks it for a lone word
               await t.scrollUntilVisible(find.text(l.gardenHint), 200, scrollable: find.byType(Scrollable).last);
