@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Launch screen (Android 11 and older): the zeep logo, 180 dp wide, centred on the
-     splash colour. The Flutter splash draws its first frame the same way. -->
+<!-- Launch screen (Android 11 and older): the Soft Paper zeep logo, 180 dp wide, centred on the
+     Midnight splash colour. The Flutter splash draws its first frame the same way. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/splash_background" />
     <item>
