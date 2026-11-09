@@ -32,14 +32,9 @@ Future<void> main() async {
   // window up for every Android version (bar colours too, since Android 7
   // can't show dark navigation icons); screens keep clear with SafeArea.
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Color(0x00000000),
-      statusBarIconBrightness: Brightness.dark,
-      statusBarBrightness: Brightness.light,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ),
-  );
+  // The app opens on the dark splash: light bar icons from the start (the
+  // launch gate switches to the app's dark icons when the splash goes).
+  SystemChrome.setSystemUIOverlayStyle(splashBarsStyle);
   // Show the splash at once and load while it plays (it waits for this).
   final boot = loadApp();
   final logo = await loadSplashLogo();
@@ -101,17 +96,23 @@ class ZeepBreatheApp extends StatelessWidget {
 class LaunchGate extends StatefulWidget {
   final Future<AppController> boot;
 
-  /// Splash speed (0.5 = the approved half speed); tests may speed it up.
+  /// Splash speed (1 = the approved real-time breath); tests may speed it up.
   final double splashSpeed;
   final ui.Image? logo;
 
-  const LaunchGate({super.key, required this.boot, this.splashSpeed = 0.5, this.logo});
+  const LaunchGate({super.key, required this.boot, this.splashSpeed = 1, this.logo});
 
   @override
   State<LaunchGate> createState() => _LaunchGateState();
 }
 
 class _LaunchGateState extends State<LaunchGate> {
+  static const _appBars = SystemUiOverlayStyle(
+    statusBarColor: Color(0x00000000),
+    statusBarIconBrightness: Brightness.dark,
+    statusBarBrightness: Brightness.light,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  );
   final _splashGone = Completer<void>();
   AppController? _app;
   bool _showApp = false, _splashDone = false;
@@ -135,7 +136,11 @@ class _LaunchGateState extends State<LaunchGate> {
     return Stack(
       children: [
         if (app != null && _showApp)
-          HomePage(app: app, splashGone: _splashGone.future)
+          // dark bar icons again once the dark splash is going
+          AnnotatedRegion<SystemUiOverlayStyle>(
+            value: _appBars,
+            child: HomePage(app: app, splashGone: _splashGone.future),
+          )
         else
           const ColoredBox(color: splashBackground, child: SizedBox.expand()),
         if (!_splashDone)
