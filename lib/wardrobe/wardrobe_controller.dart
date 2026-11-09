@@ -12,7 +12,9 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../friends/characters.dart';
-import '../friends/characters.dart' as friends show unlockedCharacters, friendChoicePending, dueFriendCard;
+import '../friends/characters.dart'
+    as friends
+    show unlockedCharacters, friendChoicePending, dueFriendCard, dueLaterFriends, isUnlocked;
 import '../history/session_history.dart';
 import 'flowers.dart';
 import 'garden.dart';
@@ -94,6 +96,9 @@ class WardrobeController extends ChangeNotifier {
   Character? _day3Choice;
   bool _day3CardShown = false, _day10CardSeen = false;
 
+  /// Day-30/60/100 friends whose "here" card was shown (1.8.0).
+  final Set<Character> _laterCardsSeen = {};
+
   int get steps => _steps;
   int get practiceDays => _dayStepsMap.length;
   GardenLevel get garden => _garden ??= gardenFromSteps(_steps);
@@ -147,11 +152,8 @@ class WardrobeController extends ChangeNotifier {
   /// back to Zeep if the saved one is not unlocked (corrupt data).
   Character get activeCharacter {
     final a = _active;
-    if (a == Character.zeep) return a;
     // cheap: read every frame
-    final d = practiceDays;
-    final ok = a.isDay3Friend && (d >= secondFriendDays || (d >= firstFriendDays && _day3Choice == a));
-    return ok ? a : Character.zeep;
+    return friends.isUnlocked(a, practiceDays, _day3Choice) ? a : Character.zeep;
   }
 
   /// Days 3-9 with no pick yet (picker row "choose a new friend").
@@ -163,7 +165,11 @@ class WardrobeController extends ChangeNotifier {
     choice: _day3Choice,
     day3CardShown: _day3CardShown,
     day10CardSeen: _day10CardSeen,
+    laterSeen: _laterCardsSeen,
   );
+
+  /// The day-30/60/100 friends for the [FriendCard.later] card, in order.
+  List<Character> get dueLaterFriends => friends.dueLaterFriends(practiceDays, _laterCardsSeen);
 
   /// Switch to [c] (free, at once). Ignored if [c] is not unlocked.
   void selectCharacter(Character c) {
@@ -181,10 +187,15 @@ class WardrobeController extends ChangeNotifier {
     _changed();
   }
 
-  /// A friend card was shown (whatever the user tapped).
-  void markFriendCardShown(FriendCard card) {
-    _day3CardShown = true;
-    if (card != FriendCard.day3) _day10CardSeen = true;
+  /// A friend card was shown (whatever the user tapped). For the
+  /// [FriendCard.later] card, [shown] are the friends on it.
+  void markFriendCardShown(FriendCard card, {Iterable<Character> shown = const []}) {
+    if (card == FriendCard.later) {
+      _laterCardsSeen.addAll(shown.where((c) => c.isLaterFriend));
+    } else {
+      _day3CardShown = true;
+      if (card != FriendCard.day3) _day10CardSeen = true;
+    }
     _changed();
   }
 
@@ -354,6 +365,11 @@ class WardrobeController extends ChangeNotifier {
     if (_day3Choice != null) 'day3Choice': _day3Choice!.name,
     'day3CardShown': _day3CardShown,
     'day10CardSeen': _day10CardSeen,
+    // 1.8.0: the day-30/60/100 cards shown; a 1.7.x save has none
+    'laterCardsSeen': [
+      for (final c in laterFriends)
+        if (_laterCardsSeen.contains(c)) c.name,
+    ],
   };
 
   void _fromJson(Map j) {
@@ -395,11 +411,21 @@ class WardrobeController extends ChangeNotifier {
         ? GrowthEvent.fromSteps((pb[0] as num).toInt(), (pb[1] as num).toInt())
         : null;
     final active = Character.byName(j['character']);
-    _active = active != null && active.playable ? active : Character.zeep;
+    // (activeCharacter falls back to Zeep if this one is not unlocked)
+    _active = active ?? Character.zeep;
     final choice = Character.byName(j['day3Choice']);
     _day3Choice = choice != null && choice.isDay3Friend ? choice : null;
     _day3CardShown = j['day3CardShown'] == true;
     _day10CardSeen = j['day10CardSeen'] == true;
+    final later = j['laterCardsSeen'];
+    _laterCardsSeen
+      ..clear()
+      ..addAll(
+        [
+          if (later is List)
+            for (final n in later) ?Character.byName(n),
+        ].where((c) => c.isLaterFriend),
+      );
     _garden = null;
     _growth = null;
   }

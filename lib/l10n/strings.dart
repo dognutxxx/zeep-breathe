@@ -388,7 +388,8 @@ class S {
       : _('$n more sessions to bloom', 'ฝึกอีก $n ครั้ง ดอกจะบาน');
   String get gardenHint => _(
     'Each finished session grows a leaf (up to 3 a day). Tap a flower for your friend to wear.',
-    'ฝึกจนจบ 1 ครั้ง ใบงอก 1 ใบ (วันละไม่เกิน 3) แตะดอกที่บานแล้วเพื่อให้ตัวละครใส่',
+    // (the bracket stays on one line: word joiners and a no-break space)
+    'ฝึกจนจบ 1 ครั้ง ใบงอก 1 ใบ (วันละ⁠ไม่⁠เกิน 3) แตะดอกที่บานแล้วเพื่อให้ตัวละครใส่',
   );
   String levelN(int n) => _('Level $n', 'เลเวล $n');
   String bloomCount(int n) => '×$n';
@@ -430,13 +431,17 @@ class S {
     Character.zeep => 'Zeep',
     Character.miu => _('Miu', 'หมิว'),
     Character.lumi => _('Lumi', 'ลูมิ'),
-    _ => mysteryFriend,
+    Character.mun => _('Mun', 'หมุนหมุน'),
+    Character.tuntun => _('Tuntun', 'ตุ่นตุ่น'),
+    Character.nuan => _('Nuan', 'นวล'),
   };
   String characterTagline(Character c) => switch (c) {
     Character.zeep => _('Fills with water as you breathe', 'เติมน้ำตามลมหายใจ'),
     Character.miu => _('Belly rises as you breathe', 'ท้องป่องตามลมหายใจ'),
     Character.lumi => _('Glows brighter as you breathe', 'ไฟสว่างตามลมหายใจ'),
-    _ => '',
+    Character.mun => _('Spins with your breath', 'ใบพัดหมุนตามลมหายใจ'),
+    Character.tuntun => _('Peeks out as you breathe in', 'โผล่หัวออกมาตามลมหายใจ'),
+    Character.nuan => _('Grows full as you breathe in', 'เต็มดวงตามลมหายใจ'),
   };
 
   /// The speech bubble on the Breathe tab, in the active character's voice.
@@ -449,7 +454,19 @@ class S {
       "Hi, I'm Lumi. My light grows as you breathe in and softens as you breathe out.",
       'สวัสดี ฉันชื่อลูมิ หายใจเข้าแล้วไฟจะสว่างขึ้น หายใจออกแล้วไฟจะค่อยๆ หรี่ลงนะ',
     ),
-    _ => greeting,
+    Character.mun => _(
+      "Hi, I'm Mun. Breathe in and my blades spin fast, then slow down with me as you breathe out.",
+      'สวัสดี ฉันชื่อหมุนหมุน หายใจเข้าแล้วใบพัดจะหมุนเร็ว หายใจออกแล้วค่อยๆ หมุนช้าลงด้วยกันนะ',
+    ),
+    Character.tuntun => _(
+      "Hi, I'm Tuntun. I peek out as you breathe in and tuck back into my shell as you breathe out. Little by little.",
+      'สวัสดี ฉันชื่อตุ่นตุ่น หายใจเข้าแล้วฉันจะโผล่หัวออกมา หายใจออกแล้วค่อยๆ หดกลับเข้ากระดอง ไปทีละนิดก็ถึงนะ',
+    ),
+    Character.nuan => _(
+      "Hi, I'm Nuan. Breathe in and I grow full, breathe out and I become a soft crescent again.",
+      'สวัสดี ฉันชื่อนวล หายใจเข้าแล้วฉันจะค่อยๆ เต็มดวง หายใจออกแล้วกลับเป็นเสี้ยวบางๆ นะ',
+    ),
+    Character.zeep => greeting,
   };
   String get friendsTitle => _('My friends', 'เพื่อนของฉัน');
   String get friendsChip => _('Friends', 'เพื่อน');
@@ -465,14 +482,20 @@ class S {
   String friendIn(int n) => _(n == 1 ? 'Comes in 1 more day' : 'Comes in $n more days', 'มาหาอีก $n วัน');
   String get mysteryFriend => _('Mystery friend', 'เพื่อนลึกลับ');
   String mysteryWhen(int n) => _('Comes at $n practice days', 'มาหาเมื่อฝึกครบ $n วัน');
-  String get mysteryOnTheWay => _('On the way, in a coming update', 'กำลังเดินทางมา');
   String get newFriendTitle => _('A new friend is here!', 'มีเพื่อนใหม่มาหาแล้ว!');
   String chooseFriend(String name) => _('Choose $name', 'เลือก$name');
   String get otherFriendLater =>
       _('The other one comes when you reach 10 practice days', 'อีกตัวจะมาหาเมื่อฝึกครบ 10 วัน');
   String friendArrived(String name) => _('$name is here', '$name มาหาแล้ว');
   String breatheWith(String name) => _('Breathe with $name', 'ฝึกกับ$name');
-  String get twoFriendsTitle => _('Two new friends are here', 'เพื่อนใหม่ 2 ตัวมาหาแล้ว');
+
+  /// Several friends at once: "Two new friends are here" (day 10 without a
+  /// pick), or the day-30/60/100 friends after a long break or an update.
+  String newFriendsTitle(int n) => _(switch (n) {
+    2 => 'Two new friends are here',
+    3 => 'Three new friends are here',
+    _ => '$n new friends are here',
+  }, 'เพื่อนใหม่ $n ตัวมาหาแล้ว');
   String get pickOneNow => _('Pick one to breathe with now', 'เลือกตัวที่จะฝึกด้วยตอนนี้');
   String get selectedLabel => _('selected', 'เลือกอยู่');
 }

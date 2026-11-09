@@ -1,6 +1,6 @@
 // The active character on the Breathe tab (T1), in sessions and on share
 // cards. Zeep goes through exactly the same painter calls as before 1.7.0;
-// only Miu and Lumi use the friend painters.
+// only the friends use the friend painters.
 
 import 'package:flutter/widgets.dart';
 
@@ -36,6 +36,8 @@ CustomPainter activeCharacterPainter(AppController app) {
     ripples: app.haptics.ripples(app.time),
     // as tall as Zeep, where Zeep stands (QA #4)
     fit: FriendFit.stage,
+    // Mun's rotor turns with the breath (still with Reduce Motion)
+    spin: c == Character.mun && !app.reduceMotion ? app.pinwheel.angle : null,
   );
 }
 
@@ -49,7 +51,7 @@ class CharacterAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!character.playable || character == Character.zeep) {
+    if (character == Character.zeep) {
       return ZeepAvatar(tint: tint, size: size, breath: breath);
     }
     return ExcludeSemantics(

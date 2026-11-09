@@ -19,6 +19,7 @@ import 'package:zeep_breathe/l10n/strings.dart';
 import 'package:zeep_breathe/main.dart';
 import 'package:zeep_breathe/screens/friend_cards.dart';
 import 'package:zeep_breathe/screens/friends_sheet.dart';
+import 'package:zeep_breathe/screens/wardrobe_screen.dart';
 import 'package:zeep_breathe/screens/wardrobe_cards.dart';
 import 'package:zeep_breathe/settings/settings_controller.dart';
 import 'package:zeep_breathe/ui/balanced_text.dart';
@@ -85,7 +86,11 @@ void main() {
           'friend3',
           'friend10',
           'friendsBoth',
+          'friendLater1',
+          'friendLater3',
           'picker',
+          'pickerDay100',
+          'garden',
           'pickerDay0',
           'pickerDay5',
         ]) {
@@ -106,6 +111,7 @@ void main() {
             final days = switch (card) {
               'pickerDay0' => 0,
               'pickerDay5' => 5,
+              'pickerDay100' => 120,
               _ => 30,
             };
             app.wardrobe.setForTest(steps: 4 * 4 + 3, practiceDays: days);
@@ -118,22 +124,31 @@ void main() {
                 showSummaryCard(ctx, app);
               case 'newItem':
                 showNewItemCards(ctx, app, [OutfitItem.sleepCap]);
+              case 'garden':
+                // the garden tab's hint (1.8.0 #8)
+                openWardrobe(ctx, app, tab: 1);
               case 'pickerDay0' || 'pickerDay5':
                 expect(app.wardrobe.friendChoicePending, card == 'pickerDay5');
                 openFriends(ctx, app);
-              case 'picker':
+              case 'picker' || 'pickerDay100':
                 app.wardrobe.chooseFirstFriend(Character.lumi);
                 openFriends(ctx, app);
               default:
-                // the friend cards (1.7.0): day 3, day 10, both at once
+                // the friend cards (1.7.0): day 3, day 10, both at once;
+                // 1.8.0: day 30/60/100, one friend or three at once
                 final kind = switch (card) {
                   'friend3' => FriendCard.day3,
                   'friend10' => FriendCard.day10,
+                  'friendLater1' || 'friendLater3' => FriendCard.later,
                   _ => FriendCard.both,
                 };
                 showDialog<Character>(
                   context: ctx,
-                  builder: (_) => FriendCardDialog(card: kind, chosen: Character.miu),
+                  builder: (_) => FriendCardDialog(
+                    card: kind,
+                    chosen: Character.miu,
+                    later: card == 'friendLater1' ? const [Character.tuntun] : laterFriends,
+                  ),
                 );
             }
             for (var i = 0; i < 20; i++) {
@@ -141,6 +156,11 @@ void main() {
             }
             expect(t.takeException(), isNull, reason: 'overflow');
             final l = lang == 'th' ? S.thai : S.en;
+            if (card == 'garden') {
+              // balanced, so the loop below checks it for a lone word
+              await t.scrollUntilVisible(find.text(l.gardenHint), 200, scrollable: find.byType(Scrollable).last);
+              expect(find.widgetWithText(BalancedText, l.gardenHint), findsOneWidget);
+            }
             if (card == 'pickerDay5') {
               // the badge "มีเพื่อนใหม่มาหาแล้ว!" is balanced, checked below (QA #2)
               expect(find.widgetWithText(BalancedText, l.newFriendTitle), findsOneWidget);

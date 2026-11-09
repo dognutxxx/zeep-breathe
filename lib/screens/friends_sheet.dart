@@ -93,13 +93,18 @@ class FriendsSheet extends StatelessWidget {
         // the chosen one first, then the other one
         for (final c in [w.day3Choice ?? Character.miu, (w.day3Choice ?? Character.miu).other]) friendRow(c),
       ],
-      for (final c in mysteryFriends)
-        _Row(
-          art: const CustomPaint(painter: MysteryFriendPainter()),
-          title: l.mysteryFriend,
-          subtitle: days >= c.days ? l.mysteryOnTheWay : l.mysteryWhen(c.days),
-          dim: true,
-        ),
+      // 30 / 60 / 100 days: the friend itself once its day has come; before
+      // that a dark silhouette of its own shape (keeps the surprise)
+      for (final c in laterFriends)
+        if (unlocked.contains(c))
+          friendRow(c)
+        else
+          _Row(
+            art: CustomPaint(painter: FriendSilhouettePainter(c, fit: _fit)),
+            title: l.mysteryFriend,
+            subtitle: l.mysteryWhen(c.days),
+            dim: true,
+          ),
     ];
 
     return ConstrainedBox(
@@ -147,18 +152,17 @@ class FriendsSheet extends StatelessWidget {
         roomy: true,
       );
     }
-    // as tall as Zeep in its row: Zeep's avatar is "roomy" (a little
-    // smaller) when it wears an outfit or a flower (QA #4)
+    return CustomPaint(
+      painter: FriendPainter(character: c, lv: 0.55, growth: growth, fit: _fit),
+    );
+  }
+
+  /// As tall as Zeep in its row: Zeep's avatar is "roomy" (a little smaller)
+  /// when it wears an outfit or a flower (QA #4).
+  FriendFit get _fit {
     final w = app.wardrobe;
     final zeepDressed = !w.outfit.isEmpty || !w.growth.isNone;
-    return CustomPaint(
-      painter: FriendPainter(
-        character: c,
-        lv: 0.55,
-        growth: growth,
-        fit: zeepDressed ? FriendFit.roomyAvatar : FriendFit.avatar,
-      ),
-    );
+    return zeepDressed ? FriendFit.roomyAvatar : FriendFit.avatar;
   }
 }
 

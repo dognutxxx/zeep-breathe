@@ -11,6 +11,7 @@ import 'package:flutter/scheduler.dart';
 
 import '../app_controller.dart';
 import '../l10n/strings.dart';
+import '../ui/balanced_text.dart';
 import '../ui/widgets.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
@@ -325,11 +326,8 @@ class _GardenTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Text(
-          l.gardenHint,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13, color: ZeepColors.textSoft),
-        ),
+        // balanced: the Thai hint never leaves "ตัวละครใส่" alone on a line
+        BalancedText(l.gardenHint, style: const TextStyle(fontSize: 13, color: ZeepColors.textSoft)),
         const SizedBox(height: 10),
         Align(
           alignment: Alignment.centerRight,

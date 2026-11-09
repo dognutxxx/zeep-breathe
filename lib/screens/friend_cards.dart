@@ -3,6 +3,8 @@
 // - day 3: pick Miu or Lumi (also opened from the picker's "choose" row)
 // - day 10: the one not picked comes too
 // - day 10 with no day-3 pick: both come at once
+// - day 30 / 60 / 100 (1.8.0): "<name> is here", or one card for several
+//   friends due at once (e.g. 65 days after updating); pick one to switch to
 
 import 'package:flutter/material.dart';
 
@@ -16,11 +18,13 @@ import 'wardrobe_cards.dart';
 
 /// Shows the friend card that is due, if any.
 Future<void> showFriendCard(BuildContext context, AppController app) async {
-  final card = app.wardrobe.dueFriendCard;
+  final w = app.wardrobe;
+  final card = w.dueFriendCard;
   if (card == null) return;
+  final later = card == FriendCard.later ? w.dueLaterFriends : const <Character>[];
   // shown once, whatever is tapped (and even if the app closes now)
-  app.wardrobe.markFriendCardShown(card);
-  await _show(context, app, card);
+  w.markFriendCardShown(card, shown: later);
+  await _show(context, app, card, later: later);
 }
 
 /// The day-3 card from the picker's "choose a new friend" row.
@@ -30,11 +34,11 @@ Future<void> showChooseFriendCard(BuildContext context, AppController app) async
   await _show(context, app, FriendCard.day3);
 }
 
-Future<void> _show(BuildContext context, AppController app, FriendCard card) async {
+Future<void> _show(BuildContext context, AppController app, FriendCard card, {List<Character> later = const []}) async {
   final w = app.wardrobe;
   final picked = await showDialog<Character>(
     context: context,
-    builder: (_) => FriendCardDialog(card: card, chosen: w.day3Choice, growth: w.growth),
+    builder: (_) => FriendCardDialog(card: card, chosen: w.day3Choice, later: later, growth: w.growth),
   );
   if (picked == null) return;
   if (card == FriendCard.day3) {
@@ -50,28 +54,41 @@ class FriendCardDialog extends StatefulWidget {
   /// The day-3 pick (for the day-10 card: the other one is shown).
   final Character? chosen;
 
+  /// The day-30/60/100 friends on a [FriendCard.later] card.
+  final List<Character> later;
+
   /// The garden flower: it travels with every friend.
   final SproutGrowth growth;
-  const FriendCardDialog({super.key, required this.card, this.chosen, this.growth = SproutGrowth.none});
+  const FriendCardDialog({
+    super.key,
+    required this.card,
+    this.chosen,
+    this.later = const [],
+    this.growth = SproutGrowth.none,
+  });
 
   @override
   State<FriendCardDialog> createState() => _FriendCardDialogState();
 }
 
 class _FriendCardDialogState extends State<FriendCardDialog> {
-  late final List<Character> _friends = widget.card == FriendCard.day10
-      ? [(widget.chosen ?? Character.lumi).other]
-      : const [Character.miu, Character.lumi];
+  late final List<Character> _friends = switch (widget.card) {
+    FriendCard.day10 => [(widget.chosen ?? Character.lumi).other],
+    FriendCard.later => widget.later.isEmpty ? const [Character.mun] : widget.later,
+    _ => const [Character.miu, Character.lumi],
+  };
   late Character _selected = _friends.first;
 
   @override
   Widget build(BuildContext context) {
     final l = S.of(context);
     final name = l.characterName(_selected);
+    final several = _friends.length > 1;
     final (title, primary) = switch (widget.card) {
       FriendCard.day3 => (l.newFriendTitle, l.chooseFriend(name)),
       FriendCard.day10 => (l.friendArrived(name), l.breatheWith(name)),
-      FriendCard.both => (l.twoFriendsTitle, l.breatheWith(name)),
+      FriendCard.both => (l.newFriendsTitle(2), l.breatheWith(name)),
+      FriendCard.later => (several ? l.newFriendsTitle(_friends.length) : l.friendArrived(name), l.breatheWith(name)),
     };
     return ZeepDialog(
       art: Padding(
@@ -95,7 +112,7 @@ class _FriendCardDialogState extends State<FriendCardDialog> {
         ),
       ),
       title: title,
-      body: widget.card == FriendCard.both ? l.pickOneNow : l.characterTagline(_selected),
+      body: widget.card != FriendCard.day3 && several ? l.pickOneNow : l.characterTagline(_selected),
       note: widget.card == FriendCard.day3 ? l.otherFriendLater : null,
       primary: primary,
       secondary: l.later,
