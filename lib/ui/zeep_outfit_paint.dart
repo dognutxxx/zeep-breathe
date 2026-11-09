@@ -1003,11 +1003,11 @@ void drawBloom(Canvas p, FlowerKind kind, Offset c, double k, {double colour = 1
     case FlowerStyle.bell:
       // bluebell: a bell hanging mouth-down from an arched stem that grows
       // out of the stalk (so the stalk never meets the open mouth)
-      Offset q(double x, double y) => c + Offset((x + 6.5) * k, (y + 1.5) * k);
+      Offset q(double x, double y) => c + Offset((x + 6.5) * k, (y - 2) * k);
       final arch = Path()
         ..moveTo(c.dx, c.dy)
-        ..cubicTo(c.dx, c.dy - 7 * k, c.dx + 1.5 * k, c.dy - 11 * k, c.dx + 4.5 * k, c.dy - 10.5 * k)
-        ..quadraticBezierTo(c.dx + 6.5 * k, c.dy - 10 * k, c.dx + 6.5 * k, c.dy - 6.6 * k);
+        ..cubicTo(c.dx, c.dy - 8 * k, c.dx + 1.5 * k, c.dy - 13 * k, c.dx + 4.5 * k, c.dy - 12.5 * k)
+        ..quadraticBezierTo(c.dx + 6.5 * k, c.dy - 12 * k, c.dx + 6.5 * k, c.dy - 9.6 * k);
       p.drawPath(arch, _stroke(ZeepColors.ink, 1.5 * k)..strokeCap = StrokeCap.round);
       final bell = Path()
         ..moveTo(q(-3.2, -4.5).dx, q(-3.2, -4.5).dy)
@@ -1126,7 +1126,7 @@ Rect bloomBounds(FlowerKind kind) {
     case FlowerStyle.gardenia:
       return circle(8.6);
     case FlowerStyle.bell:
-      return const Rect.fromLTRB(-1.2, -11.8, 13.2, 8.6);
+      return const Rect.fromLTRB(-1.2, -13.8, 13.2, 5.2);
     case FlowerStyle.carnation:
       return const Rect.fromLTRB(-7.2, -10.2, 7.2, 7.4);
     case FlowerStyle.sideLotus:
@@ -1327,5 +1327,8 @@ Offset sproutTipAt(double x, double cy, double b, double s, double br, SproutGro
   final b = 52 * s * (1 + 0.07 * br);
   final tip = sproutTipAt(center.dx, cy, b, s, br, g);
   final f = g.flower;
-  return f == null ? (centre: tip, k: 1.5 * s) : flowerOnTip(tip, s, f);
+  if (f == null) return (centre: tip, k: 1.5 * s);
+  // the middle of what is drawn (a hanging bluebell sits off to one side)
+  final (centre: fc, k: k) = flowerOnTip(tip, s, f);
+  return (centre: fc + bloomBounds(f).center * k, k: k);
 }

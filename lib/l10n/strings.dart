@@ -402,7 +402,7 @@ class S {
       _('The sprout grew 3 times today. More tomorrow!', 'วันนี้ต้นอ่อนโตครบ 3 ครั้งแล้ว พรุ่งนี้มาต่อนะ');
   String get newItemTitle => _('Something new for Zeep!', 'Zeep ได้ของใหม่!');
   String newItemBody(String item, int days) => _(
-    //   keeps the number with its unit on one line
+    // a no-break space (U+00A0) keeps each number with its unit on one line
     days == 1 ? '$item · unlocked after 1 day of practice' : '$item · unlocked after $days days of practice',
     '$item · ปลดล็อกเมื่อฝึกครบ $days วัน',
   );
@@ -410,8 +410,9 @@ class S {
   String get later => _('Later', 'ไว้ทีหลัง');
   String get summaryTitle => _('Zeep has gifts for you', 'Zeep มีของรอคุณอยู่');
   String summaryBody(int level, int items) => _(
-    // two short lines, broken by hand so a wide font never leaves one word alone
-    'From your practice so far:\nlevel $level · $items ${items == 1 ? 'item' : 'items'} unlocked',
-    'จากที่ฝึกมาแล้ว\nได้เลเวล $level · ปลดล็อกของ $items ชิ้น',
+    // two short lines, broken by hand; no-break spaces (U+00A0) keep numbers with their
+    // units, and a word joiner (U+2060) keeps ปลดล็อก in one piece
+    'From your practice so far:\nlevel $level · $items ${items == 1 ? 'item' : 'items'} unlocked',
+    'จากที่ฝึกมาแล้ว\nได้เลเวล $level · ปลด⁠ล็อกของ $items ชิ้น',
   );
 }
