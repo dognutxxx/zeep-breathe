@@ -197,6 +197,9 @@ class _FakeRotation implements DisplayRotationSource {
   Future<int> rotation() async => value;
 }
 
+/// A bare MaterialApp around [home] (share screen, game), for other tools.
+Widget plainApp(Widget home) => _gameApp(home);
+
 Widget _gameApp(Widget home) => MaterialApp(
   debugShowCheckedModeBanner: false,
   supportedLocales: S.supportedLocales,

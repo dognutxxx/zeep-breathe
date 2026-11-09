@@ -1,7 +1,8 @@
 // Headless screenshots of Zeep and friends (1.7.0), in English and Thai:
 // the "My friends" picker (Zeep only, day 6 with Miu picked, day 12), the
 // day-3 / day-10 / both-at-once cards, T1 with Miu and with Lumi, and a
-// session with Lumi mid-inhale and on hold. Uses Windows' Leelawadee UI font
+// session with Lumi mid-inhale and on hold; 1.7.1: share cards with Miu and
+// Lumi, the picker at day 5 with no pick and at day 1. Uses Windows' Leelawadee UI font
 // for both languages (Roboto has no Thai glyphs).
 //   flutter test tool/friends_screens_test.dart --update-goldens
 
@@ -16,7 +17,10 @@ import 'package:zeep_breathe/app_controller.dart';
 import 'package:zeep_breathe/friends/characters.dart';
 import 'package:zeep_breathe/l10n/strings.dart';
 import 'package:zeep_breathe/main.dart';
+import 'package:zeep_breathe/game/balance_game.dart';
 import 'package:zeep_breathe/screens/friend_cards.dart';
+import 'package:zeep_breathe/screens/share_screen.dart';
+import 'package:zeep_breathe/share/share_card.dart';
 
 import 'screens_common.dart';
 
@@ -73,6 +77,11 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
   day12.wardrobe.selectCharacter(Character.lumi);
   await _picker(t, p, s, '42_friends_day12', day12);
 
+  // 1.7.1: the highlighted "choose a new friend" row (day 5, no pick) and
+  // the grey "Miu or Lumi" row counting down (day 1)
+  await _picker(t, p, s, '52_friends_day5_choose', await _app(t, 5));
+  await _picker(t, p, s, '53_friends_day1', await _app(t, 1));
+
   // D: the cards
   await _card(t, p, '43_friend_card_day3', await _app(t, 3));
   // Miu picked on day 3, then 10 days reached
@@ -100,6 +109,27 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
     }
     await t.pumpWidget(const SizedBox());
     await t.pump(const Duration(seconds: 1));
+  }
+
+  // 1.7.1: share cards with a friend, as tall as Zeep on 26 / 28
+  for (final (c, name, a, colour) in [
+    (Character.miu, '50_share_miu', StreakAchievement(fixedNow, days: 7, totalMinutes: 52), ShareCardColor.lavender),
+    (
+      Character.lumi,
+      '51_share_lumi',
+      GameAchievement(fixedNow, level: BalanceLevel.hard, score: 96),
+      ShareCardColor.sky,
+    ),
+  ]) {
+    phone(t);
+    await t.pumpWidget(plainApp(ShareScreen(achievement: a, character: c, sharer: (_, _, _) async {})));
+    await advance(t, 0.3);
+    if (colour != ShareCardColor.lavender) {
+      await t.tap(find.byTooltip(s.cardThemeName(colour)));
+      await advance(t, 0.3);
+    }
+    await shot('screens/$p$name.png');
+    await t.pumpWidget(const SizedBox());
   }
 }
 
