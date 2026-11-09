@@ -288,23 +288,21 @@ void main() {
                 textScaler: para.textScaler,
                 maxLines: para.maxLines,
               )..layout(maxWidth: para.softWrap ? para.constraints.maxWidth : double.infinity);
-              // the line a letter is on
-              int line(int at) => tp.getLineBoundary(TextPosition(offset: at)).start;
+              // where each line starts (after the first)
+              final starts = <int>{
+                for (var i = 0; i < str.length; i++) tp.getLineBoundary(TextPosition(offset: i)).start,
+              }..removeWhere((k) => k <= 0 || k >= str.length);
               bool latin(int c) => (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
-              for (var i = 1; i < str.length - 1; i++) {
-                if (str.codeUnitAt(i) != 0x2060) continue;
-                expect(line(i - 1), line(i + 1), reason: '"$str" splits a word at $i');
-              }
-              // no Latin word broken inside ("Wongwon / g", QA 1.9.0 #7): a word
-              // too wide for the line is drawn smaller instead
-              for (var i = 1; i < str.length; i++) {
-                if (!latin(str.codeUnitAt(i - 1)) || !latin(str.codeUnitAt(i))) continue;
-                expect(
-                  line(i - 1),
-                  line(i),
-                  reason:
-                      '"$str" breaks a word at $i (width ${para.constraints.maxWidth}, widest ${tp.minIntrinsicWidth})',
-                );
+              for (final k in starts) {
+                final why = '"$str" breaks at $k: "${str.substring(0, k)} / ${str.substring(k)}"';
+                // no Thai word held by a word joiner split, next to the joiner
+                // or anywhere inside the joined run (QA 1.9.0 #4, #9)
+                expect(str.codeUnitAt(k - 1) != 0x2060 && str.codeUnitAt(k) != 0x2060, isTrue, reason: why);
+                // no Latin word broken inside ("Wongwon / g", QA 1.9.0 #7)
+                expect(latin(str.codeUnitAt(k - 1)) && latin(str.codeUnitAt(k)), isFalse, reason: why);
+                // only between words: never inside a word or a letter cluster
+                // ("เพื่อนให / ม่มาเพิ่ม", QA 1.9.0 #9)
+                expect(tp.getWordBoundary(TextPosition(offset: k)).start, k, reason: why);
               }
               tp.dispose();
             }

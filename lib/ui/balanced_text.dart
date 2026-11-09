@@ -185,20 +185,33 @@ class _RenderBalanced extends RenderShiftedBox {
 /// two Latin letters ("Wongwon / g"), or next to a word joiner (U+2060) that
 /// holds Thai words together. The engine does that only when a word is wider
 /// than the line.
-bool splitsWord(TextPainter tp, String text) {
-  if (tp.computeLineMetrics().length < 2) return false;
-  bool latin(int c) => (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
-  int line(int at) => tp.getLineBoundary(TextPosition(offset: at)).start;
-  for (var i = 1; i < text.length; i++) {
-    final c = text.codeUnitAt(i);
-    if (c == 0x2060 && i + 1 < text.length) {
-      if (line(i - 1) != line(i + 1)) return true;
-    } else if (latin(text.codeUnitAt(i - 1)) && latin(c)) {
-      if (line(i - 1) != line(i)) return true;
-    }
+bool splitsWord(TextPainter tp, String text) => lineStarts(tp, text).any((k) => !breakAllowed(tp, text, k));
+
+/// Where the lines of [tp] (laid out from [text]) start, after the first.
+Iterable<int> lineStarts(TextPainter tp, String text) {
+  if (tp.computeLineMetrics().length < 2) return const [];
+  final starts = <int>{};
+  for (var i = 0; i < text.length; i++) {
+    final s = tp.getLineBoundary(TextPosition(offset: i)).start;
+    if (s > 0 && s < text.length) starts.add(s);
   }
-  return false;
+  return starts;
 }
+
+/// Whether a line may start at [k] of [text]: only between two words (ICU's
+/// word boundaries, the same Thai dictionary as the line breaker), never
+/// next to a word joiner (U+2060, it holds Thai words together, so a joined
+/// run like "เพื่อน⁠ใหม่" never breaks anywhere inside) and never between two
+/// Latin letters. An emergency break inside a word or a letter cluster
+/// ("เพื่อนให / ม่", "Wongwon / g") is not a word boundary.
+bool breakAllowed(TextPainter tp, String text, int k) {
+  final a = text.codeUnitAt(k - 1), b = text.codeUnitAt(k);
+  if (a == 0x2060 || b == 0x2060) return false;
+  if (_latin(a) && _latin(b)) return false;
+  return tp.getWordBoundary(TextPosition(offset: k)).start == k;
+}
+
+bool _latin(int c) => (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
 
 /// How much smaller [text] must be drawn so no word is broken inside at
 /// [maxWidth]: 1 when nothing breaks, never below [minFit]. Cached like
