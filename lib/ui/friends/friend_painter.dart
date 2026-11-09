@@ -43,22 +43,71 @@ void _ripples(Canvas p, List<double> ripples) {
   }
 }
 
+/// How a friend is placed in its box.
+enum FriendFit {
+  /// The whole 200-unit art plus a margin fills the box, centred (previews
+  /// and the friend_draw tests).
+  box,
+
+  /// As tall as Zeep and standing where Zeep stands in a ZeepPainter box
+  /// (Breathe tab T1, session).
+  stage,
+
+  /// As tall as Zeep and standing where Zeep stands in a ZeepAvatar of the
+  /// same box (share cards, picker rows).
+  avatar,
+
+  /// As [avatar] for a "roomy" ZeepAvatar that wears an outfit or a flower
+  /// (Zeep shrinks to make room); also the cards' friend tiles.
+  roomyAvatar,
+}
+
+/// Zeep's visual height (opaque pixels, mid breath) is about 136 of its
+/// scale units, from the top of the sprout to its feet at 54 units below the
+/// body centre (measured from drawZeep; Zeep itself is not changed). Miu is
+/// about 156 SVG units tall and Lumi 174, so they are drawn at these
+/// fractions of Zeep's scale to look the same height (test/character_size_test).
+const _zeepFeet = 54.0;
+double friendMatch(Character c) => c == Character.lumi ? 0.779 : 0.869;
+
+/// The friend's feet (bottom of the opaque art, at rest) in SVG units.
+double _friendFeet(Character c) => c == Character.lumi ? 194 : 191;
+
 /// Paints [character] (Miu or Lumi) at lung level [lv] and [hold], wearing
-/// [growth]'s flower, with haptic [ripples] (ages in seconds). Draws nothing
-/// for Zeep or the mystery friends.
+/// [growth]'s flower, with haptic [ripples] (ages in seconds), placed by
+/// [fit]. Draws nothing for Zeep or the mystery friends.
 void drawFriend(
   Canvas canvas,
   Size size,
   Character character,
   double lv,
   double hold,
-  SproutGrowth growth, [
+  SproutGrowth growth, {
   List<double> ripples = const [],
-]) {
-  final k = math.min(size.width, size.height) / _box;
-  if (!(k > 0) || !k.isFinite || !character.isDay3Friend) return;
+  FriendFit fit = FriendFit.box,
+}) {
+  if (!character.isDay3Friend) return;
+  final double k;
+  final Offset origin;
+  if (fit == FriendFit.box) {
+    k = math.min(size.width, size.height) / _box;
+    origin = Offset(size.width / 2 - 100 * k, size.height / 2 - 100 * k);
+  } else {
+    // Zeep's scale and body centre in the same box: ZeepPainter (stage) or
+    // ZeepAvatar (avatar), copied from zeep_character.dart
+    final s = switch (fit) {
+      FriendFit.stage => math.min(size.width / 290, size.height / 225),
+      FriendFit.avatar => size.shortestSide / 160,
+      _ => size.shortestSide / 200,
+    };
+    k = s * friendMatch(character);
+    // the friend's feet on Zeep's feet line
+    final feet = size.height * 0.52 + _zeepFeet * s;
+    origin = Offset(size.width / 2 - 100 * k, feet - _friendFeet(character) * k);
+  }
+  if (!(k > 0) || !k.isFinite) return;
   canvas.save();
-  canvas.translate(size.width / 2 - 100 * k, size.height / 2 - 100 * k);
+  canvas.translate(origin.dx, origin.dy);
   canvas.scale(k);
   final f = growth.flower;
   void flower(Canvas p, Offset at) {
@@ -104,22 +153,28 @@ class FriendPainter extends CustomPainter {
 
   /// Ages (s) of haptic pulses to show as rings, as around Zeep.
   final List<double> ripples;
+
+  /// Where in the box the friend is drawn.
+  final FriendFit fit;
   FriendPainter({
     required this.character,
     required this.lv,
     this.hold = 0,
     this.growth = SproutGrowth.none,
     this.ripples = const [],
+    this.fit = FriendFit.box,
   });
 
   @override
-  void paint(Canvas canvas, Size size) => drawFriend(canvas, size, character, lv, hold, growth, ripples);
+  void paint(Canvas canvas, Size size) =>
+      drawFriend(canvas, size, character, lv, hold, growth, ripples: ripples, fit: fit);
 
   @override
   bool shouldRepaint(covariant FriendPainter old) =>
       old.character != character ||
       old.lv != lv ||
       old.hold != hold ||
+      old.fit != fit ||
       !sameGrowth(old.growth, growth) ||
       !listEquals(old.ripples, ripples);
 }
@@ -134,12 +189,21 @@ class FriendPainter extends CustomPainter {
 }
 
 /// A friend breathing on its own (cards, where the app's ticker is not
-/// driving anything). Still at [reducedLv] with Reduce Motion on.
+/// driving anything). Still at [reducedLv] with Reduce Motion on. Placed
+/// like a roomy ZeepAvatar by default, so Miu and Lumi side by side look the
+/// same height.
 class LiveFriend extends StatefulWidget {
   final Character character;
   final double size;
   final SproutGrowth growth;
-  const LiveFriend({super.key, required this.character, this.size = 96, this.growth = SproutGrowth.none});
+  final FriendFit fit;
+  const LiveFriend({
+    super.key,
+    required this.character,
+    this.size = 96,
+    this.growth = SproutGrowth.none,
+    this.fit = FriendFit.roomyAvatar,
+  });
 
   @override
   State<LiveFriend> createState() => _LiveFriendState();
@@ -169,7 +233,7 @@ class _LiveFriendState extends State<LiveFriend> with SingleTickerProviderStateM
     final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     return SizedBox.square(
       dimension: widget.size,
-      child: CustomPaint(painter: _LivePainter(widget.character, widget.growth, still ? null : _time)),
+      child: CustomPaint(painter: _LivePainter(widget.character, widget.growth, widget.fit, still ? null : _time)),
     );
   }
 }
@@ -177,23 +241,24 @@ class _LiveFriendState extends State<LiveFriend> with SingleTickerProviderStateM
 class _LivePainter extends CustomPainter {
   final Character character;
   final SproutGrowth growth;
+  final FriendFit fit;
   final ValueNotifier<double>? time;
-  _LivePainter(this.character, this.growth, this.time) : super(repaint: time);
+  _LivePainter(this.character, this.growth, this.fit, this.time) : super(repaint: time);
 
   @override
   void paint(Canvas canvas, Size size) {
     final t = time;
     if (t == null) {
-      drawFriend(canvas, size, character, reducedLv, 0, growth);
+      drawFriend(canvas, size, character, reducedLv, 0, growth, fit: fit);
     } else {
       final b = demoBreath(t.value);
-      drawFriend(canvas, size, character, b.lv, b.hold, growth);
+      drawFriend(canvas, size, character, b.lv, b.hold, growth, fit: fit);
     }
   }
 
   @override
   bool shouldRepaint(covariant _LivePainter old) =>
-      old.character != character || old.time != time || !sameGrowth(old.growth, growth);
+      old.character != character || old.fit != fit || old.time != time || !sameGrowth(old.growth, growth);
 }
 
 /// A dark, generic silhouette for a friend who has not come yet (not a

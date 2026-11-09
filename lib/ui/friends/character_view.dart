@@ -34,11 +34,13 @@ CustomPainter activeCharacterPainter(AppController app) {
     growth: app.wardrobe.growth,
     // vibration shown as rings on devices without a haptic engine, as for Zeep
     ripples: app.haptics.ripples(app.time),
+    // as tall as Zeep, where Zeep stands (QA #4)
+    fit: FriendFit.stage,
   );
 }
 
 /// A still character for cards (share card). Zeep is the same ZeepAvatar as
-/// before; friends are drawn at the same lung level.
+/// before; friends are drawn at the same lung level, as tall as Zeep.
 class CharacterAvatar extends StatelessWidget {
   final Character character;
   final Color tint;
@@ -54,7 +56,7 @@ class CharacterAvatar extends StatelessWidget {
       child: SizedBox.square(
         dimension: size,
         child: CustomPaint(
-          painter: FriendPainter(character: character, lv: breath),
+          painter: FriendPainter(character: character, lv: breath, fit: FriendFit.avatar),
         ),
       ),
     );

@@ -65,7 +65,7 @@ class _ShareScreenState extends State<ShareScreen> {
       final image = await boundary.toImage(pixelRatio: 3);
       final data = await image.toByteData(format: ui.ImageByteFormat.png);
       image.dispose();
-      await widget.sharer(data!.buffer.asUint8List(), s.shareText, origin);
+      await widget.sharer(data!.buffer.asUint8List(), s.shareText(s.characterName(widget.character)), origin);
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(s.shareFailed)));
     } finally {

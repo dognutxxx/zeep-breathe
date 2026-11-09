@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../app_controller.dart';
 import '../friends/characters.dart';
 import '../l10n/strings.dart';
+import '../ui/balanced_text.dart';
 import '../ui/friends/friend_painter.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
@@ -72,11 +73,11 @@ class FriendsSheet extends StatelessWidget {
       friendRow(Character.zeep),
       if (days < firstFriendDays)
         // before day 3: Miu or Lumi, one of them comes on day 3
+        // (the wait, not "choose": nothing to tap yet, QA #3)
         _Row(
           art: const _Greyed(child: _Pair()),
           title: l.miuOrLumi,
-          subtitle: l.chooseNewFriend,
-          status: l.friendIn(firstFriendDays - days),
+          subtitle: l.firstFriendWhen(firstFriendDays, firstFriendDays - days),
           dim: true,
         )
       else if (w.friendChoicePending)
@@ -146,13 +147,22 @@ class FriendsSheet extends StatelessWidget {
         roomy: true,
       );
     }
+    // as tall as Zeep in its row: Zeep's avatar is "roomy" (a little
+    // smaller) when it wears an outfit or a flower (QA #4)
+    final w = app.wardrobe;
+    final zeepDressed = !w.outfit.isEmpty || !w.growth.isNone;
     return CustomPaint(
-      painter: FriendPainter(character: c, lv: 0.55, growth: growth),
+      painter: FriendPainter(
+        character: c,
+        lv: 0.55,
+        growth: growth,
+        fit: zeepDressed ? FriendFit.roomyAvatar : FriendFit.avatar,
+      ),
     );
   }
 }
 
-/// Miu and Lumi side by side (the "choose" row).
+/// Miu and Lumi side by side (the "choose" row), the same height.
 class _Pair extends StatelessWidget {
   const _Pair();
 
@@ -165,14 +175,18 @@ class _Pair extends StatelessWidget {
           top: 10,
           width: 40,
           height: 40,
-          child: CustomPaint(painter: FriendPainter(character: Character.miu, lv: 0.55)),
+          child: CustomPaint(
+            painter: FriendPainter(character: Character.miu, lv: 0.55, fit: FriendFit.roomyAvatar),
+          ),
         ),
         Positioned(
           right: 0,
           top: 10,
           width: 40,
           height: 40,
-          child: CustomPaint(painter: FriendPainter(character: Character.lumi, lv: 0.55)),
+          child: CustomPaint(
+            painter: FriendPainter(character: Character.lumi, lv: 0.55, fit: FriendFit.roomyAvatar),
+          ),
         ),
       ],
     );
@@ -261,8 +275,12 @@ class _Row extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
+                      // balanced: "มาหาเมื่อฝึกครบ 3 วัน · อีก 2 วัน" never leaves a
+                      // lone word on a small screen or with large text (QA r2 #1)
+                      BalancedText(
                         subtitle,
+                        textAlign: TextAlign.start,
+                        hug: true,
                         style: TextStyle(fontSize: 13, color: dim ? ZeepColors.textFaint : ZeepColors.textSoft),
                       ),
                       if (st != null) ...[
@@ -302,8 +320,12 @@ class _Status extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
-      child: Text(
+      // balanced: a long label wraps into even lines, never one lone word
+      // ("แล้ว!") on the second line (QA #2)
+      child: BalancedText(
         text,
+        textAlign: TextAlign.start,
+        hug: true,
         style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: fg),
       ),
     );

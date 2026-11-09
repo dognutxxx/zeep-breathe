@@ -113,32 +113,33 @@ class S {
   String get vibrationHint =>
       _('Pulse at inhale, hold (×2) and exhale', 'สั่นตอนหายใจเข้า กลั้น (2 ครั้ง) และหายใจออก');
   String get noHapticEngine => _(
-    'This device has no haptic engine, so pulses show as ripples around Zeep.',
-    'เครื่องนี้ไม่มีมอเตอร์สั่น จึงแสดงเป็นวงกระเพื่อมรอบ Zeep แทน',
+    'This device has no haptic engine, so pulses show as ripples around your friend.',
+    'เครื่องนี้ไม่มีมอเตอร์สั่น จึงแสดงเป็นวงกระเพื่อมรอบตัวละครแทน',
   );
 
   // ---------------------------------------------------------------- instructions sheet
+  // neutral wording (1.7.1): the breathing character may be Zeep, Miu or Lumi
   List<(String, String)> get instructionSteps => th
       ? const [
-          ('หายใจเข้า', 'Zeep พองตัวและเติมน้ำ หายใจเข้าทางจมูก'),
-          ('กลั้นไว้', 'Zeep เรืองแสงเบาๆ กลั้นไว้สบายๆ ไม่ต้องเกร็ง'),
-          ('หายใจออก', 'Zeep หดตัวและถอนหายใจ ค่อยๆ ปล่อยลมออกช้าๆ'),
+          ('หายใจเข้า', 'ตัวละครค่อยๆ เติมลมไปพร้อมคุณ หายใจเข้าทางจมูก'),
+          ('กลั้นไว้', 'ตัวละครนิ่งไปพร้อมคุณ กลั้นไว้สบายๆ ไม่ต้องเกร็ง'),
+          ('หายใจออก', 'ตัวละครค่อยๆ ผ่อนลง ปล่อยลมออกช้าๆ'),
         ]
       : const [
-          ('Inhale', 'Zeep fills up and grows. Breathe in through your nose.'),
-          ('Hold', 'Zeep glows softly. Keep the breath gently, no strain.'),
-          ('Exhale', 'Zeep shrinks and sighs. Let the air drift out slowly.'),
+          ('Inhale', 'Your friend fills up with you. Breathe in through your nose.'),
+          ('Hold', 'Your friend stays still with you. Keep the breath gently, no strain.'),
+          ('Exhale', 'Your friend settles down. Let the air drift out slowly.'),
         ];
   List<String> get instructionBullets => th
       ? const [
-          'แถบใต้ Zeep เต็มตามลมหายใจ เส้นบางๆ ด้านล่างบอกว่าเฟสนี้ผ่านไปเท่าไหร่แล้ว',
-          'ปรับเวลาแต่ละเฟสได้ใน "ตั้งค่าการหายใจ" แม้ระหว่างฝึก Zeep จะปรับตามอย่างนุ่มนวล',
+          'แถบใต้ตัวละครเต็มตามลมหายใจ เส้นบางๆ ด้านล่างบอกว่าเฟสนี้ผ่านไปเท่าไหร่แล้ว',
+          'ปรับเวลาแต่ละเฟสได้ใน "ตั้งค่าการหายใจ" แม้ระหว่างฝึก ตัวละครจะปรับตามอย่างนุ่มนวล',
           'โทรศัพท์สั่นเบาๆ ตอนเริ่มหายใจเข้าและหายใจออก และสั่น 2 ครั้งสั้นๆ ตอนกลั้น',
           'หน้าจอจะไม่ดับระหว่างฝึก ถ้าออกจากแอป การฝึกจะหยุดชั่วคราว',
         ]
       : const [
-          'The bar under Zeep fills with your breath; the thin line under it shows how far into the current step you are.',
-          "Change each step's length in Breathing settings, even mid-session. Zeep adjusts smoothly.",
+          'The bar under your friend fills with your breath; the thin line under it shows how far into the current step you are.',
+          "Change each step's length in Breathing settings, even mid-session. Your friend adjusts smoothly.",
           'Your phone gives a gentle pulse when inhale and exhale start, and two short pulses for hold.',
           'The screen stays on during a session. Leaving the app pauses it.',
         ];
@@ -231,7 +232,14 @@ class S {
   /// alone reads oddly to someone else): "Breathing · 4 · 2 · 6".
   String cardRhythm(String pattern) => _('Breathing · $pattern', 'ฝึกหายใจ · $pattern');
   String get cardFooter => _('Come breathe with me', 'มาหายใจด้วยกันนะ');
-  String get shareText => _('Breathing with Zeep · ZEEP Breathe', 'หายใจไปกับ Zeep · ZEEP Breathe');
+
+  /// The text sent with a share card; [name] is the character on the card.
+  String shareText(String name) =>
+      _('Breathing with $name · ZEEP Breathe', 'หายใจไปกับ${_latin(name) ? ' ' : ''}$name · ZEEP Breathe');
+
+  /// Thai puts a space before a Latin name ("กับ Zeep") but not a Thai one
+  /// ("กับหมิว").
+  static bool _latin(String name) => name.isNotEmpty && name.codeUnitAt(0) < 0x80;
   String get shareFailed => _("Couldn't open sharing. Please try again.", 'เปิดเมนูแชร์ไม่ได้ ลองอีกครั้งนะ');
 
   // ---------------------------------------------------------------- progress
@@ -239,7 +247,7 @@ class S {
   String get currentStreak => _('Current streak', 'ฝึกต่อเนื่องตอนนี้');
   String dayUnit(int n) => th ? 'วัน' : (n == 1 ? 'day' : 'days');
   String get streakStart => _('Start a session today to begin a streak.', 'เริ่มฝึกวันนี้เพื่อเริ่มนับวันต่อเนื่อง');
-  String get streakToday => _('Lovely. You breathed with Zeep today.', 'เยี่ยมมาก วันนี้คุณหายใจกับ Zeep แล้ว');
+  String get streakToday => _('Lovely. You breathed today.', 'เยี่ยมมาก วันนี้คุณฝึกหายใจแล้ว');
   String get streakKeep => _('Breathe today to keep it going.', 'ฝึกวันนี้เพื่อรักษาความต่อเนื่อง');
   String streakSemantics(int n, String msg) => _('$n day streak. $msg', 'ฝึกต่อเนื่อง $n วัน $msg');
   String get totalMin => _('total min', 'นาทีรวม');
@@ -265,7 +273,7 @@ class S {
   String get completedLabel => _('Completed', 'ฝึกจนจบ');
   String get stoppedEarly => _('Stopped early', 'หยุดก่อนจบ');
   String get noSessionsThisDay => _('No breathing sessions on this day.', 'ไม่มีการฝึกในวันนั้น');
-  String get noSessionsToday => _("You haven't breathed with Zeep today yet.", 'วันนี้ยังไม่ได้ฝึกกับ Zeep');
+  String get noSessionsToday => _("You haven't breathed today yet.", 'วันนี้ยังไม่ได้ฝึกหายใจ');
   String get breatheNow => _('Breathe now', 'ไปฝึกหายใจ');
   String get dayTimelineHint =>
       _('Tap a day in the calendar to see its sessions.', 'แตะวันในปฏิทินเพื่อดูการฝึกของวันนั้น');
@@ -379,8 +387,8 @@ class S {
       ? _('One more session and it blooms', 'ฝึกอีก 1 ครั้ง ดอกจะบาน')
       : _('$n more sessions to bloom', 'ฝึกอีก $n ครั้ง ดอกจะบาน');
   String get gardenHint => _(
-    'Each finished session grows a leaf (up to 3 a day). Tap a flower for Zeep to wear.',
-    'ฝึกจนจบ 1 ครั้ง ใบงอก 1 ใบ (วันละไม่เกิน 3) แตะดอกที่บานแล้วเพื่อให้ Zeep ใส่',
+    'Each finished session grows a leaf (up to 3 a day). Tap a flower for your friend to wear.',
+    'ฝึกจนจบ 1 ครั้ง ใบงอก 1 ใบ (วันละไม่เกิน 3) แตะดอกที่บานแล้วเพื่อให้ตัวละครใส่',
   );
   String levelN(int n) => _('Level $n', 'เลเวล $n');
   String bloomCount(int n) => '×$n';
@@ -450,6 +458,10 @@ class S {
   String get tapToSwitch => _('Tap to switch', 'แตะเพื่อสลับ');
   String get chooseNewFriend => _('Choose a new friend', 'เลือกเพื่อนใหม่');
   String get miuOrLumi => _('Miu or Lumi', 'หมิว หรือ ลูมิ');
+
+  /// The greyed "Miu or Lumi" row before day 3: when they come, no action.
+  String firstFriendWhen(int at, int left) =>
+      _('Arrives at $at practice days · $left more', 'มาหาเมื่อฝึกครบ $at วัน · อีก $left วัน');
   String friendIn(int n) => _(n == 1 ? 'Comes in 1 more day' : 'Comes in $n more days', 'มาหาอีก $n วัน');
   String get mysteryFriend => _('Mystery friend', 'เพื่อนลึกลับ');
   String mysteryWhen(int n) => _('Comes at $n practice days', 'มาหาเมื่อฝึกครบ $n วัน');

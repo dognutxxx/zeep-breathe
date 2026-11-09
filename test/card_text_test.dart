@@ -7,6 +7,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -59,6 +60,20 @@ void main() {
   final hasFont = File(_thaiFont).existsSync();
   setUpAll(() async {
     if (hasFont) await loadFonts();
+  });
+
+  test('a hugging balanced text (picker badge) is as wide as its one line', () {
+    const style = TextStyle(fontSize: 12.5);
+    const scaler = TextScaler.noScaling;
+    final one = balancedWidth('In use', style, 300, scaler, TextDirection.ltr, hug: true);
+    expect(one, lessThan(100));
+    expect(balancedWidth('In use', style, 300, scaler, TextDirection.ltr), 300);
+    // two lines: the same balanced width with or without hug
+    const long = 'A new friend is here, come and say hello to them!';
+    expect(
+      balancedWidth(long, style, 150, scaler, TextDirection.ltr, hug: true),
+      balancedWidth(long, style, 150, scaler, TextDirection.ltr),
+    );
   });
 
   for (final (lang, _, locale) in [('en', S.en, const Locale('en', 'US')), ('th', S.thai, const Locale('th', 'TH'))]) {
@@ -125,6 +140,18 @@ void main() {
               await t.pump(const Duration(milliseconds: 20));
             }
             expect(t.takeException(), isNull, reason: 'overflow');
+            final l = lang == 'th' ? S.thai : S.en;
+            if (card == 'pickerDay5') {
+              // the badge "มีเพื่อนใหม่มาหาแล้ว!" is balanced, checked below (QA #2)
+              expect(find.widgetWithText(BalancedText, l.newFriendTitle), findsOneWidget);
+            }
+            if (card == 'pickerDay0') {
+              // the grey row shows the wait, not "choose" (QA #3)
+              expect(find.text(l.firstFriendWhen(3, 3)), findsOneWidget);
+              // balanced, so the loop below checks it for a lone word (QA r2 #1)
+              expect(find.widgetWithText(BalancedText, l.firstFriendWhen(3, 3)), findsOneWidget);
+              expect(find.text(l.chooseNewFriend), findsNothing);
+            }
 
             // every balanced text: no paragraph ends with a lone short line
             for (final e in find.byType(BalancedText).evaluate()) {
@@ -136,6 +163,27 @@ void main() {
                 if (lines.length < 2) continue;
                 final widest = lines.reduce((a, b) => a > b ? a : b);
                 expect(lines.last, greaterThan(widest * 0.4), reason: '"${bt.text}" lines $lines');
+              }
+            }
+            // short badges that fit stay on one line (the hug width is never
+            // a hair too narrow, Pim r2 #1)
+            for (final short in [l.inUse, l.tapToSwitch]) {
+              for (final e in find.widgetWithText(BalancedText, short).evaluate()) {
+                final text = find.descendant(of: find.byWidget(e.widget), matching: find.byType(Text));
+                final para = t.renderObject<RenderParagraph>(text);
+                // room the badge has: the row's text column less its padding
+                final room = t.getSize(find.ancestor(of: text, matching: find.byType(Column)).first).width - 18;
+                final style = DefaultTextStyle.of(t.element(text)).style.merge((e.widget as BalancedText).style);
+                if (lineWidths(short, style, room, TextScaler.linear(scale)).first.length > 1) continue;
+                expect(
+                  para
+                      .getBoxesForSelection(TextSelection(baseOffset: 0, extentOffset: short.length))
+                      .map((b) => b.top)
+                      .toSet()
+                      .length,
+                  1,
+                  reason: '"$short" wraps',
+                );
               }
             }
             await t.pumpWidget(const SizedBox());

@@ -101,7 +101,9 @@ void main() {
     await launch(t, app);
     await openPicker(t, app);
     expect(label(t, 'Zeep'), 'Zeep, ${s.characterTagline(Character.zeep)}, ${s.inUse}');
-    expect(label(t, s.miuOrLumi), '${s.miuOrLumi}, ${s.chooseNewFriend}, ${s.friendIn(3)}');
+    // the wait, no "choose" wording on a row that cannot be tapped (QA #3)
+    expect(label(t, s.miuOrLumi), '${s.miuOrLumi}, ${s.firstFriendWhen(3, 3)}');
+    expect(find.text(s.chooseNewFriend), findsNothing);
     for (final n in [30, 60, 100]) {
       expect(find.text(s.mysteryWhen(n)), findsOneWidget);
     }
@@ -110,6 +112,19 @@ void main() {
     // no level or bond bar anywhere
     expect(find.byType(LinearProgressIndicator), findsNothing);
     await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('day 1 and day 2: the grey row counts down to day 3 (QA #3)', (t) async {
+    for (final days in [1, 2]) {
+      final app = await makeApp(days: days);
+      await launch(t, app);
+      await openPicker(t, app);
+      expect(label(t, s.miuOrLumi), '${s.miuOrLumi}, ${s.firstFriendWhen(3, 3 - days)}');
+      expect(find.text(s.chooseNewFriend), findsNothing);
+      await t.pumpWidget(const SizedBox());
+    }
+    expect(S.en.firstFriendWhen(3, 1), 'Arrives at 3 practice days · 1 more');
+    expect(S.thai.firstFriendWhen(3, 2), 'มาหาเมื่อฝึกครบ 3 วัน · อีก 2 วัน');
   });
 
   testWidgets('day 6, Miu picked: Miu in use, Lumi greyed for 4 more days (C2)', (t) async {
@@ -164,6 +179,8 @@ void main() {
     await launch(t, app);
     expect(find.bySemanticsLabel('${s.friendsTitle}, ${s.chooseNewFriend}'), findsOneWidget); // dot on the chip
     await openPicker(t, app);
+    // the highlighted row is as in 1.7.0
+    expect(label(t, s.chooseNewFriend), '${s.chooseNewFriend}, ${s.miuOrLumi}, ${s.newFriendTitle}');
     await t.tap(row(s.chooseNewFriend).first);
     await frames(t, app);
     expect(find.text(s.newFriendTitle), findsWidgets);

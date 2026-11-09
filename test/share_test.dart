@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zeep_breathe/friends/characters.dart';
 import 'package:zeep_breathe/game/balance_game.dart';
 import 'package:zeep_breathe/l10n/strings.dart';
 import 'package:zeep_breathe/screens/share_screen.dart';
@@ -111,9 +112,43 @@ void main() {
       expect(rgba.getUint8(rgba.lengthInBytes - 1), 255); // bottom-right
       frame.image.dispose();
     });
-    expect(text, S.en.shareText);
+    expect(text, S.en.shareText('Zeep'));
     expect(origin, isNotNull); // iPad needs an anchor for the popover
   });
+
+  test('the share text names the character on the card (QA #5)', () {
+    expect(S.en.shareText('Zeep'), 'Breathing with Zeep · ZEEP Breathe');
+    expect(S.thai.shareText('Zeep'), 'หายใจไปกับ Zeep · ZEEP Breathe');
+    expect(S.en.shareText(S.en.characterName(Character.lumi)), 'Breathing with Lumi · ZEEP Breathe');
+    expect(S.thai.shareText(S.thai.characterName(Character.miu)), 'หายใจไปกับหมิว · ZEEP Breathe');
+  });
+
+  for (final (c, locale, want) in [
+    (Character.miu, const Locale('th'), 'หายใจไปกับหมิว · ZEEP Breathe'),
+    (Character.lumi, const Locale('en'), 'Breathing with Lumi · ZEEP Breathe'),
+  ]) {
+    testWidgets('sharing with ${c.name} sends "$want"', (t) async {
+      phone(t);
+      String? text;
+      await t.pumpWidget(
+        wrap(
+          ShareScreen(
+            achievement: StreakAchievement(day, days: 3, totalMinutes: 12),
+            character: c,
+            sharer: (_, tx, _) async => text = tx,
+          ),
+          locale: locale,
+        ),
+      );
+      await t.runAsync(() async {
+        await t.tap(find.text(locale.languageCode == 'th' ? S.thai.share : S.en.share));
+        for (var i = 0; i < 50 && text == null; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+      });
+      expect(text, want);
+    });
+  }
 
   testWidgets('sharing fails: a message, no crash, the button works again', (t) async {
     phone(t);
