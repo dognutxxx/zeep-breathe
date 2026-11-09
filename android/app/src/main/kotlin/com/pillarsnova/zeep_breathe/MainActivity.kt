@@ -30,6 +30,11 @@ class MainActivity : FlutterActivity() {
         applyEdgeToEdge()
     }
 
+    // Layout only: the light/dark icon bits (LIGHT_STATUS_BAR,
+    // LIGHT_NAVIGATION_BAR) are left to Flutter, which sets them from the
+    // current SystemUiOverlayStyle and re-applies it on resume (light icons on
+    // the dark splash, dark icons in the app). Before Flutter's first frame no
+    // light bit is set, so the icons are white on the Midnight launch screen.
     private fun applyEdgeToEdge() {
         val w = window
         if (Build.VERSION.SDK_INT >= 30) {
@@ -37,14 +42,11 @@ class MainActivity : FlutterActivity() {
         } else {
             // Android 7 can't draw dark navigation icons: it gets a dim scrim
             // behind its white icons instead of a clear bar (set below).
-            val nav = View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                if (Build.VERSION.SDK_INT >= 26) View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR else 0
             @Suppress("DEPRECATION")
             w.decorView.systemUiVisibility = w.decorView.systemUiVisibility or
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                 View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
-                nav
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
         }
         @Suppress("DEPRECATION")
         w.statusBarColor = Color.TRANSPARENT
