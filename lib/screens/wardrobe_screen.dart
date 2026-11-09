@@ -3,6 +3,8 @@
 // button (T1.9), by tapping Zeep on the Breathe tab (T1.5), from the new-item
 // card (N) and from the bloom strip on the finish card (S.9).
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -196,6 +198,7 @@ class _OutfitsTab extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Wrap(
+            alignment: WrapAlignment.center,
             spacing: 8,
             runSpacing: 8,
             children: [for (final i in OutfitItem.values.where((i) => i.slot == slot)) _ItemTile(w: w, item: i)],
@@ -340,6 +343,7 @@ class _GardenTab extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Wrap(
+          alignment: WrapAlignment.center,
           spacing: 8,
           runSpacing: 8,
           children: [
@@ -386,6 +390,8 @@ class _FlowerTile extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Column(
+                    // fill the tile so a short name doesn't pull the flower to the left
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 8),
                       Opacity(
@@ -427,7 +433,13 @@ class _BloomPainter extends CustomPainter {
   _BloomPainter(this.kind);
 
   @override
-  void paint(Canvas canvas, Size size) => drawBloom(canvas, kind, size.center(Offset.zero), size.shortestSide / 21);
+  void paint(Canvas canvas, Size size) {
+    // centre the drawing itself (some kinds are taller above their middle),
+    // and shrink only the ones that would not fit
+    final b = bloomBounds(kind);
+    final k = math.min(size.shortestSide / 21, math.min(size.width / b.width, size.height / b.height));
+    drawBloom(canvas, kind, size.center(Offset.zero) - b.center * k, k);
+  }
 
   @override
   bool shouldRepaint(covariant _BloomPainter old) => old.kind != kind;

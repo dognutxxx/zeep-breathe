@@ -218,32 +218,26 @@ class _ZeepDialog extends StatelessWidget {
               style: const TextStyle(fontSize: 14, height: 1.4, color: ZeepColors.textSoft),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: ZeepColors.btnBg,
-                      foregroundColor: ZeepColors.text,
-                      minimumSize: const Size.fromHeight(44),
-                    ),
-                    child: Text(secondary),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: ZeepColors.mint,
-                      foregroundColor: ZeepColors.mintDark,
-                      minimumSize: const Size.fromHeight(44),
-                    ),
-                    child: Text(primary, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  ),
-                ),
-              ],
+            // full-width buttons, one above the other: labels like
+            // "เปิดตู้เสื้อผ้า" stay on one line even with wide fonts
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: ZeepColors.mint,
+                foregroundColor: ZeepColors.mintDark,
+                minimumSize: const Size.fromHeight(46),
+              ),
+              child: Text(
+                primary,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              style: TextButton.styleFrom(foregroundColor: ZeepColors.textSoft, minimumSize: const Size.fromHeight(44)),
+              child: Text(secondary, textAlign: TextAlign.center),
             ),
           ],
         ),

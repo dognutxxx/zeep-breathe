@@ -864,6 +864,294 @@ void drawBloom(Canvas p, FlowerKind kind, Offset c, double k) {
       final cr = (kind.petals >= 14 ? 3.4 : 2.2) * k;
       p.drawCircle(c, cr, _fill(kind.center));
       p.drawCircle(c, cr, _stroke(ZeepColors.ink, 0.8 * k));
+    case FlowerStyle.pompom:
+      // marigold: three ruffled rings, no visible middle
+      for (final (r, n, color) in [(6.0, 12, kind.petal), (3.9, 9, kind.inner ?? kind.petal), (1.9, 6, kind.center)]) {
+        final bump = r * 0.3;
+        _blob(
+          p,
+          [(c, r * k), for (var i = 0; i < n; i++) (c + Offset.fromDirection(i * _tau / n + r, r * k), bump * k)],
+          color,
+          1.6 * k,
+        );
+      }
+    case FlowerStyle.jasmine:
+      // a small white star with two closed buds beside it
+      for (final sign in const [-1.0, 1.0]) {
+        final bc = c + Offset(sign * 5.6 * k, 3.4 * k);
+        _ellipse(p, bc + Offset(0, 2.4 * k), 1.6 * k, 1.0 * k, 0, const Color(0xFFB5E3C2), ZeepColors.ink, 0.8 * k);
+        _ellipse(p, bc, 1.7 * k, 3.2 * k, sign * 0.5, kind.petal, ZeepColors.ink, 0.9 * k);
+      }
+      _petalShapes(
+        p,
+        [
+          for (var i = 0; i < 5; i++)
+            _leafPath(c, c + Offset.fromDirection(-math.pi / 2 + i * _tau / 5, 6.6 * k), 2.6 * k),
+        ],
+        kind.petal,
+        1.6 * k,
+      );
+      p.drawCircle(c, 1.4 * k, _fill(kind.center));
+      p.drawCircle(c, 1.4 * k, _stroke(ZeepColors.ink, 0.7 * k));
+    case FlowerStyle.lily:
+      // six long petals and stamens that stick out past them
+      _petalShapes(
+        p,
+        [
+          for (var i = 0; i < 6; i++)
+            _leafPath(c, c + Offset.fromDirection(-math.pi / 2 + i * _tau / 6, 8.8 * k), 2.4 * k),
+        ],
+        kind.petal,
+        1.6 * k,
+      );
+      for (var i = 0; i < 6; i++) {
+        final d = c + Offset.fromDirection(-math.pi / 2 + math.pi / 6 + i * _tau / 6, 5.6 * k);
+        p.drawLine(c, d, _stroke(withAlpha(ZeepColors.ink, 0.8), 0.7 * k));
+        p.drawCircle(d, 0.9 * k, _fill(kind.center));
+      }
+      p.drawCircle(c, 1.3 * k, _fill(const Color(0xFFB5E3C2)));
+    case FlowerStyle.pansy:
+      // violet: two big petals behind, three in front, a little face in the middle
+      _blob(
+        p,
+        [(c + Offset(-2.9 * k, -3.6 * k), 3.8 * k), (c + Offset(2.9 * k, -3.6 * k), 3.8 * k)],
+        kind.petal,
+        1.6 * k,
+      );
+      _blob(
+        p,
+        [
+          (c + Offset(-4.6 * k, 0.8 * k), 3.0 * k),
+          (c + Offset(4.6 * k, 0.8 * k), 3.0 * k),
+          (c + Offset(0, 3.6 * k), 3.6 * k),
+        ],
+        Color.lerp(kind.petal, const Color(0xFFFFFFFF), 0.25)!,
+        1.6 * k,
+      );
+      final vein = _stroke(withAlpha(ZeepColors.ink, 0.6), 0.7 * k);
+      for (final d in const [(-3.2, 1.2), (3.2, 1.2), (-1.0, 4.0), (0.0, 4.6), (1.0, 4.0)]) {
+        p.drawLine(c + Offset(0, 0.6 * k), c + Offset(d.$1 * k, d.$2 * k), vein);
+      }
+      p.drawCircle(c + Offset(0, 0.6 * k), 1.2 * k, _fill(const Color(0xFFFFE08A)));
+    case FlowerStyle.hibiscus:
+      // five wide petals with a long staminal column
+      for (var i = 0; i < 5; i++) {
+        final ang = -math.pi / 2 + i * _tau / 5;
+        final pc = c + Offset.fromDirection(ang, 4.4 * k);
+        p.save();
+        p.translate(pc.dx, pc.dy);
+        p.rotate(ang);
+        final r = Rect.fromCenter(center: Offset.zero, width: 7.4 * k, height: 7.6 * k);
+        p.drawOval(r, _fill(kind.petal));
+        p.drawOval(r, _stroke(ZeepColors.ink, 0.9 * k));
+        p.restore();
+      }
+      p.drawCircle(c, 2.6 * k, _fill(kind.center));
+      final top = c + Offset.fromDirection(-0.75, 8.4 * k);
+      p.drawLine(c, top, _stroke(ZeepColors.ink, 1.6 * k));
+      p.drawLine(c, top, _stroke(const Color(0xFFFFE08A), 0.8 * k));
+      for (final o in const [(0.0, 0.0), (-1.2, 0.6), (0.6, 1.2)]) {
+        final d = top + Offset(o.$1 * k, o.$2 * k);
+        p.drawCircle(d, 0.95 * k, _fill(const Color(0xFFFFE08A)));
+        p.drawCircle(d, 0.95 * k, _stroke(ZeepColors.ink, 0.6 * k));
+      }
+    case FlowerStyle.pinwheel:
+      // frangipani: five petals that overlap like a pinwheel
+      for (var i = 0; i < 5; i++) {
+        final ang = -math.pi / 2 + i * _tau / 5;
+        final dir = Offset.fromDirection(ang);
+        final pc = c + dir * (4.0 * k) + Offset(-dir.dy, dir.dx) * (1.9 * k);
+        p.save();
+        p.translate(pc.dx, pc.dy);
+        p.rotate(ang + 0.55);
+        final r = Rect.fromCenter(center: Offset.zero, width: 8.6 * k, height: 4.6 * k);
+        p.drawOval(r, _fill(kind.petal));
+        p.drawOval(r, _stroke(ZeepColors.ink, 0.9 * k));
+        p.restore();
+      }
+      p.drawCircle(c, 2.6 * k, _fill(kind.inner ?? kind.center));
+    case FlowerStyle.gardenia:
+      // double white flower: broad outer petals, a cupped heart, no centre
+      for (final (n, dist, w, h, rot, color) in [
+        (6, 4.6, 7.2, 5.4, 0.0, kind.petal),
+        (4, 2.0, 5.0, 3.8, 0.6, kind.inner ?? kind.petal),
+      ]) {
+        for (var i = 0; i < n; i++) {
+          final ang = -math.pi / 2 + rot + i * _tau / n;
+          final pc = c + Offset.fromDirection(ang, dist * k);
+          p.save();
+          p.translate(pc.dx, pc.dy);
+          p.rotate(ang);
+          final r = Rect.fromCenter(center: Offset.zero, width: w * k, height: h * k);
+          p.drawOval(r, _fill(color));
+          p.drawOval(r, _stroke(ZeepColors.ink, 0.9 * k));
+          p.restore();
+        }
+      }
+      p.drawArc(Rect.fromCircle(center: c, radius: 1.1 * k), -1, 3.6, false, _stroke(ZeepColors.ink, 0.8 * k));
+    case FlowerStyle.bell:
+      // bluebell: a bell hanging mouth-down, with a frilled rim
+      Offset q(double x, double y) => c + Offset(x * k, y * k);
+      final bell = Path()
+        ..moveTo(q(-3.2, -4.5).dx, q(-3.2, -4.5).dy)
+        ..cubicTo(
+          q(-3.2, -7.6).dx,
+          q(-3.2, -7.6).dy,
+          q(3.2, -7.6).dx,
+          q(3.2, -7.6).dy,
+          q(3.2, -4.5).dx,
+          q(3.2, -4.5).dy,
+        )
+        ..cubicTo(q(3.4, -1).dx, q(3.4, -1).dy, q(4, 1.5).dx, q(4, 1.5).dy, q(6, 3.2).dx, q(6, 3.2).dy)
+        ..quadraticBezierTo(q(4.6, 5.3).dx, q(4.6, 5.3).dy, q(3, 4).dx, q(3, 4).dy)
+        ..quadraticBezierTo(q(1.5, 5.5).dx, q(1.5, 5.5).dy, q(0, 4.2).dx, q(0, 4.2).dy)
+        ..quadraticBezierTo(q(-1.5, 5.5).dx, q(-1.5, 5.5).dy, q(-3, 4).dx, q(-3, 4).dy)
+        ..quadraticBezierTo(q(-4.6, 5.3).dx, q(-4.6, 5.3).dy, q(-6, 3.2).dx, q(-6, 3.2).dy)
+        ..cubicTo(q(-4, 1.5).dx, q(-4, 1.5).dy, q(-3.4, -1).dx, q(-3.4, -1).dy, q(-3.2, -4.5).dx, q(-3.2, -4.5).dy)
+        ..close();
+      p.drawPath(bell, _fill(kind.petal));
+      p.drawPath(bell, ink);
+      p.drawCircle(q(0, 5.8), 1.0 * k, _fill(const Color(0xFFFFFFFF)));
+      p.drawCircle(q(0, 5.8), 1.0 * k, _stroke(ZeepColors.ink, 0.7 * k));
+      _ellipse(p, q(0, -7.2), 1.8 * k, 1.1 * k, 0, const Color(0xFFB5E3C2), ZeepColors.ink, 0.8 * k);
+    case FlowerStyle.carnation:
+      // side view: a frilly fan of petals on a green tube
+      for (final (lift, spread, color) in [(1.8, 0.8, kind.inner ?? kind.petal), (0.0, 1.0, kind.petal)]) {
+        final frill = Path()..moveTo(c.dx - 2 * k, c.dy + 1.5 * k);
+        const n = 10;
+        for (var i = 0; i <= n; i++) {
+          final x = (-6.6 + 13.2 * i / n) * spread;
+          final u = x / 6.6;
+          final y = -2.6 - 3.4 * (1 - u * u) - (i.isOdd ? 1.7 : 0) - lift;
+          frill.lineTo(c.dx + x * k, c.dy + y * k);
+        }
+        frill
+          ..lineTo(c.dx + 2 * k, c.dy + 1.5 * k)
+          ..close();
+        p.drawPath(frill, _fill(color));
+        p.drawPath(frill, _stroke(ZeepColors.ink, 0.9 * k)..strokeJoin = StrokeJoin.round);
+      }
+      final tube = RRect.fromLTRBR(
+        c.dx - 2.3 * k,
+        c.dy + 0.4 * k,
+        c.dx + 2.3 * k,
+        c.dy + 6.8 * k,
+        Radius.circular(1.6 * k),
+      );
+      p.drawRRect(tube, _fill(const Color(0xFFB5E3C2)));
+      p.drawRRect(tube, _stroke(ZeepColors.ink, 0.9 * k));
+    case FlowerStyle.rosette:
+      // camellia: rings of round petals laid one over another, golden stamens
+      for (final (n, dist, r, rot, color) in [
+        (7, 5.0, 3.3, 0.0, kind.petal),
+        (5, 2.7, 2.6, 0.5, kind.inner ?? kind.petal),
+      ]) {
+        for (var i = 0; i < n; i++) {
+          final pc = c + Offset.fromDirection(-math.pi / 2 + rot + i * _tau / n, dist * k);
+          p.drawCircle(pc, r * k, _fill(color));
+          p.drawCircle(pc, r * k, _stroke(ZeepColors.ink, 0.9 * k));
+        }
+      }
+      for (final o in const [(0.0, -0.9), (0.8, 0.5), (-0.8, 0.5)]) {
+        final d = c + Offset(o.$1 * k, o.$2 * k);
+        p.drawCircle(d, 0.9 * k, _fill(const Color(0xFFFFD34F)));
+        p.drawCircle(d, 0.9 * k, _stroke(ZeepColors.ink, 0.6 * k));
+      }
+    case FlowerStyle.sideLotus:
+      // golden lotus seen from the side: petals open upwards like a bowl
+      final base = c + Offset(0, 4.6 * k);
+      Path petal(double ang, double len, double w) =>
+          _leafPath(base, base + Offset(math.sin(ang), -math.cos(ang)) * (len * k), w * k);
+      for (final path in [petal(-0.95, 8.6, 2.4), petal(0.95, 8.6, 2.4), petal(0, 9.6, 2.8)]) {
+        p.drawPath(path, _fill(kind.inner ?? kind.petal));
+        p.drawPath(path, ink);
+      }
+      for (final path in [petal(-0.5, 8.4, 3.0), petal(0.5, 8.4, 3.0), petal(0, 6.8, 3.2)]) {
+        p.drawPath(path, _fill(kind.petal));
+        p.drawPath(path, ink);
+      }
+  }
+}
+
+/// Bounding box of [drawBloom]'s drawing for [kind], in units of k around the
+/// centre it is given; tiles use it to centre and fit every kind.
+Rect bloomBounds(FlowerKind kind) {
+  Rect circle(double r) => Rect.fromCircle(center: Offset.zero, radius: r);
+  switch (kind.style) {
+    case FlowerStyle.radial:
+      return circle(switch (kind.shape) {
+        PetalShape.round => 8.4,
+        PetalShape.oval => 10.0,
+        PetalShape.pointed => 9.4,
+        PetalShape.notched => 8.4,
+        PetalShape.toothed => 9.6,
+      });
+    case FlowerStyle.tulip:
+      return const Rect.fromLTRB(-6.0, -6.0, 6.0, 5.6);
+    case FlowerStyle.lavender:
+      return const Rect.fromLTRB(-4.4, -13.4, 4.4, 7.0);
+    case FlowerStyle.rose:
+      return circle(6.5);
+    case FlowerStyle.hydrangea:
+      return circle(7.6);
+    case FlowerStyle.pompom:
+      return circle(8.6);
+    case FlowerStyle.jasmine:
+      return const Rect.fromLTRB(-8.8, -7.4, 8.8, 7.6);
+    case FlowerStyle.lily:
+      return circle(9.6);
+    case FlowerStyle.pansy:
+      return const Rect.fromLTRB(-8.4, -8.2, 8.4, 8.0);
+    case FlowerStyle.hibiscus:
+      return const Rect.fromLTRB(-8.6, -8.8, 9.0, 8.4);
+    case FlowerStyle.pinwheel:
+      return circle(9.4);
+    case FlowerStyle.gardenia:
+      return circle(8.6);
+    case FlowerStyle.bell:
+      return const Rect.fromLTRB(-6.6, -8.6, 6.6, 7.2);
+    case FlowerStyle.carnation:
+      return const Rect.fromLTRB(-7.2, -10.2, 7.2, 7.4);
+    case FlowerStyle.sideLotus:
+      return const Rect.fromLTRB(-8.6, -5.6, 8.6, 5.6);
+    case FlowerStyle.rosette:
+      return circle(8.8);
+  }
+}
+
+/// A leaf-shaped petal from [base] to [tip], [w] wide at the middle.
+Path _leafPath(Offset base, Offset tip, double w) {
+  final d = tip - base;
+  final n = Offset(-d.dy, d.dx) / d.distance;
+  final mid = Offset.lerp(base, tip, 0.5)!;
+  return Path()
+    ..moveTo(base.dx, base.dy)
+    ..quadraticBezierTo(mid.dx + n.dx * w, mid.dy + n.dy * w, tip.dx, tip.dy)
+    ..quadraticBezierTo(mid.dx - n.dx * w, mid.dy - n.dy * w, base.dx, base.dy)
+    ..close();
+}
+
+/// Petals with one outline round the whole group (outline first, then fill).
+void _petalShapes(Canvas p, List<Path> shapes, Color color, double outline) {
+  final o = _stroke(ZeepColors.ink, outline);
+  for (final s in shapes) {
+    p.drawPath(s, o);
+  }
+  final f = _fill(color);
+  for (final s in shapes) {
+    p.drawPath(s, f);
+  }
+}
+
+/// Overlapping circles drawn as one soft shape with a single outline.
+void _blob(Canvas p, List<(Offset, double)> circles, Color color, double outline) {
+  final o = _stroke(ZeepColors.ink, outline);
+  for (final (c, r) in circles) {
+    p.drawCircle(c, r, o);
+  }
+  final f = _fill(color);
+  for (final (c, r) in circles) {
+    p.drawCircle(c, r, f);
   }
 }
 
@@ -899,6 +1187,16 @@ void _petalRing(Canvas p, FlowerKind kind, Color color, Offset c, double k, doub
           path.addOval(Rect.fromCircle(center: c + dir * (4.8 * q) + nrm * (side * 1.3 * q), radius: 2.5 * q));
         }
         path.addOval(Rect.fromCircle(center: c + dir * (3.4 * q), radius: 2.4 * q));
+      case PetalShape.toothed:
+        // a wedge that widens out to a jagged, three-toothed tip
+        Offset at(double along, double side) => c + dir * (along * q) + nrm * (side * q);
+        final pts = [at(7.2, 3.0), at(8.6, 2.0), at(7.7, 1.0), at(8.9, 0), at(7.7, -1.0), at(8.6, -2.0), at(7.2, -3.0)];
+        final b = at(1.4, 0);
+        path.moveTo(b.dx, b.dy);
+        for (final pt in pts) {
+          path.lineTo(pt.dx, pt.dy);
+        }
+        path.close();
     }
     shapes.add(path);
   }

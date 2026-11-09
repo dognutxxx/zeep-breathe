@@ -409,7 +409,8 @@ class S {
   String get later => _('Later', 'ไว้ทีหลัง');
   String get summaryTitle => _('Zeep has gifts for you', 'Zeep มีของรอคุณอยู่');
   String summaryBody(int level, int items) => _(
-    'From the practice you have done so far: level $level and $items ${items == 1 ? 'item' : 'items'} unlocked.',
-    'จากที่ฝึกมาแล้ว: เลเวล $level และปลดล็อกของ $items ชิ้น',
+    // two short lines, broken by hand so a wide font never leaves one word alone
+    'From the practice you have done so far:\nlevel $level · $items ${items == 1 ? 'item' : 'items'} unlocked',
+    'จากที่ฝึกมาแล้ว\nได้เลเวล $level · ปลดล็อกของ $items ชิ้น',
   );
 }
