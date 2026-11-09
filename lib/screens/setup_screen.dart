@@ -79,15 +79,20 @@ class SetupScreen extends StatelessWidget {
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: () => openWardrobe(context, app),
-                        child: CustomPaint(
-                          size: const Size(0, 150), // the least Zeep gets on a short screen
-                          painter: ZeepPainter(
-                            pose: app.anim.pose,
-                            time: app.anim.time,
-                            ripples: app.haptics.ripples(app.time),
-                            reduceMotion: app.reduceMotion,
-                            outfit: app.wardrobe.outfit,
-                            growth: app.wardrobe.growth,
+                        // full width (a bare CustomPaint would be 0 px wide here and
+                        // Zeep would not be drawn at all: bug in 1.6.0)
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: CustomPaint(
+                            size: const Size(0, 150), // the least Zeep gets on a short screen
+                            painter: ZeepPainter(
+                              pose: app.anim.pose,
+                              time: app.anim.time,
+                              ripples: app.haptics.ripples(app.time),
+                              reduceMotion: app.reduceMotion,
+                              outfit: app.wardrobe.outfit,
+                              growth: app.wardrobe.growth,
+                            ),
                           ),
                         ),
                       ),
