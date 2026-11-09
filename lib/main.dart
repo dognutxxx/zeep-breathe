@@ -32,14 +32,9 @@ Future<void> main() async {
   // window up for every Android version (bar colours too, since Android 7
   // can't show dark navigation icons); screens keep clear with SafeArea.
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Color(0x00000000),
-      statusBarIconBrightness: Brightness.dark,
-      statusBarBrightness: Brightness.light,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ),
-  );
+  // The app opens on the dark splash: light bar icons from the start (the
+  // launch gate switches to the app's dark icons when the splash goes).
+  SystemChrome.setSystemUIOverlayStyle(splashBarsStyle);
   // Show the splash at once and load while it plays (it waits for this).
   final boot = loadApp();
   final logo = await loadSplashLogo();

@@ -33,6 +33,16 @@ const splashBackground = BrandColors.background;
 /// The logo's size on screen; the native launch images are made at this size.
 const splashLogoSize = Size(180, 58);
 
+/// Light status / navigation bar icons on the dark splash. `main()` sets it
+/// before the first frame too (no dark-icon blink after the native launch
+/// screen); the launch gate puts the app's dark icons back afterwards.
+const splashBarsStyle = SystemUiOverlayStyle(
+  statusBarColor: Color(0x00000000),
+  statusBarIconBrightness: Brightness.light,
+  statusBarBrightness: Brightness.dark,
+  systemNavigationBarIconBrightness: Brightness.light,
+);
+
 /// Where Zeep and the glow sit, as a fraction of the screen height.
 const splashZeepY = 0.42;
 
@@ -248,12 +258,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final t = _t, w = _wobble, reduce = _reduce;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       // light status / navigation icons on the dark splash
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Color(0x00000000),
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
+      value: splashBarsStyle,
       child: Semantics(
         label: 'ZEEP Breathe',
         excludeSemantics: true,

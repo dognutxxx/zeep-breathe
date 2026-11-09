@@ -90,7 +90,10 @@ void main() {
     final region = t.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
       find.descendant(of: find.byType(SplashScreen), matching: find.byType(AnnotatedRegion<SystemUiOverlayStyle>)),
     );
+    expect(region.value, splashBarsStyle);
     expect(region.value.statusBarIconBrightness, Brightness.light);
+    await t.pump();
+    expect(SystemChrome.latestStyle?.statusBarIconBrightness, Brightness.light);
     expect(find.bySemanticsLabel('ZEEP Breathe'), findsOneWidget);
     boot.complete(await makeApp());
     await frames(t, 4.5);
@@ -196,6 +199,8 @@ void main() {
       find.ancestor(of: find.byType(HomePage), matching: find.byType(AnnotatedRegion<SystemUiOverlayStyle>)).first,
     );
     expect(region.value.statusBarIconBrightness, Brightness.dark);
+    // and the system really got them (main() starts with the splash's light ones)
+    expect(SystemChrome.latestStyle?.statusBarIconBrightness, Brightness.dark);
     await t.pumpWidget(const SizedBox());
   });
 
