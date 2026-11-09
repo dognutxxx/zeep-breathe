@@ -441,6 +441,42 @@ void main() {
     expect(hb.width, greaterThan(b.width + 40));
   });
 
+  test('Saisai: the whole bell is painted, scallop corners too; the silhouette has no hole (Pim r1 #1)', () async {
+    // where a point of the bell (SVG units) is at lung level lv: it swells
+    // about (100, 106) and floats up 8
+    Offset moved(Offset q, double lv) =>
+        Offset(100 + (q.dx - 100) * (1 + 0.06 * lv), 106 + (q.dy - 106) * (1 + 0.1 * lv) - saisaiFloat * lv);
+    // every pixel centre inside the bell, at 2 px per unit
+    Future<void> check(double lv, {required bool silhouette}) async {
+      const k = 2.0;
+      final (ByteData d, int w, int h) r;
+      if (silhouette) {
+        // a 448 box: 2 px per unit, the art at (24, 24)
+        r = await render(const FriendSilhouettePainter(Character.saisai, fit: FriendFit.box), const Size(448, 448));
+      } else {
+        r = await render(_Direct((c) => drawSaisai(c, lv, 0, glow: false)), const Size(448, 448));
+      }
+      final origin = silhouette ? const Offset(24, 24) : Offset.zero;
+      var n = 0;
+      for (var y = 60.0; y < 120; y += 0.5) {
+        for (var x = 40.0; x < 160; x += 0.5) {
+          final q = Offset(x, y);
+          if (!saisaiBell.contains(q)) continue;
+          final px = origin + moved(q, lv) * k;
+          final a = r.$1.getUint8(((px.dy.floor() + _margin) * r.$2 + px.dx.floor() + _margin) * 4 + 3);
+          expect(a, greaterThanOrEqualTo(silhouette ? 200 : 254), reason: 'lv $lv silhouette $silhouette at $q');
+          n++;
+        }
+      }
+      expect(n, greaterThan(1000));
+    }
+
+    for (final lv in const [0.0, 1.0]) {
+      await check(lv, silhouette: false);
+    }
+    await check(0.55, silhouette: true);
+  });
+
   test('Saisai on hold: the tentacle tips glow and three sparkles show (1.9.0 #1)', () async {
     const size = Size(224, 224);
     final full = await render(FriendPainter(character: Character.saisai, lv: 1), size);
@@ -674,4 +710,20 @@ void main() {
       expect(p.hold, 0);
     });
   });
+}
+
+/// Paints with [draw] at 2 px per SVG unit (tests that call a painter
+/// function directly).
+class _Direct extends CustomPainter {
+  final void Function(Canvas) draw;
+  _Direct(this.draw);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.scale(2);
+    draw(canvas);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => true;
 }

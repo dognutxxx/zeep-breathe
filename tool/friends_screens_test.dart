@@ -5,7 +5,7 @@
 // Lumi, the picker at day 5 with no pick and at day 1; 1.8.0: the picker at
 // day 35, 65 and 120, Mun, Tuntun and Nuan on T1 and in a session (inhale and
 // hold), the "Mun is here" card, the three-friends card and a share card with
-// Nuan; 1.9.0: the picker at day 160 and 210, Saisai and Wongwong on T1 and
+// Nuan; 1.9.0: the end of the picker at day 120, 160 and 210, Saisai and Wongwong on T1 and
 // in a session (inhale and hold), the "Saisai is here" card, the two-friends
 // card and a share card with Wongwong. Uses Windows' Leelawadee UI font
 // for both languages (Roboto has no Thai glyphs).
@@ -51,12 +51,12 @@ Future<AppController> _app(WidgetTester t, int days) async {
   return app;
 }
 
-Future<void> _picker(WidgetTester t, String p, S s, String name, AppController app, {String? end}) async {
+Future<void> _picker(WidgetTester t, String p, S s, String? name, AppController app, {String? end}) async {
   await t.pumpWidget(ZeepBreatheApp(controller: app));
   await advance(t, 0.6);
   await t.tap(find.text(s.friendsChip));
   await advance(t, 0.8);
-  await shot('screens/$p$name.png');
+  if (name != null) await shot('screens/$p$name.png');
   if (end != null) {
     // the end of the list (1.9.0: the 150 / 200 rows are below the fold)
     await t.drag(find.text(s.friendsTitle), const Offset(0, -2000));
@@ -116,15 +116,13 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
     await _picker(t, p, s, name, app, end: end);
   }
 
-  // 1.9.0: the picker with Saisai (day 160) and everyone (day 210)
-  for (final (days, name, end) in const [
-    (160, '69_friends_day160', '81_friends_day160_end'),
-    (210, '70_friends_day210', '82_friends_day210_end'),
-  ]) {
+  // 1.9.0: the picker with Saisai (day 160) and everyone (day 210), scrolled
+  // to the end where they are (the top of the list is the same as day 120)
+  for (final (days, end) in const [(160, '81_friends_day160_end'), (210, '82_friends_day210_end')]) {
     final app = await _app(t, days);
     app.wardrobe.chooseFirstFriend(Character.miu);
     app.wardrobe.markFriendCardShown(FriendCard.day10);
-    await _picker(t, p, s, name, app, end: end);
+    await _picker(t, p, s, null, app, end: end);
   }
 
   // 1.9.0: "Saisai is here" at day 150, and Saisai + Wongwong at once (day 210

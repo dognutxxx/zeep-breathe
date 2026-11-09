@@ -85,7 +85,8 @@ final _tentacles = [
 
 const _tips = [Offset(70, 172), Offset(130, 172), Offset(88, 178), Offset(112, 178)];
 
-final _bell = Path()
+/// The bell (before it swells), in SVG units.
+final saisaiBell = Path()
   ..moveTo(44, 104)
   ..cubicTo(44, 56, 156, 56, 156, 104)
   ..quadraticBezierTo(150, 113, 140, 107)
@@ -157,14 +158,15 @@ void drawSaisai(
   // `sai-bell`: objectBoundingBox gradient on the bell (x 44..156, y 68..111),
   // centre (.45, .3), radius .75 of each side: an oval
   p.save();
-  p.clipPath(_bell);
+  p.clipPath(saisaiBell);
   const bw = 112.0, bh = 43.0;
   p.translate(44 + 0.45 * bw, 68 + 0.3 * bh);
   p.scale(1, bh / bw);
   const r = 0.75 * bw;
-  p.drawCircle(
-    Offset.zero,
-    r,
+  // fill the whole clipped bell: past the oval the last colour carries on
+  // (TileMode.clamp, the SVG's spreadMethod pad), so the scallops' corners
+  // outside the oval are painted too (Pim r1 #1)
+  p.drawPaint(
     Paint()
       ..shader = const RadialGradient(
         colors: [Color(0xFFFFFFFF), Color(0xFFEAE5F7), Color(0xFFBFB0F0)],
@@ -172,7 +174,7 @@ void drawSaisai(
       ).createShader(Rect.fromCircle(center: Offset.zero, radius: r)),
   );
   p.restore();
-  p.drawPath(_bell, stroke(saisaiOutline, 2.5));
+  p.drawPath(saisaiBell, stroke(saisaiOutline, 2.5));
 
   // the light in the middle (`sai-core`)
   final coreA = (0.15 + lv * 0.35 + hold * 0.5).clamp(0.0, 1.0);
