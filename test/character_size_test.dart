@@ -1,5 +1,5 @@
-// Miu and Lumi look as tall as Zeep in every slot where they stand in for
-// Zeep (1.7.1, QA #4): the Breathe tab (T1) and the session on phones and
+// Every friend (Miu and Lumi since 1.7.1, QA #4; Mun, Tuntun and Nuan since
+// 1.8.0) looks as tall as Zeep in every slot where it stands in for Zeep: the Breathe tab (T1) and the session on phones and
 // iPads, the share cards, the picker rows, and the cards' friend tiles.
 // Heights are measured from the painted (opaque) pixels, not the box.
 // Zeep itself is drawn by the unchanged ZeepPainter / ZeepAvatar.
@@ -88,7 +88,10 @@ Future<Rect> paintedWidget(WidgetTester t, Widget child, Size size) async {
 Pose _pose(double b) =>
     Pose(breath: b, armLift: b, cheekPuff: 0.3, eyeSqueeze: 0.1, mouthOpen: 0, hold: 0, tint: tintInhale);
 
-const _friends = [Character.miu, Character.lumi];
+const _friends = [Character.miu, Character.lumi, Character.mun, Character.tuntun, Character.nuan];
+
+/// Mun's rotor angles to check (its height changes a little as it turns).
+List<double?> _spins(Character c) => c == Character.mun ? const [null, 0, 20, 45, 70] : const [null];
 
 void _sameHeight(Rect friend, Rect zeep, String why) {
   final ratio = friend.height / zeep.height;
@@ -133,18 +136,21 @@ void main() {
               box,
             );
             for (final c in _friends) {
-              final why = '$name $slot $box ${c.name} breath $b';
-              final f = await paintedBy(FriendPainter(character: c, lv: b, fit: FriendFit.stage), box);
-              _sameHeight(f, zeep, why);
-              // standing on Zeep's feet line, in the middle (Miu's tail makes her a little wider on one side)
-              expect(f.bottom, closeTo(zeep.bottom, zeep.height * 0.06), reason: why);
-              expect(f.center.dx, closeTo(zeep.center.dx, zeep.width * 0.1), reason: why);
-              // whole body (and the hold glow and haptic rings) inside the box
-              final held = await paintedBy(
-                FriendPainter(character: c, lv: b, hold: 1, fit: FriendFit.stage, ripples: const [0.69]),
-                box,
-              );
-              expect(held.top >= 0 && held.bottom <= box.height, isTrue, reason: '$why: $held');
+              for (final spin in _spins(c)) {
+                final why = '$name $slot $box ${c.name} breath $b spin $spin';
+                final f = await paintedBy(FriendPainter(character: c, lv: b, fit: FriendFit.stage, spin: spin), box);
+                _sameHeight(f, zeep, why);
+                // standing on Zeep's feet line, in the middle (Miu's tail makes her a little wider on one side)
+                expect(f.bottom, closeTo(zeep.bottom, zeep.height * 0.06), reason: why);
+                expect(f.center.dx, closeTo(zeep.center.dx, zeep.width * 0.1), reason: why);
+                // whole body (and the hold glow, the rotor and the haptic rings) inside the box
+                final held = await paintedBy(
+                  FriendPainter(character: c, lv: b, hold: 1, fit: FriendFit.stage, ripples: const [0.69], spin: spin),
+                  box,
+                );
+                expect(held.top >= 0 && held.bottom <= box.height, isTrue, reason: '$why: $held');
+                expect(held.left >= 0 && held.right <= box.width, isTrue, reason: '$why: $held');
+              }
             }
           }
         }
@@ -206,6 +212,17 @@ void main() {
           .map((w) => w.painter! as FriendPainter)
           .toList();
       expect(painters.map((p) => p.character).toSet(), {Character.miu, Character.lumi});
+      // the silhouettes of the friends still to come are placed the same way
+      final shadows = t
+          .widgetList<CustomPaint>(
+            find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FriendSilhouettePainter),
+          )
+          .map((w) => w.painter! as FriendSilhouettePainter)
+          .toList();
+      expect(shadows.map((p) => p.character), laterFriends);
+      for (final p in shadows) {
+        expect(p.fit, flower ? FriendFit.roomyAvatar : FriendFit.avatar);
+      }
       final dressed = !app.wardrobe.outfit.isEmpty || !app.wardrobe.growth.isNone;
       expect(dressed, flower);
       for (final p in painters) {
@@ -215,7 +232,7 @@ void main() {
     }
   });
 
-  testWidgets('card tiles and the picker pair: Miu and Lumi the same height', (t) async {
+  testWidgets('card tiles and the picker pair: every friend the same height', (t) async {
     for (final s in const [40.0, 60.0, 100.0, 130.0]) {
       final size = Size(s, s);
       final zeep = await paintedWidget(t, ZeepAvatar(tint: tintInhale, size: s * 160 / 200), size * 0.8);
@@ -234,7 +251,9 @@ void main() {
         _sameHeight(f, zeep, 'tile ${c.name} $s');
         expect(f.top >= -1 && f.bottom <= s + 1, isTrue, reason: 'tile ${c.name} $s: $f');
       }
-      expect(heights[0] / heights[1], inInclusiveRange(0.9, 1.1));
+      for (final h in heights) {
+        expect(h / heights[0], inInclusiveRange(0.85, 1.15), reason: 'tile $s: $heights');
+      }
     }
   });
 }

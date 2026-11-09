@@ -2,7 +2,10 @@
 // the "My friends" picker (Zeep only, day 6 with Miu picked, day 12), the
 // day-3 / day-10 / both-at-once cards, T1 with Miu and with Lumi, and a
 // session with Lumi mid-inhale and on hold; 1.7.1: share cards with Miu and
-// Lumi, the picker at day 5 with no pick and at day 1. Uses Windows' Leelawadee UI font
+// Lumi, the picker at day 5 with no pick and at day 1; 1.8.0: the picker at
+// day 35, 65 and 120, Mun, Tuntun and Nuan on T1 and in a session (inhale and
+// hold), the "Mun is here" card, the three-friends card and a share card with
+// Nuan. Uses Windows' Leelawadee UI font
 // for both languages (Roboto has no Thai glyphs).
 //   flutter test tool/friends_screens_test.dart --update-goldens
 
@@ -14,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zeep_breathe/app_controller.dart';
+import 'package:zeep_breathe/exercises/exercises.dart';
 import 'package:zeep_breathe/friends/characters.dart';
 import 'package:zeep_breathe/l10n/strings.dart';
 import 'package:zeep_breathe/main.dart';
@@ -91,6 +95,45 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
   await _card(t, p, '44_friend_card_day10', pick);
   await _card(t, p, '45_friend_card_both', await _app(t, 12));
 
+  // 1.8.0: the picker with Mun (day 35), Mun and Tuntun (day 65), everyone (day 120)
+  for (final (days, name) in const [(35, '54_friends_day35'), (65, '55_friends_day65'), (120, '56_friends_day120')]) {
+    final app = await _app(t, days);
+    app.wardrobe.chooseFirstFriend(Character.miu);
+    app.wardrobe.markFriendCardShown(FriendCard.day10);
+    await _picker(t, p, s, name, app);
+  }
+
+  // 1.8.0: "Mun is here" at day 30, and three friends at once (day 120 after an update)
+  final day30 = await _app(t, 30);
+  day30.wardrobe.markFriendCardShown(FriendCard.both);
+  await _card(t, p, '66_friend_card_mun', day30);
+  final day120 = await _app(t, 120);
+  day120.wardrobe.markFriendCardShown(FriendCard.both);
+  await _card(t, p, '67_friend_card_three', day120);
+
+  // 1.8.0: T1 and the session (mid-inhale, hold) with each new friend
+  for (final (c, n, name) in [
+    (Character.mun, 57, 'mun'),
+    (Character.tuntun, 58, 'tuntun'),
+    (Character.nuan, 59, 'nuan'),
+  ]) {
+    final app = await _app(t, 120);
+    app.wardrobe.markFriendCardShown(FriendCard.both);
+    app.wardrobe.markFriendCardShown(FriendCard.later, shown: laterFriends);
+    app.wardrobe.selectCharacter(c);
+    await t.pumpWidget(ZeepBreatheApp(controller: app));
+    await advance(t, 1.2);
+    await shot('screens/$p${n}_breathe_$name.png');
+    app.startSession();
+    await advance(t, 2.0);
+    await shot('screens/$p${n + 3}_session_${name}_inhale.png');
+    await advance(t, 2.8);
+    await shot('screens/$p${n + 6}_session_${name}_hold.png');
+    app.stopSession();
+    await t.pumpWidget(const SizedBox());
+    await t.pump(const Duration(seconds: 1));
+  }
+
   // E1: T1 and the session
   for (final (c, name) in [(Character.miu, '46_breathe_miu'), (Character.lumi, '47_breathe_lumi')]) {
     final app = await _app(t, 12);
@@ -119,6 +162,13 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
       '51_share_lumi',
       GameAchievement(fixedNow, level: BalanceLevel.hard, score: 96),
       ShareCardColor.sky,
+    ),
+    // 1.8.0: Nuan on a session card
+    (
+      Character.nuan,
+      '68_share_nuan',
+      SessionAchievement(fixedNow, exerciseName: exercises[1].name(s), minutes: 15, breaths: 47),
+      ShareCardColor.mint,
     ),
   ]) {
     phone(t);

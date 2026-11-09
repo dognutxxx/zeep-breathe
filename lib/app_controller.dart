@@ -9,6 +9,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'audio/music_service.dart';
 import 'breathing/breathing_engine.dart';
 import 'exercises/exercises.dart';
+import 'friends/pinwheel.dart';
 import 'game/balance_game.dart';
 import 'haptics/haptics_service.dart';
 import 'history/session_history.dart';
@@ -29,6 +30,9 @@ class AppController extends ChangeNotifier {
   final WardrobeController wardrobe;
   late final BreathingEngine engine;
   final Animator anim = Animator();
+
+  /// Mun's rotor (1.8.0): turns with the breath, like the Animator's pose.
+  final Pinwheel pinwheel = Pinwheel();
 
   Screen screen = Screen.setup;
   HomeTab tab = HomeTab.breathe;
@@ -241,6 +245,12 @@ class AppController extends ChangeNotifier {
         : AnimState.idle;
     anim.setState(st);
     anim.update(dt, engine.level, engine.phaseProgress, engine.state == RunState.paused);
+    pinwheel.update(
+      dt,
+      phase: st == AnimState.idle ? null : engine.phase,
+      progress: engine.phaseProgress,
+      paused: engine.state == RunState.paused,
+    );
 
     final wantMusic = settings.music && screen == Screen.session && engine.state == RunState.running;
     music.update(dt, wantMusic, settings.track);

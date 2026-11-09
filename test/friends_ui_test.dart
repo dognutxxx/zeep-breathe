@@ -1,5 +1,5 @@
 // "My friends" picker (C), the new-friend cards (D) and where the active
-// character shows (E), 1.7.0.
+// character shows (E), 1.7.0; the day-30/60/100 friends, 1.8.0.
 
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 
@@ -165,12 +165,42 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('a mystery friend whose day has come is "on the way" (C2)', (t) async {
+  testWidgets('day 35: Mun is here and can be picked; Tuntun and Nuan are silhouettes (1.8.0 #4)', (t) async {
     final app = await makeApp(days: 35);
     await launch(t, app);
     await openPicker(t, app);
-    expect(find.text(s.mysteryOnTheWay), findsOneWidget);
+    expect(label(t, 'Mun'), 'Mun, ${s.characterTagline(Character.mun)}, ${s.tapToSwitch}');
+    expect(find.text(s.mysteryWhen(30)), findsNothing);
     expect(find.text(s.mysteryWhen(60)), findsOneWidget);
+    expect(find.text(s.mysteryWhen(100)), findsOneWidget);
+    expect(find.text(s.mysteryFriend), findsNWidgets(2));
+    // the silhouettes are the friends' own shapes, not their names
+    final shadows = t
+        .widgetList<CustomPaint>(
+          find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FriendSilhouettePainter),
+        )
+        .map((w) => (w.painter! as FriendSilhouettePainter).character);
+    expect(shadows, [Character.tuntun, Character.nuan]);
+    expect(find.text('Tuntun'), findsNothing);
+    await t.tap(row('Mun').first);
+    await frames(t, app);
+    expect(app.wardrobe.activeCharacter, Character.mun);
+    expect(find.text(s.greetingOf(Character.mun)), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('day 100: all six can be picked, no rows beyond (1.8.0 #4)', (t) async {
+    final app = await makeApp(days: 120);
+    await launch(t, app);
+    await openPicker(t, app);
+    for (final n in ['Miu', 'Lumi', 'Mun', 'Tuntun', 'Nuan']) {
+      expect(label(t, n), endsWith(s.tapToSwitch), reason: n);
+    }
+    expect(find.text(s.mysteryFriend), findsNothing);
+    expect(find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FriendSilhouettePainter), findsNothing);
+    await t.tap(row('Nuan').first);
+    await frames(t, app);
+    expect(app.wardrobe.activeCharacter, Character.nuan);
     await t.pumpWidget(const SizedBox());
   });
 
@@ -254,12 +284,86 @@ void main() {
     while (find.text(s.newItemTitle).evaluate().isNotEmpty) {
       await tapText(t, app, s.later);
     }
-    expect(find.text(s.twoFriendsTitle), findsOneWidget);
+    expect(find.text(s.newFriendsTitle(2)), findsOneWidget);
     expect(find.byType(LiveFriend), findsNWidgets(2));
     await tapText(t, app, s.later);
     expect(find.byType(FriendCardDialog), findsNothing);
     expect(app.wardrobe.activeCharacter, Character.zeep);
     expect(app.wardrobe.dueFriendCard, isNull); // no day-3 card afterwards either
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('reaching day 30: "Mun is here", once; "Breathe with Mun" switches (1.8.0 #5)', (t) async {
+    final app = await makeApp(days: 29);
+    app.wardrobe.chooseFirstFriend(Character.miu);
+    app.wardrobe.markFriendCardShown(FriendCard.day10);
+    await launch(t, app);
+    await finishSession(t, app);
+    expect(app.wardrobe.practiceDays, 30);
+    // items unlocked on day 30 come first
+    while (find.text(s.newItemTitle).evaluate().isNotEmpty) {
+      await tapText(t, app, s.later);
+    }
+    expect(find.text(s.friendArrived('Mun')), findsOneWidget);
+    expect(find.text(s.characterTagline(Character.mun)), findsWidgets);
+    expect(find.byType(LiveFriend), findsOneWidget);
+    expect(find.text(s.later), findsOneWidget);
+    await tapText(t, app, s.breatheWith('Mun'));
+    expect(app.wardrobe.activeCharacter, Character.mun);
+    expect(app.wardrobe.dueFriendCard, isNull);
+    // T1 draws Mun with the rotor driven by the ticker
+    final p = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FriendPainter);
+    expect((t.widget<CustomPaint>(p.first).painter! as FriendPainter).spin, isNotNull);
+    expect(find.text(s.greetingOf(Character.mun)), findsOneWidget);
+    // the next session end: no card again
+    await finishSession(t, app);
+    expect(find.byType(FriendCardDialog), findsNothing);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('65 days after updating: one card with Mun and Tuntun; pick one (1.8.0 #5)', (t) async {
+    final app = await makeApp(days: 65);
+    app.wardrobe.chooseFirstFriend(Character.lumi); // too late for a pick: ignored
+    app.wardrobe.markFriendCardShown(FriendCard.both);
+    await launch(t, app);
+    await finishSession(t, app);
+    while (find.text(s.newItemTitle).evaluate().isNotEmpty) {
+      await tapText(t, app, s.later);
+    }
+    // "two more", not the Miu + Lumi card's "two new" again (QA r2 #3)
+    expect(find.text(s.moreFriendsTitle(2)), findsOneWidget);
+    expect(find.text(s.newFriendsTitle(2)), findsNothing);
+    expect(find.text(s.pickOneNow), findsOneWidget);
+    expect(find.byType(LiveFriend), findsNWidgets(2));
+    // Mun selected first; pick Tuntun
+    expect(find.text(s.breatheWith('Mun')), findsOneWidget);
+    await t.tap(find.bySemanticsLabel('Tuntun, ${s.characterTagline(Character.tuntun)}'));
+    await frames(t, app);
+    await tapText(t, app, s.breatheWith('Tuntun'));
+    expect(app.wardrobe.activeCharacter, Character.tuntun);
+    expect(app.wardrobe.dueFriendCard, isNull);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('35 days, no day-3 pick: "two new friends" first, Mun at the next session end (1.8.0 #5)', (t) async {
+    final app = await makeApp(days: 34);
+    await launch(t, app);
+    await finishSession(t, app);
+    while (find.text(s.newItemTitle).evaluate().isNotEmpty) {
+      await tapText(t, app, s.later);
+    }
+    expect(find.text(s.newFriendsTitle(2)), findsOneWidget);
+    expect(find.text(s.friendArrived('Mun')), findsNothing);
+    await tapText(t, app, s.later);
+    expect(find.byType(FriendCardDialog), findsNothing); // one friend card per session end
+    await finishSession(t, app);
+    while (find.text(s.newItemTitle).evaluate().isNotEmpty) {
+      await tapText(t, app, s.later);
+    }
+    expect(find.text(s.friendArrived('Mun')), findsOneWidget);
+    await tapText(t, app, s.later);
+    expect(app.wardrobe.activeCharacter, Character.zeep);
+    expect(app.wardrobe.dueFriendCard, isNull);
     await t.pumpWidget(const SizedBox());
   });
 

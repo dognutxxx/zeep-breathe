@@ -1,5 +1,6 @@
-// Zeep and friends (1.7.0): unlock rules, the friend card that is due, and
-// the saved state (with a 1.6.1 save loading as before).
+// Zeep and friends (1.7.0; the day-30/60/100 friends 1.8.0): unlock rules,
+// the friend card that is due, and the saved state (with 1.6.1 and 1.7.x
+// saves loading as before).
 
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 
@@ -11,6 +12,22 @@ import 'package:zeep_breathe/friends/characters.dart';
 import 'package:zeep_breathe/wardrobe/wardrobe_controller.dart';
 
 const _miu = Character.miu, _lumi = Character.lumi, _zeep = Character.zeep;
+const _mun = Character.mun, _tuntun = Character.tuntun, _nuan = Character.nuan;
+
+/// What 1.7.1 saved: [save161] plus the friend keys of 1.7.0.
+Map<String, Object?> save171(
+  int days, {
+  String character = 'zeep',
+  String? choice,
+  bool shown3 = false,
+  bool seen10 = false,
+}) => {
+  ...save161(days),
+  'character': character,
+  'day3Choice': ?choice,
+  'day3CardShown': shown3,
+  'day10CardSeen': seen10,
+};
 
 /// What 1.6.1 saved under `zeep.wardrobe` (no friend keys at all).
 Map<String, Object?> save161(int days) => {
@@ -57,7 +74,7 @@ void main() {
     });
 
     test('day 10 and up: both Miu and Lumi, with or without a pick', () {
-      for (final d in [10, 11, 29, 30, 60, 100, 365]) {
+      for (final d in [10, 11, 29]) {
         for (final c in [null, _miu, _lumi]) {
           expect(unlockedCharacters(d, c), {_zeep, _miu, _lumi}, reason: 'day $d, pick $c');
         }
@@ -65,12 +82,24 @@ void main() {
       }
     });
 
-    test('the 30/60/100-day friends are never selectable in 1.7.0', () {
-      for (final c in mysteryFriends) {
-        expect(c.playable, isFalse);
-        expect(unlockedCharacters(1000, _miu).contains(c), isFalse);
+    test('Mun at 30 days, Tuntun at 60, Nuan at 100, whatever the day-3 pick (1.8.0 #4)', () {
+      expect(laterFriends, [_mun, _tuntun, _nuan]);
+      expect([for (final c in laterFriends) c.days], [30, 60, 100]);
+      for (final c in [null, _miu, _lumi]) {
+        expect(unlockedCharacters(29, c), {_zeep, _miu, _lumi});
+        expect(unlockedCharacters(30, c), {_zeep, _miu, _lumi, _mun});
+        expect(unlockedCharacters(59, c), {_zeep, _miu, _lumi, _mun});
+        expect(unlockedCharacters(60, c), {_zeep, _miu, _lumi, _mun, _tuntun});
+        expect(unlockedCharacters(99, c), {_zeep, _miu, _lumi, _mun, _tuntun});
+        expect(unlockedCharacters(100, c), Character.values.toSet());
+        expect(unlockedCharacters(1000, c), Character.values.toSet());
       }
-      expect([for (final c in mysteryFriends) c.days], [30, 60, 100]);
+      for (final c in laterFriends) {
+        expect(c.isLaterFriend, isTrue);
+        expect(c.isDay3Friend, isFalse);
+        expect(isUnlocked(c, c.days - 1, _miu), isFalse);
+        expect(isUnlocked(c, c.days, null), isTrue);
+      }
     });
 
     test('more days never lock anyone again', () {
@@ -86,8 +115,8 @@ void main() {
   });
 
   group('friend card due (D1, D2)', () {
-    FriendCard? due(int d, Character? c, {bool shown3 = false, bool seen10 = false}) =>
-        dueFriendCard(days: d, choice: c, day3CardShown: shown3, day10CardSeen: seen10);
+    FriendCard? due(int d, Character? c, {bool shown3 = false, bool seen10 = false, Set<Character> later = const {}}) =>
+        dueFriendCard(days: d, choice: c, day3CardShown: shown3, day10CardSeen: seen10, laterSeen: later);
 
     test('day 3 card once, only while a pick is pending', () {
       expect(due(2, null), isNull);
@@ -103,7 +132,33 @@ void main() {
       expect(due(10, null), FriendCard.both);
       expect(due(25, null, shown3: true), FriendCard.both);
       expect(due(10, _lumi, seen10: true), isNull);
-      expect(due(40, null, shown3: true, seen10: true), isNull);
+      expect(due(29, null, shown3: true, seen10: true), isNull);
+    });
+
+    test('day 30 / 60 / 100: one card each, once (1.8.0 #5)', () {
+      expect(due(30, _miu, shown3: true, seen10: true), FriendCard.later);
+      expect(dueLaterFriends(30, {}), [_mun]);
+      expect(due(30, _miu, shown3: true, seen10: true, later: {_mun}), isNull);
+      expect(due(60, _miu, shown3: true, seen10: true, later: {_mun}), FriendCard.later);
+      expect(dueLaterFriends(60, {_mun}), [_tuntun]);
+      expect(due(99, _miu, shown3: true, seen10: true, later: {_mun, _tuntun}), isNull);
+      expect(dueLaterFriends(100, {_mun, _tuntun}), [_nuan]);
+      expect(due(500, _miu, shown3: true, seen10: true, later: {_mun, _tuntun, _nuan}), isNull);
+    });
+
+    test('several due at once: one card with all of them (1.8.0 #5)', () {
+      expect(dueLaterFriends(65, {}), [_mun, _tuntun]);
+      expect(dueLaterFriends(120, {}), [_mun, _tuntun, _nuan]);
+      expect(dueLaterFriends(120, {_tuntun}), [_mun, _nuan]);
+    });
+
+    test('the Miu and Lumi cards come first; the 30/60/100 card waits a session end (1.8.0 #5)', () {
+      // 35 days, no day-3 pick: "two new friends" first, Mun at the next session end
+      expect(due(35, null), FriendCard.both);
+      expect(due(35, null, shown3: true, seen10: true), FriendCard.later);
+      // 65 days with Miu picked and the day-10 card not seen yet
+      expect(due(65, _miu, shown3: true), FriendCard.day10);
+      expect(due(65, _miu, shown3: true, seen10: true), FriendCard.later);
     });
   });
 
@@ -174,7 +229,16 @@ void main() {
         (2, {'character': 'lumi', 'day3Choice': 'lumi'}), // too few days
         (5, {'character': 'miu', 'day3Choice': 'lumi'}), // not the pick
         (5, {'character': 'miu'}), // no pick
-        (40, {'character': 'friend30'}), // not playable yet
+        (40, {'character': 'friend30'}), // a 1.7.0 placeholder name: unknown now
+        (29, {'character': 'mun'}), // one day short
+        (65, {'character': 'nuan'}), // Nuan comes at 100
+        (
+          99,
+          {
+            'character': 'nuan',
+            'laterCardsSeen': ['nuan'],
+          },
+        ), // a seen flag unlocks nothing
         (40, {'character': 'dragon'}), // unknown
         (40, {'character': 7, 'day3Choice': 'zeep'}), // wrong types
       ]) {
@@ -193,7 +257,7 @@ void main() {
       expect(w.day3Choice, isNull);
       expect(w.activeCharacter, _zeep);
       w.setForTest(practiceDays: 3);
-      w.chooseFirstFriend(Character.friend30);
+      w.chooseFirstFriend(Character.mun);
       expect(w.day3Choice, isNull);
       w.chooseFirstFriend(_miu);
       expect(w.day3Choice, _miu);
@@ -201,6 +265,52 @@ void main() {
       // the pick is made once
       w.chooseFirstFriend(_lumi);
       expect(w.day3Choice, _miu);
+    });
+
+    test('a 1.7.1 save loads as it was and gets the day-30/60/100 friends it earned (1.8.0 #6)', () async {
+      final w = await loadFrom(save171(65, character: 'lumi', choice: 'miu', shown3: true, seen10: true));
+      expect(w.activeCharacter, _lumi);
+      expect(w.day3Choice, _miu);
+      expect(w.unlockedCharacters, {_zeep, _miu, _lumi, _mun, _tuntun});
+      // one card with both new friends
+      expect(w.dueFriendCard, FriendCard.later);
+      expect(w.dueLaterFriends, [_mun, _tuntun]);
+      expect(w.outfit.items.map((i) => i.name), ['sproutBow']);
+      expect(w.steps, 65);
+      // nothing changes on save but the new key
+      w.markFriendCardShown(FriendCard.later, shown: w.dueLaterFriends);
+      final j = await saved();
+      expect(j['laterCardsSeen'], ['mun', 'tuntun']);
+      expect(j['character'], 'lumi');
+      expect(j['day3Choice'], 'miu');
+      expect(j['day3CardShown'], true);
+      expect(j['day10CardSeen'], true);
+      expect(j['v'], 3);
+
+      final again = await loadFrom(j);
+      expect(again.dueFriendCard, isNull);
+      expect(again.activeCharacter, _lumi);
+      // day 100 later: only Nuan is new
+      again.setForTest(practiceDays: 100);
+      expect(again.dueFriendCard, FriendCard.later);
+      expect(again.dueLaterFriends, [_nuan]);
+    });
+
+    test('switching to a day-30/60/100 friend is saved; seen flags ignore bad entries (1.8.0 #6)', () async {
+      final w = await loadFrom({
+        ...save171(100, choice: 'lumi', shown3: true, seen10: true),
+        'laterCardsSeen': ['nuan', 'miu', 7, 'dragon'],
+      });
+      expect(w.dueLaterFriends, [_mun, _tuntun]);
+      w.selectCharacter(_nuan);
+      expect(w.activeCharacter, _nuan);
+      final again = await loadFrom(await saved());
+      expect(again.activeCharacter, _nuan);
+      expect((await saved())['laterCardsSeen'], ['nuan']);
+      // marking a later card with Miu on it changes nothing for Miu
+      again.markFriendCardShown(FriendCard.later, shown: const [_miu, _mun]);
+      expect(again.dueLaterFriends, [_tuntun]);
+      expect(again.dueFriendCard, FriendCard.later);
     });
 
     test('practice days only go up: a gap of missed days keeps friends (B4)', () async {

@@ -39,6 +39,8 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
   app.wardrobe.markAllSeen();
   // these screenshots are about the wardrobe: the friend cards (1.7.0) were seen
   app.wardrobe.markFriendCardShown(FriendCard.both);
+  // and the day-30 card (1.8.0): these shots are about the wardrobe cards
+  app.wardrobe.markFriendCardShown(FriendCard.later, shown: laterFriends);
   for (final i in [OutfitItem.sproutBow, OutfitItem.beanie, OutfitItem.roundGlasses, OutfitItem.butterfly]) {
     app.wardrobe.toggle(i);
   }
