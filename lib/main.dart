@@ -101,17 +101,23 @@ class ZeepBreatheApp extends StatelessWidget {
 class LaunchGate extends StatefulWidget {
   final Future<AppController> boot;
 
-  /// Splash speed (0.5 = the approved half speed); tests may speed it up.
+  /// Splash speed (1 = the approved real-time breath); tests may speed it up.
   final double splashSpeed;
   final ui.Image? logo;
 
-  const LaunchGate({super.key, required this.boot, this.splashSpeed = 0.5, this.logo});
+  const LaunchGate({super.key, required this.boot, this.splashSpeed = 1, this.logo});
 
   @override
   State<LaunchGate> createState() => _LaunchGateState();
 }
 
 class _LaunchGateState extends State<LaunchGate> {
+  static const _appBars = SystemUiOverlayStyle(
+    statusBarColor: Color(0x00000000),
+    statusBarIconBrightness: Brightness.dark,
+    statusBarBrightness: Brightness.light,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  );
   final _splashGone = Completer<void>();
   AppController? _app;
   bool _showApp = false, _splashDone = false;
@@ -135,7 +141,11 @@ class _LaunchGateState extends State<LaunchGate> {
     return Stack(
       children: [
         if (app != null && _showApp)
-          HomePage(app: app, splashGone: _splashGone.future)
+          // dark bar icons again once the dark splash is going
+          AnnotatedRegion<SystemUiOverlayStyle>(
+            value: _appBars,
+            child: HomePage(app: app, splashGone: _splashGone.future),
+          )
         else
           const ColoredBox(color: splashBackground, child: SizedBox.expand()),
         if (!_splashDone)

@@ -68,6 +68,17 @@ void main() {
     }
   });
 
+  testWidgets('splash (th)', (t) async {
+    debugDisableShadows = false;
+    try {
+      thai(t);
+      await splashFlow(t, 'th_');
+    } finally {
+      debugDisableShadows = true;
+      t.platformDispatcher.clearAllTestValues();
+    }
+  });
+
   testWidgets('sheets (th)', (t) async {
     debugDisableShadows = false;
     try {

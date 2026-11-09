@@ -313,19 +313,35 @@ Future<void> shareFlow(WidgetTester t, String p, S s) async {
   await t.pumpWidget(const SizedBox());
 }
 
-/// Launch splash (1.6.0): frames at the start, mid-inhale, the hold and the
-/// exhale (half speed, so the hold is at about 2.3 s).
+/// Launch splash (1.9.0, dark, Zeep only): 0.2 s, the inhale peak (1.6 s),
+/// the hold (2.0 s) and the exhale (2.9 s); Reduce Motion at its hold; the
+/// inhale peak on a 320 px phone and an iPad in landscape.
 Future<void> splashFlow(WidgetTester t, String p) async {
-  phone(t);
-  final app = await makeApp();
-  final logo = await t.runAsync(loadSplashLogo);
-  await t.pumpWidget(ZeepBreatheApp(boot: Future.value(app), splashLogo: logo));
-  await shot('screens/${p}36_splash_start.png');
-  for (final (name, secs) in [('37_splash_out', 1.2), ('38_splash_hold', 1.1), ('39_splash_back', 0.9)]) {
-    await advance(t, secs);
-    await shot('screens/$p$name.png');
+  Future<void> run(List<(String, double)> stops) async {
+    final app = await makeApp();
+    final logo = await t.runAsync(loadSplashLogo);
+    await t.pumpWidget(ZeepBreatheApp(boot: Future.value(app), splashLogo: logo));
+    for (final (shotName, secs) in stops) {
+      await advance(t, secs);
+      await shot('screens/$p$shotName.png');
+    }
+    await t.pumpWidget(const SizedBox());
+    await t.pump(const Duration(seconds: 1));
   }
-  await advance(t, 2);
-  await t.pumpWidget(const SizedBox());
-  await t.pump(const Duration(seconds: 1));
+
+  phone(t);
+  await run([('36_splash_start', 0.2), ('37_splash_inhale', 1.4), ('38_splash_hold', 0.4), ('39_splash_exhale', 0.9)]);
+  t.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(disableAnimations: true);
+  await run([('splash_reduce_motion', 0.6)]);
+  t.platformDispatcher.clearAccessibilityFeaturesTestValue();
+  t.view.physicalSize = const Size(640, 1136);
+  t.view.devicePixelRatio = 2;
+  t.view.padding = const FakeViewPadding(top: 20 * 2);
+  t.view.viewPadding = const FakeViewPadding(top: 20 * 2);
+  await run([('splash_320_inhale', 1.6)]);
+  t.view.physicalSize = const Size(2732, 2048);
+  t.view.padding = const FakeViewPadding(top: 24 * 2, bottom: 20 * 2);
+  t.view.viewPadding = const FakeViewPadding(top: 24 * 2, bottom: 20 * 2);
+  await run([('splash_ipad_landscape_inhale', 1.6)]);
+  t.view.reset();
 }
