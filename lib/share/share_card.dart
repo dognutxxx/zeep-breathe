@@ -6,7 +6,9 @@
 import 'package:flutter/material.dart';
 
 import '../game/balance_game.dart';
+import '../friends/characters.dart';
 import '../l10n/strings.dart';
+import '../ui/friends/character_view.dart';
 import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
 
@@ -61,7 +63,15 @@ class ShareCard extends StatelessWidget {
 
   final ShareAchievement achievement;
   final ShareCardColor theme;
-  const ShareCard({super.key, required this.achievement, this.theme = ShareCardColor.lavender});
+
+  /// Who is on the card (the active character); Zeep by default.
+  final Character character;
+  const ShareCard({
+    super.key,
+    required this.achievement,
+    this.theme = ShareCardColor.lavender,
+    this.character = Character.zeep,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +113,7 @@ class ShareCard extends StatelessWidget {
                 ],
               ),
               const Spacer(),
-              ZeepAvatar(tint: theme.zeepTint, size: 150, breath: 0.75),
+              CharacterAvatar(character: character, tint: theme.zeepTint, size: 150, breath: 0.75),
               const SizedBox(height: 6),
               Text(
                 big,

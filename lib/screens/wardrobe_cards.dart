@@ -12,6 +12,7 @@ import '../wardrobe/flowers.dart';
 import '../wardrobe/outfits.dart';
 import '../wardrobe/wardrobe_controller.dart';
 import 'bloom_card.dart';
+import 'friend_cards.dart';
 import 'wardrobe_screen.dart';
 
 /// T1.9: opens the wardrobe; a red dot while something new is unseen.
@@ -133,14 +134,15 @@ class GrowthStrip extends StatelessWidget {
 }
 
 /// N: one card per newly unlocked item. "Try it on" wears it and opens the
-/// wardrobe; "Later" leaves the red dot on the hanger button.
-Future<void> showNewItemCards(BuildContext context, AppController app, List<OutfitItem> items) async {
+/// wardrobe; "Later" leaves the red dot on the hanger button. Returns true if
+/// the wardrobe was opened.
+Future<bool> showNewItemCards(BuildContext context, AppController app, List<OutfitItem> items) async {
   for (final item in items) {
-    if (!context.mounted) return;
+    if (!context.mounted) return false;
     final l = S.of(context);
     final tryOn = await showDialog<bool>(
       context: context,
-      builder: (ctx) => _ZeepDialog(
+      builder: (ctx) => ZeepDialog(
         outfit: Outfit.of([item]),
         title: l.newItemTitle,
         body: l.newItemBody(l.itemName(item), item.unlockDays),
@@ -151,9 +153,10 @@ Future<void> showNewItemCards(BuildContext context, AppController app, List<Outf
     if (tryOn == true && context.mounted) {
       app.wardrobe.wear(item);
       openWardrobe(context, app);
-      return;
+      return true;
     }
   }
+  return false;
 }
 
 /// Once, for people who practised before the wardrobe existed.
@@ -163,7 +166,7 @@ Future<void> showSummaryCard(BuildContext context, AppController app) async {
   final l = S.of(context);
   final open = await showDialog<bool>(
     context: context,
-    builder: (ctx) => _ZeepDialog(
+    builder: (ctx) => ZeepDialog(
       growth: w.growth,
       title: l.summaryTitle,
       body: l.summaryBody(w.garden.level, w.unlocked.length),
@@ -175,17 +178,31 @@ Future<void> showSummaryCard(BuildContext context, AppController app) async {
   if (open == true && context.mounted) openWardrobe(context, app);
 }
 
-class _ZeepDialog extends StatelessWidget {
+/// The card style shared by N, the summary card and the friend cards: a
+/// picture on top ([art], or a still Zeep), a balanced title and body, and two
+/// full-width buttons. The buttons pop true / false unless [onPrimary] /
+/// [onSecondary] are given.
+class ZeepDialog extends StatelessWidget {
   final Outfit outfit;
   final SproutGrowth growth;
   final String title, body, primary, secondary;
-  const _ZeepDialog({
+  final Widget? art;
+
+  /// A smaller line under the body, e.g. "the other one comes later".
+  final String? note;
+  final VoidCallback? onPrimary, onSecondary;
+  const ZeepDialog({
+    super.key,
     this.outfit = Outfit.none,
     this.growth = SproutGrowth.none,
     required this.title,
     required this.body,
     required this.primary,
     required this.secondary,
+    this.art,
+    this.note,
+    this.onPrimary,
+    this.onSecondary,
   });
 
   @override
@@ -199,27 +216,34 @@ class _ZeepDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ExcludeSemantics(
-              child: SizedBox(
-                width: 150,
-                height: 130,
-                child: CustomPaint(
-                  painter: ZeepThumbPainter(outfit: outfit, growth: growth),
+            art ??
+                ExcludeSemantics(
+                  child: SizedBox(
+                    width: 150,
+                    height: 130,
+                    child: CustomPaint(
+                      painter: ZeepThumbPainter(outfit: outfit, growth: growth),
+                    ),
+                  ),
                 ),
-              ),
-            ),
             // balanced lines: no word left alone on the last line
             BalancedText(
               title,
               style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: ZeepColors.text),
             ),
-            const SizedBox(height: 6),
-            BalancedText(body, style: const TextStyle(fontSize: 14, height: 1.4, color: ZeepColors.textSoft)),
+            if (body.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              BalancedText(body, style: const TextStyle(fontSize: 14, height: 1.4, color: ZeepColors.textSoft)),
+            ],
+            if (note != null) ...[
+              const SizedBox(height: 6),
+              BalancedText(note!, style: const TextStyle(fontSize: 13, height: 1.4, color: ZeepColors.textFaint)),
+            ],
             const SizedBox(height: 16),
             // full-width buttons, one above the other: labels like
             // "เปิดตู้เสื้อผ้า" stay on one line even with wide fonts
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: onPrimary ?? () => Navigator.of(context).pop(true),
               style: FilledButton.styleFrom(
                 backgroundColor: ZeepColors.mint,
                 foregroundColor: ZeepColors.mintDark,
@@ -233,7 +257,7 @@ class _ZeepDialog extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: onSecondary ?? () => Navigator.of(context).pop(false),
               style: TextButton.styleFrom(foregroundColor: ZeepColors.textSoft, minimumSize: const Size.fromHeight(44)),
               child: Text(secondary, textAlign: TextAlign.center),
             ),
@@ -245,8 +269,8 @@ class _ZeepDialog extends StatelessWidget {
 }
 
 /// After "Done" on the finish card or the game results: card L if a flower
-/// bloomed, then card N for each new item. Pass the navigator's context (the
-/// finish card itself is gone by then).
+/// bloomed, then card N for each new item, then at most one friend card.
+/// Pass the navigator's context (the finish card itself is gone by then).
 Future<void> showGrowthCards(BuildContext context, AppController app) async {
   final bloom = app.wardrobe.takePendingBloom();
   final items = app.wardrobe.takePendingNewItems();
@@ -259,5 +283,9 @@ Future<void> showGrowthCards(BuildContext context, AppController app) async {
       if (!context.mounted) return;
     }
   }
-  if (items.isNotEmpty && context.mounted) await showNewItemCards(context, app, items);
+  if (items.isNotEmpty && context.mounted) {
+    // "Try it on" went to the wardrobe: the friend card waits for the next time
+    if (await showNewItemCards(context, app, items)) return;
+  }
+  if (context.mounted) await showFriendCard(context, app);
 }

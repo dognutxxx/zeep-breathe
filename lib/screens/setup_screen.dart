@@ -6,12 +6,12 @@ import '../app_controller.dart';
 import '../exercises/exercises.dart';
 import '../l10n/strings.dart';
 import '../settings/settings_controller.dart';
+import '../ui/friends/character_view.dart';
 import '../ui/widgets.dart';
-import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
 import 'sheets.dart';
+import 'friends_sheet.dart';
 import 'wardrobe_cards.dart';
-import 'wardrobe_screen.dart';
 
 class SetupScreen extends StatelessWidget {
   final AppController app;
@@ -70,32 +70,32 @@ class SetupScreen extends StatelessWidget {
                       _TrackChip(app: app),
                     ],
                   ),
-                  // character (idle); tap Zeep to open the wardrobe
+                  // character (idle); tap it, or the "Friends" chip, to open
+                  // the friends picker (1.7.0; the wardrobe has the hanger button)
                   Expanded(
-                    child: Semantics(
-                      button: true,
-                      label: l.openWardrobe,
-                      excludeSemantics: true,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => openWardrobe(context, app),
-                        // full width (a bare CustomPaint would be 0 px wide here and
-                        // Zeep would not be drawn at all: bug in 1.6.0)
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: CustomPaint(
-                            size: const Size(0, 150), // the least Zeep gets on a short screen
-                            painter: ZeepPainter(
-                              pose: app.anim.pose,
-                              time: app.anim.time,
-                              ripples: app.haptics.ripples(app.time),
-                              reduceMotion: app.reduceMotion,
-                              outfit: app.wardrobe.outfit,
-                              growth: app.wardrobe.growth,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Semantics(
+                          button: true,
+                          label: l.openFriends,
+                          excludeSemantics: true,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => openFriends(context, app),
+                            // full width (a bare CustomPaint would be 0 px wide here and
+                            // Zeep would not be drawn at all: bug in 1.6.0)
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: CustomPaint(
+                                size: const Size(0, 150), // the least Zeep gets on a short screen
+                                painter: activeCharacterPainter(app),
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                        Positioned(top: 6, right: 14, child: _FriendsChip(app: app)),
+                      ],
                     ),
                   ),
                   // speech bubble
@@ -109,7 +109,7 @@ class SetupScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(18),
                       ),
                       child: Text(
-                        l.greeting,
+                        l.greetingOf(app.wardrobe.activeCharacter),
                         textAlign: TextAlign.center,
                         style: const TextStyle(fontSize: 14, color: Color(0xFF6A6560), height: 1.4),
                       ),
@@ -195,6 +195,68 @@ class SetupScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// T1: "Friends" chip over the character, so tapping it is discoverable.
+/// A dot while a new friend waits to be picked (days 3-9, no pick yet).
+class _FriendsChip extends StatelessWidget {
+  final AppController app;
+  const _FriendsChip({required this.app});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = S.of(context);
+    final dot = app.wardrobe.friendChoicePending;
+    const fg = Color(0xFF6A4FB0);
+    return Semantics(
+      button: true,
+      label: dot ? '${l.friendsTitle}, ${l.chooseNewFriend}' : l.friendsTitle,
+      excludeSemantics: true,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Material(
+            color: const Color(0xFFEEE9FA),
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => openFriends(context, app),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.diversity_1_rounded, size: 16, color: fg),
+                    const SizedBox(width: 5),
+                    Text(
+                      l.friendsChip,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: fg),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (dot)
+            Positioned(
+              right: -2,
+              top: -2,
+              child: IgnorePointer(
+                child: Container(
+                  width: 11,
+                  height: 11,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE5484D),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

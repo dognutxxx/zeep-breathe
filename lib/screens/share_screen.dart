@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../friends/characters.dart';
 import '../l10n/strings.dart';
 import '../share/share_card.dart';
 import '../ui/widgets.dart';
@@ -32,7 +33,15 @@ Future<void> sharePngWithSystem(Uint8List png, String text, Rect? origin) async 
 class ShareScreen extends StatefulWidget {
   final ShareAchievement achievement;
   final ImageSharer sharer;
-  const ShareScreen({super.key, required this.achievement, this.sharer = sharePngWithSystem});
+
+  /// Who is on the card: the active character (1.7.0).
+  final Character character;
+  const ShareScreen({
+    super.key,
+    required this.achievement,
+    this.sharer = sharePngWithSystem,
+    this.character = Character.zeep,
+  });
 
   @override
   State<ShareScreen> createState() => _ShareScreenState();
@@ -115,7 +124,11 @@ class _ShareScreenState extends State<ShareScreen> {
                             borderRadius: BorderRadius.circular(28),
                             child: RepaintBoundary(
                               key: _cardKey,
-                              child: ShareCard(achievement: widget.achievement, theme: _theme),
+                              child: ShareCard(
+                                achievement: widget.achievement,
+                                theme: _theme,
+                                character: widget.character,
+                              ),
                             ),
                           ),
                         ),

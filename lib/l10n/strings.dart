@@ -6,6 +6,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../breathing/breathing_engine.dart';
+import '../friends/characters.dart';
 import '../game/balance_game.dart';
 import '../haptics/haptics_service.dart';
 import '../share/share_card.dart';
@@ -415,4 +416,51 @@ class S {
     'From your practice so far:\nlevel $level · $items ${items == 1 ? 'item' : 'items'} unlocked',
     'จากที่ฝึกมาแล้ว\nได้เลเวล $level · ปลด⁠ล็อกของ $items ชิ้น',
   );
+
+  // ---------------------------------------------------------------- Zeep and friends (1.7.0)
+  String characterName(Character c) => switch (c) {
+    Character.zeep => 'Zeep',
+    Character.miu => _('Miu', 'หมิว'),
+    Character.lumi => _('Lumi', 'ลูมิ'),
+    _ => mysteryFriend,
+  };
+  String characterTagline(Character c) => switch (c) {
+    Character.zeep => _('Fills with water as you breathe', 'เติมน้ำตามลมหายใจ'),
+    Character.miu => _('Belly rises as you breathe', 'ท้องป่องตามลมหายใจ'),
+    Character.lumi => _('Glows brighter as you breathe', 'ไฟสว่างตามลมหายใจ'),
+    _ => '',
+  };
+
+  /// The speech bubble on the Breathe tab, in the active character's voice.
+  String greetingOf(Character c) => switch (c) {
+    Character.miu => _(
+      "Hi, I'm Miu. Breathe in until your belly is round, then let it out slowly with me.",
+      'สวัสดี ฉันชื่อหมิว หายใจเข้าให้ท้องป่องๆ แล้วค่อยๆ ปล่อยออกไปช้าๆ ด้วยกันนะ',
+    ),
+    Character.lumi => _(
+      "Hi, I'm Lumi. My light grows as you breathe in and softens as you breathe out.",
+      'สวัสดี ฉันชื่อลูมิ หายใจเข้าแล้วไฟจะสว่างขึ้น หายใจออกแล้วไฟจะค่อยๆ หรี่ลงนะ',
+    ),
+    _ => greeting,
+  };
+  String get friendsTitle => _('My friends', 'เพื่อนของฉัน');
+  String get friendsChip => _('Friends', 'เพื่อน');
+  String get openFriends => _('My friends: choose who to breathe with', 'เพื่อนของฉัน เลือกเพื่อนที่จะหายใจด้วย');
+  String get inUse => _('In use', 'ใช้อยู่');
+  String get tapToSwitch => _('Tap to switch', 'แตะเพื่อสลับ');
+  String get chooseNewFriend => _('Choose a new friend', 'เลือกเพื่อนใหม่');
+  String get miuOrLumi => _('Miu or Lumi', 'หมิว หรือ ลูมิ');
+  String friendIn(int n) => _(n == 1 ? 'Comes in 1 more day' : 'Comes in $n more days', 'มาหาอีก $n วัน');
+  String get mysteryFriend => _('Mystery friend', 'เพื่อนลึกลับ');
+  String mysteryWhen(int n) => _('Comes at $n practice days', 'มาหาเมื่อฝึกครบ $n วัน');
+  String get mysteryOnTheWay => _('On the way, in a coming update', 'กำลังเดินทางมา');
+  String get newFriendTitle => _('A new friend is here!', 'มีเพื่อนใหม่มาหาแล้ว!');
+  String chooseFriend(String name) => _('Choose $name', 'เลือก$name');
+  String get otherFriendLater =>
+      _('The other one comes when you reach 10 practice days', 'อีกตัวจะมาหาเมื่อฝึกครบ 10 วัน');
+  String friendArrived(String name) => _('$name is here', '$name มาหาแล้ว');
+  String breatheWith(String name) => _('Breathe with $name', 'ฝึกกับ$name');
+  String get twoFriendsTitle => _('Two new friends are here', 'เพื่อนใหม่ 2 ตัวมาหาแล้ว');
+  String get pickOneNow => _('Pick one to breathe with now', 'เลือกตัวที่จะฝึกด้วยตอนนี้');
+  String get selectedLabel => _('selected', 'เลือกอยู่');
 }
