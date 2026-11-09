@@ -774,6 +774,7 @@ class _BalanceGameScreenState extends State<BalanceGameScreen>
                                 level: widget.level,
                                 score: score,
                               ),
+                              character: app.wardrobe.activeCharacter,
                             ),
                           ),
                         );

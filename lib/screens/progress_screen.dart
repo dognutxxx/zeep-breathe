@@ -77,6 +77,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                     MaterialPageRoute<void>(
                       builder: (_) => ShareScreen(
                         achievement: StreakAchievement(now, days: st.currentStreak, totalMinutes: st.totalMinutes),
+                        character: widget.app.wardrobe.activeCharacter,
                       ),
                     ),
                   )

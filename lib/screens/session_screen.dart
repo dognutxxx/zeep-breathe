@@ -7,8 +7,8 @@ import '../breathing/breathing_engine.dart';
 import '../exercises/exercises.dart';
 import '../l10n/strings.dart';
 import '../share/share_card.dart';
+import '../ui/friends/character_view.dart';
 import '../ui/widgets.dart';
-import '../ui/zeep_character.dart';
 import '../ui/zeep_colors.dart';
 import 'share_screen.dart';
 import 'wardrobe_cards.dart';
@@ -62,14 +62,8 @@ class SessionScreen extends StatelessWidget {
                 child: ExcludeSemantics(
                   child: CustomPaint(
                     size: Size.infinite,
-                    painter: ZeepPainter(
-                      pose: app.anim.pose,
-                      time: app.anim.time,
-                      ripples: app.haptics.ripples(app.time),
-                      reduceMotion: app.reduceMotion,
-                      outfit: app.wardrobe.outfit,
-                      growth: app.wardrobe.growth,
-                    ),
+                    // the active character (Zeep, Miu or Lumi)
+                    painter: activeCharacterPainter(app),
                   ),
                 ),
               ),
@@ -334,6 +328,7 @@ class _FinishedCard extends StatelessWidget {
                             minutes: mins,
                             breaths: app.engine.breaths,
                           ),
+                          character: app.wardrobe.activeCharacter,
                         ),
                       ),
                     );

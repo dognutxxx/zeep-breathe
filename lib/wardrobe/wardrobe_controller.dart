@@ -11,6 +11,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../friends/characters.dart';
+import '../friends/characters.dart' as friends show unlockedCharacters, friendChoicePending, dueFriendCard;
 import '../history/session_history.dart';
 import 'flowers.dart';
 import 'garden.dart';
@@ -87,6 +89,11 @@ class WardrobeController extends ChangeNotifier {
   GardenLevel? _garden;
   SproutGrowth? _growth;
 
+  // ---- Zeep and friends (1.7.0); saved in the same JSON
+  Character _active = Character.zeep;
+  Character? _day3Choice;
+  bool _day3CardShown = false, _day10CardSeen = false;
+
   int get steps => _steps;
   int get practiceDays => _dayStepsMap.length;
   GardenLevel get garden => _garden ??= gardenFromSteps(_steps);
@@ -125,6 +132,61 @@ class WardrobeController extends ChangeNotifier {
 
   /// What grows on the sprout now. Read every frame, so it is cached.
   SproutGrowth get growth => _growth ??= SproutGrowth(leaves: garden.leaves, flower: wornFlower);
+
+  // ---------------------------------------------------------------- friends
+
+  /// Miu or Lumi, picked on day 3; null = not picked yet.
+  Character? get day3Choice => _day3Choice;
+
+  /// Characters the user can breathe with now.
+  Set<Character> get unlockedCharacters => friends.unlockedCharacters(practiceDays, _day3Choice);
+
+  bool isCharacterUnlocked(Character c) => unlockedCharacters.contains(c);
+
+  /// Who is drawn on the Breathe tab, in sessions and on share cards. Falls
+  /// back to Zeep if the saved one is not unlocked (corrupt data).
+  Character get activeCharacter {
+    final a = _active;
+    if (a == Character.zeep) return a;
+    // cheap: read every frame
+    final d = practiceDays;
+    final ok = a.isDay3Friend && (d >= secondFriendDays || (d >= firstFriendDays && _day3Choice == a));
+    return ok ? a : Character.zeep;
+  }
+
+  /// Days 3-9 with no pick yet (picker row "choose a new friend").
+  bool get friendChoicePending => friends.friendChoicePending(practiceDays, _day3Choice);
+
+  /// The friend card due after this session, if any.
+  FriendCard? get dueFriendCard => friends.dueFriendCard(
+    days: practiceDays,
+    choice: _day3Choice,
+    day3CardShown: _day3CardShown,
+    day10CardSeen: _day10CardSeen,
+  );
+
+  /// Switch to [c] (free, at once). Ignored if [c] is not unlocked.
+  void selectCharacter(Character c) {
+    if (!isCharacterUnlocked(c) || _active == c) return;
+    _active = c;
+    _changed();
+  }
+
+  /// The day-3 pick: [c] comes now and becomes the active character.
+  void chooseFirstFriend(Character c) {
+    if (!c.isDay3Friend || practiceDays < firstFriendDays) return;
+    if (_day3Choice == null && practiceDays < secondFriendDays) _day3Choice = c;
+    _day3CardShown = true;
+    if (isCharacterUnlocked(c)) _active = c;
+    _changed();
+  }
+
+  /// A friend card was shown (whatever the user tapped).
+  void markFriendCardShown(FriendCard card) {
+    _day3CardShown = true;
+    if (card != FriendCard.day3) _day10CardSeen = true;
+    _changed();
+  }
 
   void _changed({bool grown = false}) {
     if (grown) {
@@ -287,6 +349,11 @@ class WardrobeController extends ChangeNotifier {
     // cards L and N not shown yet (the app may close before "Done")
     'pendingNew': [for (final i in _pendingNew) i.name],
     if (_pendingBloom != null) 'pendingBloom': [_pendingBloom!.stepsBefore, _pendingBloom!.stepsAfter],
+    // Zeep and friends (1.7.0); a 1.6.1 save has none of these
+    'character': _active.name,
+    if (_day3Choice != null) 'day3Choice': _day3Choice!.name,
+    'day3CardShown': _day3CardShown,
+    'day10CardSeen': _day10CardSeen,
   };
 
   void _fromJson(Map j) {
@@ -327,6 +394,12 @@ class WardrobeController extends ChangeNotifier {
     _pendingBloom = pb is List && pb.length == 2 && pb[0] is num && pb[1] is num
         ? GrowthEvent.fromSteps((pb[0] as num).toInt(), (pb[1] as num).toInt())
         : null;
+    final active = Character.byName(j['character']);
+    _active = active != null && active.playable ? active : Character.zeep;
+    final choice = Character.byName(j['day3Choice']);
+    _day3Choice = choice != null && choice.isDay3Friend ? choice : null;
+    _day3CardShown = j['day3CardShown'] == true;
+    _day10CardSeen = j['day10CardSeen'] == true;
     _garden = null;
     _growth = null;
   }

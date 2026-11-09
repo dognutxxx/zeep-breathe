@@ -10,6 +10,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zeep_breathe/friends/characters.dart';
 import 'package:zeep_breathe/l10n/strings.dart';
 import 'package:zeep_breathe/main.dart';
 import 'package:zeep_breathe/screens/wardrobe_cards.dart';
@@ -36,6 +37,8 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
   // 4 levels done and 3 leaves in level 5: the next session blooms
   app.wardrobe.setForTest(steps: 4 * 4 + 3, practiceDays: 23);
   app.wardrobe.markAllSeen();
+  // these screenshots are about the wardrobe: the friend cards (1.7.0) were seen
+  app.wardrobe.markFriendCardShown(FriendCard.both);
   for (final i in [OutfitItem.sproutBow, OutfitItem.beanie, OutfitItem.roundGlasses, OutfitItem.butterfly]) {
     app.wardrobe.toggle(i);
   }
