@@ -1,7 +1,8 @@
 // W: Zeep's wardrobe. Two tabs: outfits (28 items, one per slot) and the
 // flower garden (W.2: level, leaves, 20 flower kinds). Opened from the hanger
-// button (T1.9), by tapping Zeep on the Breathe tab (T1.5), from the new-item
-// card (N) and from the bloom strip on the finish card (S.9).
+// button (T1.9), from the new-item card (N) and from the bloom strip on the
+// finish card (S.9). (Tapping the character on T1.5 opens the friends picker
+// since 1.7.0.)
 
 import 'dart:math' as math;
 

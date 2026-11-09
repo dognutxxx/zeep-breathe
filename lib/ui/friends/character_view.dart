@@ -32,6 +32,8 @@ CustomPainter activeCharacterPainter(AppController app) {
     lv: app.reduceMotion ? reducedLv : pose.breath.clamp(0.0, 1.0),
     hold: app.reduceMotion ? 0 : pose.hold.clamp(0.0, 1.0),
     growth: app.wardrobe.growth,
+    // vibration shown as rings on devices without a haptic engine, as for Zeep
+    ripples: app.haptics.ripples(app.time),
   );
 }
 

@@ -64,7 +64,16 @@ void main() {
   for (final (lang, _, locale) in [('en', S.en, const Locale('en', 'US')), ('th', S.thai, const Locale('th', 'TH'))]) {
     for (final size in const [Size(393, 852), Size(375, 667), Size(320, 568)]) {
       for (final scale in const [1.0, 1.3, 2.0]) {
-        for (final card in const ['summary', 'newItem', 'friend3', 'friend10', 'friendsBoth', 'picker']) {
+        for (final card in const [
+          'summary',
+          'newItem',
+          'friend3',
+          'friend10',
+          'friendsBoth',
+          'picker',
+          'pickerDay0',
+          'pickerDay5',
+        ]) {
           testWidgets('$card card, $lang, ${size.width.toInt()} px, text x$scale', (t) async {
             t.view.physicalSize = size * 3;
             t.view.devicePixelRatio = 3;
@@ -77,7 +86,14 @@ void main() {
             final settings = SettingsController();
             await settings.load();
             final app = AppController(settings: settings, haptics: HapticsService(), music: QuietMusic());
-            app.wardrobe.setForTest(steps: 4 * 4 + 3, practiceDays: 30);
+            // the picker also before day 3 ("Miu or Lumi" row) and at day 5 with
+            // no pick yet (the highlighted "choose a new friend" row)
+            final days = switch (card) {
+              'pickerDay0' => 0,
+              'pickerDay5' => 5,
+              _ => 30,
+            };
+            app.wardrobe.setForTest(steps: 4 * 4 + 3, practiceDays: days);
             await t.pumpWidget(ZeepBreatheApp(controller: app));
             await t.pump(const Duration(milliseconds: 300));
             final ctx = t.element(find.byType(Scaffold).first);
@@ -87,6 +103,9 @@ void main() {
                 showSummaryCard(ctx, app);
               case 'newItem':
                 showNewItemCards(ctx, app, [OutfitItem.sleepCap]);
+              case 'pickerDay0' || 'pickerDay5':
+                expect(app.wardrobe.friendChoicePending, card == 'pickerDay5');
+                openFriends(ctx, app);
               case 'picker':
                 app.wardrobe.chooseFirstFriend(Character.lumi);
                 openFriends(ctx, app);

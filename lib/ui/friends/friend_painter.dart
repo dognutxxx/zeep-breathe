@@ -4,6 +4,7 @@
 
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
@@ -26,11 +27,36 @@ const reducedLv = 0.6;
 /// Flower size at an anchor, in SVG units per flower unit.
 const _flowerK = 1.4;
 
+/// Haptic ripples (the stand-in for vibration on devices without a haptic
+/// engine), in SVG units: rings from the middle of the friend that grow and
+/// fade over 0.7 s. The same look as drawZeep's
+/// ripples (copied here, not shared: the Zeep files stay as they are), sized
+/// so the largest ring stays inside the box.
+const rippleCentre = Offset(100, 110);
+const rippleStart = 60.0, rippleGrow = 34.0;
+
+void _ripples(Canvas p, List<double> ripples) {
+  for (final age in ripples) {
+    final u = (age / 0.7).clamp(0.0, 1.0);
+    final r = rippleStart + u * rippleGrow;
+    p.drawCircle(rippleCentre, r, stroke(withOpacity(const Color(0xFF7FA6F2), (1 - u) * 0.75), 2.5 - 1.5 * u));
+  }
+}
+
 /// Paints [character] (Miu or Lumi) at lung level [lv] and [hold], wearing
-/// [growth]'s flower. Draws nothing for Zeep or the mystery friends.
-void drawFriend(Canvas canvas, Size size, Character character, double lv, double hold, SproutGrowth growth) {
+/// [growth]'s flower, with haptic [ripples] (ages in seconds). Draws nothing
+/// for Zeep or the mystery friends.
+void drawFriend(
+  Canvas canvas,
+  Size size,
+  Character character,
+  double lv,
+  double hold,
+  SproutGrowth growth, [
+  List<double> ripples = const [],
+]) {
   final k = math.min(size.width, size.height) / _box;
-  if (!(k > 0) || !k.isFinite) return;
+  if (!(k > 0) || !k.isFinite || !character.isDay3Friend) return;
   canvas.save();
   canvas.translate(size.width / 2 - 100 * k, size.height / 2 - 100 * k);
   canvas.scale(k);
@@ -55,25 +81,47 @@ void drawFriend(Canvas canvas, Size size, Character character, double lv, double
     default:
       break;
   }
+  // on top: unlike Zeep's round body, the friends are too big for rings that
+  // start outside them and still fit the box, so the rings cross the edges
+  _ripples(canvas, ripples);
   canvas.restore();
 }
+
+/// Every field the friend painters read from a [SproutGrowth].
+bool sameGrowth(SproutGrowth a, SproutGrowth b) =>
+    identical(a, b) ||
+    (a.flower == b.flower &&
+        a.leaves == b.leaves &&
+        a.open == b.open &&
+        a.colour == b.colour &&
+        a.budScale == b.budScale &&
+        a.rock == b.rock);
 
 class FriendPainter extends CustomPainter {
   final Character character;
   final double lv, hold;
   final SproutGrowth growth;
-  FriendPainter({required this.character, required this.lv, this.hold = 0, this.growth = SproutGrowth.none});
+
+  /// Ages (s) of haptic pulses to show as rings, as around Zeep.
+  final List<double> ripples;
+  FriendPainter({
+    required this.character,
+    required this.lv,
+    this.hold = 0,
+    this.growth = SproutGrowth.none,
+    this.ripples = const [],
+  });
 
   @override
-  void paint(Canvas canvas, Size size) => drawFriend(canvas, size, character, lv, hold, growth);
+  void paint(Canvas canvas, Size size) => drawFriend(canvas, size, character, lv, hold, growth, ripples);
 
   @override
   bool shouldRepaint(covariant FriendPainter old) =>
       old.character != character ||
       old.lv != lv ||
       old.hold != hold ||
-      old.growth.flower != growth.flower ||
-      old.growth.open != growth.open;
+      !sameGrowth(old.growth, growth) ||
+      !listEquals(old.ripples, ripples);
 }
 
 /// Lung level and hold for a 12 s demo breath (inhale 4 s, hold 2 s, exhale
@@ -145,7 +193,7 @@ class _LivePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _LivePainter old) =>
-      old.character != character || old.time != time || old.growth.flower != growth.flower;
+      old.character != character || old.time != time || !sameGrowth(old.growth, growth);
 }
 
 /// A dark, generic silhouette for a friend who has not come yet (not a

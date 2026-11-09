@@ -99,13 +99,16 @@ void main() {
     for (final size in const [Size(224, 224), Size(390, 300), Size(160, 260)]) {
       for (final c in const [Character.miu, Character.lumi]) {
         for (final (lv, hold) in const [(0.0, 0.0), (0.5, 0.0), (1.0, 0.0), (1.0, 1.0)]) {
-          for (final f in [null, ...flowerKinds]) {
+          for (final (i, f) in [null, ...flowerKinds].indexed) {
+            // haptic rings too, at their largest (just started and nearly gone)
+            final ripples = i.isEven ? const <double>[] : const [0.0, 0.35, 0.69];
             final r = await render(
               FriendPainter(
                 character: c,
                 lv: lv,
                 hold: hold,
                 growth: SproutGrowth(flower: f),
+                ripples: ripples,
               ),
               size,
             );
@@ -119,6 +122,72 @@ void main() {
         }
       }
     }
+  });
+
+  test('haptic pulses show as rings around a friend, inside the box (Pim #1)', () async {
+    const size = Size(224, 224);
+    for (final c in const [Character.miu, Character.lumi]) {
+      final still = await render(FriendPainter(character: c, lv: 0.5), size);
+      for (final age in const [0.0, 0.3, 0.5]) {
+        final pulsed = await render(FriendPainter(character: c, lv: 0.5, ripples: [age]), size);
+        final d = diffBounds(still, pulsed);
+        expect(d, isNotNull, reason: '${c.name} age $age');
+        // a ring around the friend: wider than the body (x 38..162 SVG units)
+        expect(d!.left, lessThan(toBox(const Offset(40, 0), size).dx), reason: '${c.name} age $age');
+        expect(d.right, greaterThan(toBox(const Offset(160, 0), size).dx), reason: '${c.name} age $age');
+        final b = inkBounds(pulsed.$1, pulsed.$2, pulsed.$3)!;
+        expect(b.left >= 0 && b.top >= 0 && b.right <= size.width && b.bottom <= size.height, isTrue, reason: '$b');
+      }
+      // gone after 0.7 s
+      final old = await render(FriendPainter(character: c, lv: 0.5, ripples: const [0.7]), size);
+      expect(diffBounds(still, old), isNull);
+    }
+    // repaint when the rings move or any growth field changes (Pim #2)
+    expect(
+      FriendPainter(
+        character: Character.miu,
+        lv: 0,
+        ripples: const [0.1],
+      ).shouldRepaint(FriendPainter(character: Character.miu, lv: 0, ripples: const [0.2])),
+      isTrue,
+    );
+    expect(
+      FriendPainter(
+        character: Character.miu,
+        lv: 0,
+        growth: SproutGrowth(flower: flowerKinds[0], colour: 0.5),
+      ).shouldRepaint(
+        FriendPainter(
+          character: Character.miu,
+          lv: 0,
+          growth: SproutGrowth(flower: flowerKinds[0]),
+        ),
+      ),
+      isTrue,
+    );
+    expect(
+      FriendPainter(
+        character: Character.miu,
+        lv: 0,
+        ripples: const [0.1],
+      ).shouldRepaint(FriendPainter(character: Character.miu, lv: 0, ripples: const [0.1])),
+      isFalse,
+    );
+  });
+
+  test('a friend on T1 gets the haptic ripples of the app', () async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = SettingsController();
+    await settings.load();
+    final app = AppController(settings: settings, haptics: HapticsService(), music: MusicService()..available = true);
+    app.wardrobe.setForTest(practiceDays: 12);
+    app.wardrobe.selectCharacter(Character.lumi);
+    app.time = 1;
+    app.haptics.fire(HapticPattern.inhaleStart, 1);
+    app.time = 1.2;
+    final p = activeCharacterPainter(app) as FriendPainter;
+    expect(p.ripples, isNotEmpty);
+    expect(p.ripples, app.haptics.ripples(1.2));
   });
 
   test('an empty box draws nothing and does not throw', () async {
