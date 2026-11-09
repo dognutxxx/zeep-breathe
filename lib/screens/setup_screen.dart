@@ -285,6 +285,11 @@ class _CircleButton extends StatelessWidget {
   }
 }
 
+/// The rhythm chip's text, "Default · 4 · 2 · 6", with a no-break space before
+/// every "·" so a wrapped line never starts with a dot.
+@visibleForTesting
+String chipText(String name, String pattern) => '$name · $pattern'.replaceAll(' · ', '\u00A0· ');
+
 /// Current rhythm; tap to open the Exercises tab.
 class _ExerciseChip extends StatelessWidget {
   final AppController app;
@@ -314,10 +319,12 @@ class _ExerciseChip extends StatelessWidget {
               children: [
                 const Icon(Icons.air_rounded, size: 16, color: fg),
                 const SizedBox(width: 6),
-                // wraps instead of overflowing on narrow screens or large text
+                // wraps instead of overflowing on narrow screens or large text;
+                // a no-break space before each dot: a line may end with "·"
+                // but never starts with one
                 Flexible(
                   child: Text(
-                    '$name · $pattern',
+                    chipText(name, pattern),
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: fg),
                   ),
