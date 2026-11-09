@@ -164,7 +164,15 @@ double _balancedWidth(String text, TextStyle style, double maxWidth, TextScaler 
     // the same hair of slack as below, so the line never wraps
     return hug ? math.min(one + 1, maxWidth) : maxWidth;
   }
-  var lo = maxWidth / lines * 0.5, hi = maxWidth;
+  // never narrower than the widest piece that cannot break (a long word, or
+  // Thai words held together by word joiners): below it the engine breaks
+  // the piece anywhere, even inside a word, without adding a line (QA 1.9.0 #4)
+  final floor = tp.minIntrinsicWidth;
+  if (floor >= maxWidth) {
+    tp.dispose();
+    return maxWidth;
+  }
+  var lo = math.max(maxWidth / lines * 0.5, floor), hi = maxWidth;
   for (var i = 0; i < 14 && hi - lo > 0.5; i++) {
     final mid = (lo + hi) / 2;
     if (linesAt(mid) > lines) {

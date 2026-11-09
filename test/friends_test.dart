@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zeep_breathe/friends/characters.dart';
+import 'package:zeep_breathe/l10n/strings.dart';
 import 'package:zeep_breathe/wardrobe/wardrobe_controller.dart';
 
 const _miu = Character.miu, _lumi = Character.lumi, _zeep = Character.zeep;
@@ -119,6 +120,26 @@ void main() {
       expect(_sai.isDay3Friend || _ww.isDay3Friend, isFalse);
       expect(Character.byName('saisai'), _sai);
       expect(Character.byName('wongwong'), _ww);
+    });
+
+    test('Thai words of Saisai and Wongwong never split: word joiners (QA 1.9.0 #4)', () {
+      const t = S.thai;
+      expect(t.characterName(_sai), 'ใส\u2060ใส');
+      expect(t.characterName(_ww), 'วง\u2060วง');
+      for (final w in ['ลอย\u2060ขึ้น', 'พอง\u2060ฟู', 'ลอย\u2060ลง']) {
+        expect(t.greetingOf(_sai), contains(w));
+      }
+      for (final w in ['วง\u2060แหวน', 'กาง\u2060ออก', 'แบน\u2060ลง', 'เหมือน\u2060เดิม']) {
+        expect(t.greetingOf(_ww), contains(w));
+      }
+      expect(t.friendArrived(t.characterName(_sai)), 'ใส\u2060ใส มา\u2060หา\u2060แล้ว');
+      expect(t.characterTagline(_sai), contains('ลอย\u2060ฟู'));
+      expect(t.characterTagline(_ww), contains('วง\u2060แหวน'));
+      // the joiners draw nothing: without them the words read as approved
+      String plain(String s) => s.replaceAll('\u2060', '').replaceAll('\u200B', '');
+      expect(plain(t.characterTagline(_sai)), 'ลอยฟูตามลมหายใจ');
+      expect(plain(t.characterTagline(_ww)), 'วงแหวนกางตามลมหายใจ');
+      expect(plain(t.moreFriendsTitle(2)), 'เพื่อนใหม่มาเพิ่มอีก 2\u00A0ตัว');
     });
 
     test('more days never lock anyone again', () {

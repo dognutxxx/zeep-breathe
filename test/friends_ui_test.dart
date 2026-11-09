@@ -442,7 +442,7 @@ void main() {
     }
     expect(find.text(s.moreFriendsTitle(5)), findsOneWidget);
     expect(s.moreFriendsTitle(5), 'Five more friends have arrived');
-    expect(S.thai.moreFriendsTitle(5), 'เพื่อนใหม่มาเพิ่มอีก 5\u00A0ตัว');
+    expect(S.thai.moreFriendsTitle(5), 'เพื่อน\u2060ใหม่มา\u2060เพิ่มอีก 5\u00A0ตัว');
     final tiles = find.byType(LiveFriend);
     expect(tiles, findsNWidgets(5));
     final tops = {for (final e in tiles.evaluate()) t.getTopLeft(find.byWidget(e.widget)).dy.round()};

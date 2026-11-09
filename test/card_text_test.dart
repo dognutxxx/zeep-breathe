@@ -122,6 +122,9 @@ void main() {
           'pickerDay210',
           'greetSaisai',
           'greetWongwong',
+          // round 3: the single cards of the 1.9.0 friends
+          'friendSaisai',
+          'friendWongwong',
         ]) {
           testWidgets('$card card, $lang, ${size.width.toInt()} px, text x$scale', (t) async {
             t.view.physicalSize = size * 3;
@@ -180,7 +183,11 @@ void main() {
                 final kind = switch (card) {
                   'friend3' => FriendCard.day3,
                   'friend10' => FriendCard.day10,
-                  'friendLater1' || 'friendLater2' || 'friendLater3' => FriendCard.later,
+                  'friendLater1' ||
+                  'friendLater2' ||
+                  'friendLater3' ||
+                  'friendSaisai' ||
+                  'friendWongwong' => FriendCard.later,
                   _ => FriendCard.both,
                 };
                 showDialog<Character>(
@@ -191,6 +198,8 @@ void main() {
                     later: switch (card) {
                       'friendLater1' => const [Character.tuntun],
                       'friendLater2' => const [Character.saisai, Character.wongwong],
+                      'friendSaisai' => const [Character.saisai],
+                      'friendWongwong' => const [Character.wongwong],
                       _ => laterFriends,
                     },
                   ),
@@ -249,6 +258,30 @@ void main() {
               // balanced, so the loop below checks it for a lone word (QA r2 #1)
               expect(find.widgetWithText(BalancedText, l.firstFriendWhen(3, 3)), findsOneWidget);
               expect(find.text(l.chooseNewFriend), findsNothing);
+            }
+
+            // no Thai word splits across lines: a word joiner (U+2060) holds the
+            // letters on both sides on one line ("ลอย⁠ขึ้น", "กาง⁠ออก", "มา⁠หา⁠แล้ว",
+            // QA 1.9.0 #4). Every text on screen: greetings, card titles,
+            // taglines, names
+            for (final e in find.byType(RichText).evaluate()) {
+              final para = e.renderObject! as RenderParagraph;
+              final str = para.text.toPlainText();
+              if (!str.contains('\u2060')) continue;
+              // the same layout as on screen
+              final tp = TextPainter(
+                text: para.text,
+                textDirection: para.textDirection,
+                textAlign: para.textAlign,
+                textScaler: para.textScaler,
+              )..layout(maxWidth: para.constraints.maxWidth);
+              for (var i = 1; i < str.length - 1; i++) {
+                if (str.codeUnitAt(i) != 0x2060) continue;
+                // the line the letters on both sides of the joiner are on
+                int line(int at) => tp.getLineBoundary(TextPosition(offset: at)).start;
+                expect(line(i - 1), line(i + 1), reason: '"$str" splits a word at $i');
+              }
+              tp.dispose();
             }
 
             // every balanced text: no paragraph ends with a lone short line

@@ -435,8 +435,10 @@ class S {
     Character.mun => _('Mun', 'หมุนหมุน'),
     Character.tuntun => _('Tuntun', 'ตุ่นตุ่น'),
     Character.nuan => _('Nuan', 'นวล'),
-    Character.saisai => _('Saisai', 'ใสใส'),
-    Character.wongwong => _('Wongwong', 'วงวง'),
+    // word joiners (U+2060) keep Thai words whole when a line wraps (QA
+    // 1.9.0 #4): never "ใส / ใส", "วง / วง"
+    Character.saisai => _('Saisai', 'ใส\u2060ใส'),
+    Character.wongwong => _('Wongwong', 'วง\u2060วง'),
   };
   String characterTagline(Character c) => switch (c) {
     Character.zeep => _('Fills with water as you breathe', 'เติมน้ำตามลมหายใจ'),
@@ -445,8 +447,8 @@ class S {
     Character.mun => _('Spins with your breath', 'ใบพัดหมุนตามลมหายใจ'),
     Character.tuntun => _('Peeks out as you breathe in', 'โผล่หัวออกมาตามลมหายใจ'),
     Character.nuan => _('Grows full as you breathe in', 'เต็มดวงตามลมหายใจ'),
-    Character.saisai => _('Floats up as you breathe in', 'ลอยฟูตามลมหายใจ'),
-    Character.wongwong => _('Its ring opens as you breathe in', 'วงแหวนกางตามลมหายใจ'),
+    Character.saisai => _('Floats up as you breathe in', 'ลอย\u2060ฟูตามลม\u2060หายใจ'),
+    Character.wongwong => _('Its ring opens as you breathe in', 'วง\u2060แหวนกางตามลม\u2060หายใจ'),
   };
 
   /// The speech bubble on the Breathe tab, in the active character's voice.
@@ -473,11 +475,15 @@ class S {
     ),
     Character.saisai => _(
       "Hi, I'm Saisai. Breathe in and I float up soft and round, breathe out and I drift slowly down with you.",
-      'สวัสดี ฉันชื่อใสใส หายใจเข้าแล้วฉันจะพองฟูลอยขึ้น หายใจออกแล้วค่อยๆ ลอยลงช้าๆ ไปด้วยกันนะ',
+      // word joiners: "พองฟู", "ลอยขึ้น", "ลอยลง" stay whole (QA 1.9.0 #4)
+      'สวัสดี ฉันชื่อใส\u2060ใส หายใจเข้าแล้วฉันจะพอง\u2060ฟู\u200Bลอย\u2060ขึ้น '
+          'หายใจออกแล้วค่อยๆ ลอย\u2060ลงช้าๆ ไปด้วยกันนะ',
     ),
     Character.wongwong => _(
       "Hi, I'm Wongwong. Breathe in and my ring opens wide, breathe out and it settles flat again.",
-      'สวัสดี ฉันชื่อวงวง หายใจเข้าแล้ววงแหวนจะกางออก หายใจออกแล้วค่อยๆ แบนลงเหมือนเดิมนะ',
+      // word joiners: "วงแหวน", "กางออก", "แบนลง", "เหมือนเดิม" stay whole
+      'สวัสดี ฉันชื่อวง\u2060วง หายใจเข้าแล้ววง\u2060แหวนจะกาง\u2060ออก '
+          'หายใจออกแล้วค่อยๆ แบน\u2060ลง\u200Bเหมือน\u2060เดิมนะ',
     ),
     Character.zeep => greeting,
   };
@@ -499,7 +505,8 @@ class S {
   String chooseFriend(String name) => _('Choose $name', 'เลือก$name');
   String get otherFriendLater =>
       _('The other one comes when you reach 10 practice days', 'อีกตัวจะมาหาเมื่อฝึกครบ 10 วัน');
-  String friendArrived(String name) => _('$name is here', '$name มาหาแล้ว');
+  // "มาหาแล้ว" in one piece: never "ใสใส มา / หาแล้ว" (QA 1.9.0 #4)
+  String friendArrived(String name) => _('$name is here', '$name มา\u2060หา\u2060แล้ว');
   String breatheWith(String name) => _('Breathe with $name', 'ฝึกกับ$name');
 
   /// Several friends at once: "Two new friends are here" (day 10 without a
@@ -524,7 +531,7 @@ class S {
     4 => 'Four more friends have arrived',
     5 => 'Five more friends have arrived',
     _ => '$n\u00A0more friends have arrived',
-  }, 'เพื่อนใหม่มาเพิ่มอีก $n\u00A0ตัว');
+  }, 'เพื่อน\u2060ใหม่มา\u2060เพิ่มอีก $n\u00A0ตัว');
   String get pickOneNow => _('Pick one to breathe with now', 'เลือกตัวที่จะฝึกด้วยตอนนี้');
   String get selectedLabel => _('selected', 'เลือกอยู่');
 }
