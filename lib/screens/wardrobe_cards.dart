@@ -253,13 +253,15 @@ class ZeepDialog extends StatelessWidget {
                 primary,
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontWeight: FontWeight.w600),
+                // screen readers: without the Thai word joiners (QA 1.9.0 #8)
+                semanticsLabel: plainText(primary),
               ),
             ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: onSecondary ?? () => Navigator.of(context).pop(false),
               style: TextButton.styleFrom(foregroundColor: ZeepColors.textSoft, minimumSize: const Size.fromHeight(44)),
-              child: Text(secondary, textAlign: TextAlign.center),
+              child: Text(secondary, textAlign: TextAlign.center, semanticsLabel: plainText(secondary)),
             ),
           ],
         ),

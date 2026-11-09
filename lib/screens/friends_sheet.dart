@@ -270,8 +270,12 @@ class _Row extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      // a name too wide for the row at large text is drawn a
+                      // little smaller, never broken inside ("Wongwon / g", QA 1.9.0 #7)
+                      BalancedText(
                         title,
+                        textAlign: TextAlign.start,
+                        hug: true,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,

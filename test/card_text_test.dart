@@ -210,6 +210,19 @@ void main() {
             }
             expect(t.takeException(), isNull, reason: 'overflow');
             final l = lang == 'th' ? S.thai : S.en;
+            if (card == 'pickerDay160' || card == 'pickerDay210') {
+              // the end of the list: the rows of the 1.9.0 friends
+              final last = card == 'pickerDay210' ? Character.wongwong : Character.saisai;
+              await t.scrollUntilVisible(
+                find.text(l.characterName(last)),
+                200,
+                scrollable: find.byType(Scrollable).last,
+              );
+              for (var i = 0; i < 20; i++) {
+                await t.pump(const Duration(milliseconds: 20));
+              }
+              expect(find.text(l.characterName(last)), findsOneWidget);
+            }
             if (card.startsWith('greet')) {
               final c = app.wardrobe.activeCharacter;
               expect(c, isNot(Character.zeep));
@@ -232,7 +245,7 @@ void main() {
               // the number in the title stays with its word ("3 ตัว", "3 more")
               final title = find.descendant(of: dialog, matching: find.byType(BalancedText)).first;
               final text = find.descendant(of: title, matching: find.byType(Text));
-              final para = t.renderObject<RenderParagraph>(text);
+              final para = t.renderObject<RenderParagraph>(find.descendant(of: text, matching: find.byType(RichText)));
               final str = (t.widget<Text>(text)).data!;
               final digit = str.indexOf(RegExp(r'[0-9]'));
               if (digit >= 0) {
@@ -267,19 +280,31 @@ void main() {
             for (final e in find.byType(RichText).evaluate()) {
               final para = e.renderObject! as RenderParagraph;
               final str = para.text.toPlainText();
-              if (!str.contains('\u2060')) continue;
               // the same layout as on screen
               final tp = TextPainter(
                 text: para.text,
                 textDirection: para.textDirection,
                 textAlign: para.textAlign,
                 textScaler: para.textScaler,
-              )..layout(maxWidth: para.constraints.maxWidth);
+                maxLines: para.maxLines,
+              )..layout(maxWidth: para.softWrap ? para.constraints.maxWidth : double.infinity);
+              // the line a letter is on
+              int line(int at) => tp.getLineBoundary(TextPosition(offset: at)).start;
+              bool latin(int c) => (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
               for (var i = 1; i < str.length - 1; i++) {
                 if (str.codeUnitAt(i) != 0x2060) continue;
-                // the line the letters on both sides of the joiner are on
-                int line(int at) => tp.getLineBoundary(TextPosition(offset: at)).start;
                 expect(line(i - 1), line(i + 1), reason: '"$str" splits a word at $i');
+              }
+              // no Latin word broken inside ("Wongwon / g", QA 1.9.0 #7): a word
+              // too wide for the line is drawn smaller instead
+              for (var i = 1; i < str.length; i++) {
+                if (!latin(str.codeUnitAt(i - 1)) || !latin(str.codeUnitAt(i))) continue;
+                expect(
+                  line(i - 1),
+                  line(i),
+                  reason:
+                      '"$str" breaks a word at $i (width ${para.constraints.maxWidth}, widest ${tp.minIntrinsicWidth})',
+                );
               }
               tp.dispose();
             }
@@ -301,7 +326,9 @@ void main() {
             for (final short in [l.inUse, l.tapToSwitch]) {
               for (final e in find.widgetWithText(BalancedText, short).evaluate()) {
                 final text = find.descendant(of: find.byWidget(e.widget), matching: find.byType(Text));
-                final para = t.renderObject<RenderParagraph>(text);
+                final para = t.renderObject<RenderParagraph>(
+                  find.descendant(of: text, matching: find.byType(RichText)),
+                );
                 // room the badge has: the row's text column less its padding
                 final room = t.getSize(find.ancestor(of: text, matching: find.byType(Column)).first).width - 18;
                 final style = DefaultTextStyle.of(t.element(text)).style.merge((e.widget as BalancedText).style);

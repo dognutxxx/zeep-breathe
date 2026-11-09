@@ -5,6 +5,7 @@
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zeep_breathe/app_controller.dart';
@@ -510,6 +511,79 @@ void main() {
     expect(find.byWidgetPredicate((w) => w is CustomPaint && w.painter is ZeepPainter), findsNothing);
     app.stopSession();
     await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Thai screen readers never get word joiners: T1, cards, picker (QA 1.9.0 #8)', (t) async {
+    final semantics = t.ensureSemantics();
+    final app = await makeApp(days: 210);
+    app.wardrobe.markFriendCardShown(FriendCard.both);
+    app.wardrobe.markFriendCardShown(FriendCard.later, shown: const [Character.mun, Character.tuntun, Character.nuan]);
+    t.platformDispatcher.localesTestValue = const [Locale('th', 'TH')];
+    t.platformDispatcher.localeTestValue = const Locale('th', 'TH');
+    addTearDown(t.platformDispatcher.clearAllTestValues);
+    // a wide screen: the test font draws Thai wider than real fonts
+    t.view.physicalSize = const Size(2048, 2732);
+    t.view.devicePixelRatio = 2;
+    addTearDown(t.view.reset);
+    const th = S.thai;
+
+    /// Every label, value, hint and tooltip in the semantics tree.
+    List<String> spoken() {
+      final out = <String>[];
+      void visit(SemanticsNode n) {
+        final d = n.getSemanticsData();
+        out.addAll([d.label, d.value, d.hint, d.tooltip].whereType<String>().where((x) => x.isNotEmpty));
+        n.visitChildren((c) {
+          visit(c);
+          return true;
+        });
+      }
+
+      for (final v in t.binding.renderViews) {
+        final root = v.owner?.semanticsOwner?.rootSemanticsNode;
+        if (root != null) visit(root);
+      }
+      return out;
+    }
+
+    void plain(String where, {required String has}) {
+      final all = spoken();
+      expect(all.any((l) => l.contains(has)), isTrue, reason: '$where: "$has" in $all');
+      for (final l in all) {
+        expect(l.contains('\u2060') || l.contains('\u200B'), isFalse, reason: '$where: $l');
+      }
+    }
+
+    // T1 with each new friend: the greeting
+    for (final c in const [Character.saisai, Character.wongwong]) {
+      app.wardrobe.selectCharacter(c);
+      await t.pumpWidget(ZeepBreatheApp(controller: app));
+      await frames(t, app, 5);
+      plain('T1 ${c.name}', has: plainText(th.greetingOf(c)));
+    }
+    // the combined card: title, tiles, "ฝึกกับใสใส"
+    showFriendCard(t.element(find.byType(Scaffold).first), app);
+    await frames(t, app);
+    plain('two-friends card', has: 'ฝึกกับใสใส');
+    plain('two-friends card', has: plainText(th.moreFriendsTitle(2)));
+    await tapText(t, app, th.later);
+    // a single card: "<name> มาหาแล้ว", the tagline
+    showDialog<Character>(
+      context: t.element(find.byType(Scaffold).first),
+      builder: (_) => const FriendCardDialog(card: FriendCard.later, later: [Character.wongwong]),
+    );
+    await frames(t, app);
+    plain('Wongwong card', has: 'วงวง มาหาแล้ว');
+    plain('Wongwong card', has: 'วงแหวนกางตามลมหายใจ');
+    await tapText(t, app, th.later);
+    // the picker
+    await t.tap(find.text(th.friendsChip));
+    await frames(t, app);
+    await t.drag(find.text(th.friendsTitle), const Offset(0, -2000));
+    await frames(t, app);
+    plain('picker', has: 'ใสใส, ลอยฟูตามลมหายใจ');
+    await t.pumpWidget(const SizedBox());
+    semantics.dispose();
   });
 
   testWidgets('Thai screen-reader labels have no word joiners (Pim r3)', (t) async {
