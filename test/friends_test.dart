@@ -1,6 +1,6 @@
-// Zeep and friends (1.7.0; the day-30/60/100 friends 1.8.0): unlock rules,
-// the friend card that is due, and the saved state (with 1.6.1 and 1.7.x
-// saves loading as before).
+// Zeep and friends (1.7.0; the day-30/60/100 friends 1.8.0; the day-150/200
+// friends 1.9.0): unlock rules, the friend card that is due, and the saved
+// state (with 1.6.1, 1.7.x and 1.8.0 saves loading as before).
 
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 
@@ -9,10 +9,12 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zeep_breathe/friends/characters.dart';
+import 'package:zeep_breathe/l10n/strings.dart';
 import 'package:zeep_breathe/wardrobe/wardrobe_controller.dart';
 
 const _miu = Character.miu, _lumi = Character.lumi, _zeep = Character.zeep;
 const _mun = Character.mun, _tuntun = Character.tuntun, _nuan = Character.nuan;
+const _sai = Character.saisai, _ww = Character.wongwong;
 
 /// What 1.7.1 saved: [save161] plus the friend keys of 1.7.0.
 Map<String, Object?> save171(
@@ -83,15 +85,15 @@ void main() {
     });
 
     test('Mun at 30 days, Tuntun at 60, Nuan at 100, whatever the day-3 pick (1.8.0 #4)', () {
-      expect(laterFriends, [_mun, _tuntun, _nuan]);
-      expect([for (final c in laterFriends) c.days], [30, 60, 100]);
+      expect(laterFriends, [_mun, _tuntun, _nuan, _sai, _ww]);
+      expect([for (final c in laterFriends) c.days], [30, 60, 100, 150, 200]);
       for (final c in [null, _miu, _lumi]) {
         expect(unlockedCharacters(29, c), {_zeep, _miu, _lumi});
         expect(unlockedCharacters(30, c), {_zeep, _miu, _lumi, _mun});
         expect(unlockedCharacters(59, c), {_zeep, _miu, _lumi, _mun});
         expect(unlockedCharacters(60, c), {_zeep, _miu, _lumi, _mun, _tuntun});
         expect(unlockedCharacters(99, c), {_zeep, _miu, _lumi, _mun, _tuntun});
-        expect(unlockedCharacters(100, c), Character.values.toSet());
+        expect(unlockedCharacters(100, c), {_zeep, _miu, _lumi, _mun, _tuntun, _nuan});
         expect(unlockedCharacters(1000, c), Character.values.toSet());
       }
       for (final c in laterFriends) {
@@ -102,10 +104,60 @@ void main() {
       }
     });
 
+    test('Saisai at 150 days, Wongwong at 200, whatever the day-3 pick (1.9.0 #4)', () {
+      for (final c in [null, _miu, _lumi]) {
+        final before = {_zeep, _miu, _lumi, _mun, _tuntun, _nuan};
+        expect(unlockedCharacters(149, c), before);
+        expect(unlockedCharacters(150, c), {...before, _sai});
+        expect(unlockedCharacters(199, c), {...before, _sai});
+        expect(unlockedCharacters(200, c), Character.values.toSet());
+        expect(isUnlocked(_sai, 149, c), isFalse);
+        expect(isUnlocked(_sai, 150, c), isTrue);
+        expect(isUnlocked(_ww, 199, c), isFalse);
+        expect(isUnlocked(_ww, 200, c), isTrue);
+      }
+      expect(_sai.isLaterFriend && _ww.isLaterFriend, isTrue);
+      expect(_sai.isDay3Friend || _ww.isDay3Friend, isFalse);
+      expect(Character.byName('saisai'), _sai);
+      expect(Character.byName('wongwong'), _ww);
+    });
+
+    test('Thai words of Saisai and Wongwong never split: word joiners (QA 1.9.0 #4)', () {
+      const t = S.thai;
+      expect(t.characterName(_sai), 'ใส\u2060ใส');
+      expect(t.characterName(_ww), 'วง\u2060วง');
+      for (final w in ['ลอย\u2060ขึ้น', 'พอง\u2060ฟู', 'ลอย\u2060ลง']) {
+        expect(t.greetingOf(_sai), contains(w));
+      }
+      for (final w in ['วง\u2060แหวน', 'กาง\u2060ออก', 'แบน\u2060ลง', 'เหมือน\u2060เดิม']) {
+        expect(t.greetingOf(_ww), contains(w));
+      }
+      expect(t.friendArrived(t.characterName(_sai)), 'ใส\u2060ใส มา\u2060หา\u2060แล้ว');
+      expect(t.characterTagline(_sai), contains('ลอย\u2060ฟู'));
+      expect(t.characterTagline(_ww), contains('วง\u2060แหวน'));
+      // the joiners draw nothing: without them the words read as approved
+      String plain(String s) => s.replaceAll('\u2060', '').replaceAll('\u200B', '');
+      expect(plain(t.characterTagline(_sai)), 'ลอยฟูตามลมหายใจ');
+      expect(plain(t.characterTagline(_ww)), 'วงแหวนกางตามลมหายใจ');
+      expect(plain(t.moreFriendsTitle(2)), 'เพื่อนใหม่มาเพิ่มอีก 2\u00A0ตัว');
+    });
+
+    test('no word joiners leave the app: share text and screen-reader text are plain (Pim r3)', () {
+      const t = S.thai;
+      expect(t.shareText(t.characterName(_sai)), 'หายใจไปกับใสใส · ZEEP Breathe');
+      expect(t.shareText(t.characterName(_ww)), 'หายใจไปกับวงวง · ZEEP Breathe');
+      expect(t.shareText('Zeep'), 'หายใจไปกับ Zeep · ZEEP Breathe');
+      for (final c in Character.values) {
+        final text = t.shareText(t.characterName(c));
+        expect(text.contains('\u2060') || text.contains('\u200B'), isFalse, reason: c.name);
+      }
+      expect(plainText('ลอย\u2060ขึ้น\u200Bแล้ว'), 'ลอยขึ้นแล้ว');
+    });
+
     test('more days never lock anyone again', () {
       for (final c in [null, _miu, _lumi]) {
         var before = unlockedCharacters(0, c);
-        for (var d = 1; d <= 120; d++) {
+        for (var d = 1; d <= 220; d++) {
           final now = unlockedCharacters(d, c);
           expect(now.containsAll(before), isTrue, reason: 'day $d, pick $c');
           before = now;
@@ -143,13 +195,23 @@ void main() {
       expect(dueLaterFriends(60, {_mun}), [_tuntun]);
       expect(due(99, _miu, shown3: true, seen10: true, later: {_mun, _tuntun}), isNull);
       expect(dueLaterFriends(100, {_mun, _tuntun}), [_nuan]);
-      expect(due(500, _miu, shown3: true, seen10: true, later: {_mun, _tuntun, _nuan}), isNull);
+      expect(due(149, _miu, shown3: true, seen10: true, later: {_mun, _tuntun, _nuan}), isNull);
+      // 1.9.0: Saisai at 150, Wongwong at 200, each once
+      expect(due(150, _miu, shown3: true, seen10: true, later: {_mun, _tuntun, _nuan}), FriendCard.later);
+      expect(dueLaterFriends(150, {_mun, _tuntun, _nuan}), [_sai]);
+      expect(due(199, _miu, shown3: true, seen10: true, later: {_mun, _tuntun, _nuan, _sai}), isNull);
+      expect(dueLaterFriends(200, {_mun, _tuntun, _nuan, _sai}), [_ww]);
+      expect(due(500, _miu, shown3: true, seen10: true, later: laterFriends.toSet()), isNull);
     });
 
     test('several due at once: one card with all of them (1.8.0 #5)', () {
       expect(dueLaterFriends(65, {}), [_mun, _tuntun]);
       expect(dueLaterFriends(120, {}), [_mun, _tuntun, _nuan]);
       expect(dueLaterFriends(120, {_tuntun}), [_mun, _nuan]);
+      // 1.9.0: 210 days after updating from 1.8.0 (30/60/100 seen): one card, both
+      expect(dueLaterFriends(210, {_mun, _tuntun, _nuan}), [_sai, _ww]);
+      // from 1.7.x (none seen): all five, in order
+      expect(dueLaterFriends(210, {}), laterFriends);
     });
 
     test('the Miu and Lumi cards come first; the 30/60/100 card waits a session end (1.8.0 #5)', () {
@@ -232,6 +294,15 @@ void main() {
         (40, {'character': 'friend30'}), // a 1.7.0 placeholder name: unknown now
         (29, {'character': 'mun'}), // one day short
         (65, {'character': 'nuan'}), // Nuan comes at 100
+        (149, {'character': 'saisai'}), // 1.9.0: Saisai comes at 150
+        (199, {'character': 'wongwong'}), // Wongwong at 200
+        (
+          120,
+          {
+            'character': 'wongwong',
+            'laterCardsSeen': ['saisai', 'wongwong'],
+          },
+        ), // seen flags unlock nothing
         (
           99,
           {
@@ -311,6 +382,48 @@ void main() {
       again.markFriendCardShown(FriendCard.later, shown: const [_miu, _mun]);
       expect(again.dueLaterFriends, [_tuntun]);
       expect(again.dueFriendCard, FriendCard.later);
+    });
+
+    test('a 1.8.0 save loads as it was and gets Saisai and Wongwong; their seen flags round-trip (1.9.0 #6)', () async {
+      // what 1.8.0 saved at 210 days, Nuan in use, the 30/60/100 cards seen
+      final w = await loadFrom({
+        ...save171(210, character: 'nuan', choice: 'miu', shown3: true, seen10: true),
+        'laterCardsSeen': ['mun', 'tuntun', 'nuan'],
+      });
+      expect(w.activeCharacter, _nuan);
+      expect(w.unlockedCharacters, Character.values.toSet());
+      expect(w.outfit.items.map((i) => i.name), ['sproutBow']);
+      // one "two more friends" card
+      expect(w.dueFriendCard, FriendCard.later);
+      expect(w.dueLaterFriends, [_sai, _ww]);
+      w.markFriendCardShown(FriendCard.later, shown: w.dueLaterFriends);
+      w.selectCharacter(_ww);
+      final j = await saved();
+      expect(j['laterCardsSeen'], ['mun', 'tuntun', 'nuan', 'saisai', 'wongwong']);
+      expect(j['character'], 'wongwong');
+      expect(j['day3Choice'], 'miu');
+      expect(j['v'], 3);
+
+      final again = await loadFrom(j);
+      expect(again.activeCharacter, _ww);
+      expect(again.dueFriendCard, isNull);
+      expect(again.dueLaterFriends, isEmpty);
+      // saved again unchanged
+      again.selectCharacter(_sai);
+      again.selectCharacter(_ww);
+      expect(await saved(), j);
+
+      // a 1.8.0 user at 160 days: only Saisai is new; Wongwong later
+      final w160 = await loadFrom({
+        ...save171(160, choice: 'lumi', shown3: true, seen10: true),
+        'laterCardsSeen': ['mun', 'tuntun', 'nuan'],
+      });
+      expect(w160.dueLaterFriends, [_sai]);
+      w160.markFriendCardShown(FriendCard.later, shown: w160.dueLaterFriends);
+      final a160 = await loadFrom(await saved());
+      expect(a160.dueFriendCard, isNull);
+      a160.setForTest(practiceDays: 200);
+      expect(a160.dueLaterFriends, [_ww]);
     });
 
     test('practice days only go up: a gap of missed days keeps friends (B4)', () async {

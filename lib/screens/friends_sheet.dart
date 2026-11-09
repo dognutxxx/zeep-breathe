@@ -93,7 +93,7 @@ class FriendsSheet extends StatelessWidget {
         // the chosen one first, then the other one
         for (final c in [w.day3Choice ?? Character.miu, (w.day3Choice ?? Character.miu).other]) friendRow(c),
       ],
-      // 30 / 60 / 100 days: the friend itself once its day has come; before
+      // 30 / 60 / 100 / 150 / 200 days: the friend itself once its day has come; before
       // that a dark silhouette of its own shape (keeps the surprise)
       for (final c in laterFriends)
         if (unlocked.contains(c))
@@ -249,7 +249,7 @@ class _Row extends StatelessWidget {
       container: true,
       button: onTap != null,
       selected: active,
-      label: [title, subtitle, ?st].join(', '),
+      label: plainText([title, subtitle, ?st].join(', ')),
       excludeSemantics: true,
       child: Material(
         color: bg,
@@ -270,8 +270,12 @@ class _Row extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      // a name too wide for the row at large text is drawn a
+                      // little smaller, never broken inside ("Wongwon / g", QA 1.9.0 #7)
+                      BalancedText(
                         title,
+                        textAlign: TextAlign.start,
+                        hug: true,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,

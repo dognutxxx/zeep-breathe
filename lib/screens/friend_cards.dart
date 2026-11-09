@@ -3,7 +3,7 @@
 // - day 3: pick Miu or Lumi (also opened from the picker's "choose" row)
 // - day 10: the one not picked comes too
 // - day 10 with no day-3 pick: both come at once
-// - day 30 / 60 / 100 (1.8.0): "<name> is here", or one card for several
+// - day 30 / 60 / 100 (1.8.0), 150 / 200 (1.9.0): "<name> is here", or one card for several
 //   friends due at once (e.g. 65 days after updating); pick one to switch to
 
 import 'package:flutter/material.dart';
@@ -54,7 +54,7 @@ class FriendCardDialog extends StatefulWidget {
   /// The day-3 pick (for the day-10 card: the other one is shown).
   final Character? chosen;
 
-  /// The day-30/60/100 friends on a [FriendCard.later] card.
+  /// The later friends (30 to 200 days) on a [FriendCard.later] card.
   final List<Character> later;
 
   /// The garden flower: it travels with every friend.
@@ -92,26 +92,39 @@ class _FriendCardDialogState extends State<FriendCardDialog> {
       // like the Miu + Lumi card again (QA r2 #3)
       FriendCard.later => (several ? l.moreFriendsTitle(_friends.length) : l.friendArrived(name), l.breatheWith(name)),
     };
+    Widget tile(Character c) => _FriendTile(
+      character: c,
+      selected: several && c == _selected,
+      single: !several,
+      growth: widget.growth,
+      onTap: several ? () => setState(() => _selected = c) : null,
+    );
     return ZeepDialog(
       art: Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (final (i, c) in _friends.indexed) ...[
-              if (i > 0) const SizedBox(width: 10),
-              Flexible(
-                child: _FriendTile(
-                  character: c,
-                  selected: _friends.length > 1 && c == _selected,
-                  single: _friends.length == 1,
-                  growth: widget.growth,
-                  onTap: _friends.length > 1 ? () => setState(() => _selected = c) : null,
-                ),
+        child: _friends.length <= 3
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (final (i, c) in _friends.indexed) ...[
+                    if (i > 0) const SizedBox(width: 10),
+                    Flexible(child: tile(c)),
+                  ],
+                ],
+              )
+            // 4 or 5 friends at once (e.g. 210 days after updating from 1.7):
+            // rows of 3, so the tiles stay big enough to see
+            : LayoutBuilder(
+                builder: (context, box) {
+                  final w = ((box.maxWidth - 2 * 10) / 3).floorToDouble().clamp(52.0, 120.0);
+                  return Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [for (final c in _friends) SizedBox(width: w, child: tile(c))],
+                  );
+                },
               ),
-            ],
-          ],
-        ),
       ),
       title: title,
       body: widget.card != FriendCard.day3 && several ? l.pickOneNow : l.characterTagline(_selected),
@@ -142,7 +155,7 @@ class _FriendTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = S.of(context);
     final name = l.characterName(character);
-    final label = '$name, ${l.characterTagline(character)}${selected ? ', ${l.selectedLabel}' : ''}';
+    final label = plainText('$name, ${l.characterTagline(character)}${selected ? ', ${l.selectedLabel}' : ''}');
     final style = TextStyle(
       fontSize: 15,
       fontWeight: FontWeight.w700,

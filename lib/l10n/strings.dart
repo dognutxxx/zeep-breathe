@@ -13,6 +13,11 @@ import '../share/share_card.dart';
 import '../wardrobe/flowers.dart';
 import '../wardrobe/outfits.dart';
 
+/// [text] without the invisible line-break hints (word joiner U+2060,
+/// zero-width space U+200B) that keep Thai words whole on screen: for text
+/// that leaves the app (the share text) and for screen-reader labels.
+String plainText(String text) => text.replaceAll('\u2060', '').replaceAll('\u200B', '');
+
 class S {
   final bool th;
   const S._(this.th);
@@ -235,8 +240,9 @@ class S {
   String get cardFooter => _('Come breathe with me', 'มาหายใจด้วยกันนะ');
 
   /// The text sent with a share card; [name] is the character on the card.
+  /// Plain text: no word joiners from the Thai names (Pim r3).
   String shareText(String name) =>
-      _('Breathing with $name · ZEEP Breathe', 'หายใจไปกับ${_latin(name) ? ' ' : ''}$name · ZEEP Breathe');
+      plainText(_('Breathing with $name · ZEEP Breathe', 'หายใจไปกับ${_latin(name) ? ' ' : ''}$name · ZEEP Breathe'));
 
   /// Thai puts a space before a Latin name ("กับ Zeep") but not a Thai one
   /// ("กับหมิว").
@@ -435,6 +441,10 @@ class S {
     Character.mun => _('Mun', 'หมุนหมุน'),
     Character.tuntun => _('Tuntun', 'ตุ่นตุ่น'),
     Character.nuan => _('Nuan', 'นวล'),
+    // word joiners (U+2060) keep Thai words whole when a line wraps (QA
+    // 1.9.0 #4): never "ใส / ใส", "วง / วง"
+    Character.saisai => _('Saisai', 'ใส\u2060ใส'),
+    Character.wongwong => _('Wongwong', 'วง\u2060วง'),
   };
   String characterTagline(Character c) => switch (c) {
     Character.zeep => _('Fills with water as you breathe', 'เติมน้ำตามลมหายใจ'),
@@ -443,6 +453,8 @@ class S {
     Character.mun => _('Spins with your breath', 'ใบพัดหมุนตามลมหายใจ'),
     Character.tuntun => _('Peeks out as you breathe in', 'โผล่หัวออกมาตามลมหายใจ'),
     Character.nuan => _('Grows full as you breathe in', 'เต็มดวงตามลมหายใจ'),
+    Character.saisai => _('Floats up as you breathe in', 'ลอย\u2060ฟูตามลม\u2060หายใจ'),
+    Character.wongwong => _('Its ring opens as you breathe in', 'วง\u2060แหวนกางตามลม\u2060หายใจ'),
   };
 
   /// The speech bubble on the Breathe tab, in the active character's voice.
@@ -467,6 +479,18 @@ class S {
       "Hi, I'm Nuan. Breathe in and I grow full, breathe out and I become a soft crescent again.",
       'สวัสดี ฉันชื่อนวล หายใจเข้าแล้วฉันจะค่อยๆ เต็มดวง หายใจออกแล้วกลับเป็นเสี้ยวบางๆ นะ',
     ),
+    Character.saisai => _(
+      "Hi, I'm Saisai. Breathe in and I float up soft and round, breathe out and I drift slowly down with you.",
+      // word joiners: "พองฟู", "ลอยขึ้น", "ลอยลง" stay whole (QA 1.9.0 #4)
+      'สวัสดี ฉันชื่อใส\u2060ใส หายใจเข้าแล้วฉันจะพอง\u2060ฟู\u200Bลอย\u2060ขึ้น '
+          'หายใจออกแล้วค่อยๆ ลอย\u2060ลงช้าๆ ไปด้วยกันนะ',
+    ),
+    Character.wongwong => _(
+      "Hi, I'm Wongwong. Breathe in and my ring opens wide, breathe out and it settles flat again.",
+      // word joiners: "วงแหวน", "กางออก", "แบนลง", "เหมือนเดิม" stay whole
+      'สวัสดี ฉันชื่อวง\u2060วง หายใจเข้าแล้ววง\u2060แหวนจะกาง\u2060ออก '
+          'หายใจออกแล้วค่อยๆ แบน\u2060ลง\u200Bเหมือน\u2060เดิมนะ',
+    ),
     Character.zeep => greeting,
   };
   String get friendsTitle => _('My friends', 'เพื่อนของฉัน');
@@ -487,28 +511,33 @@ class S {
   String chooseFriend(String name) => _('Choose $name', 'เลือก$name');
   String get otherFriendLater =>
       _('The other one comes when you reach 10 practice days', 'อีกตัวจะมาหาเมื่อฝึกครบ 10 วัน');
-  String friendArrived(String name) => _('$name is here', '$name มาหาแล้ว');
+  // "มาหาแล้ว" in one piece: never "ใสใส มา / หาแล้ว" (QA 1.9.0 #4)
+  String friendArrived(String name) => _('$name is here', '$name มา\u2060หา\u2060แล้ว');
   String breatheWith(String name) => _('Breathe with $name', 'ฝึกกับ$name');
 
   /// Several friends at once: "Two new friends are here" (day 10 without a
-  /// pick), or the day-30/60/100 friends after a long break or an update.
+  /// pick), or the later friends (30 to 200 days) after a long break or an update.
   String newFriendsTitle(int n) => _(
     switch (n) {
       2 => 'Two new friends are here',
       3 => 'Three new friends are here',
+      4 => 'Four new friends are here',
+      5 => 'Five new friends are here',
       _ => '$n\u00A0new friends are here',
     },
     // a no-break space and a word joiner keep "3 ตัว" together (QA r2 #1)
     'เพื่อนใหม่ $n\u00A0ตัว\u2060มาหาแล้ว',
   );
 
-  /// The day-30/60/100 card with several friends: Miu and Lumi came before,
+  /// The later friends' card (30 to 200 days) with several friends: Miu and Lumi came before,
   /// so these are "more" (QA r2 #3).
   String moreFriendsTitle(int n) => _(switch (n) {
     2 => 'Two more friends have arrived',
     3 => 'Three more friends have arrived',
+    4 => 'Four more friends have arrived',
+    5 => 'Five more friends have arrived',
     _ => '$n\u00A0more friends have arrived',
-  }, 'เพื่อนใหม่มาเพิ่มอีก $n\u00A0ตัว');
+  }, 'เพื่อน\u2060ใหม่มา\u2060เพิ่มอีก $n\u00A0ตัว');
   String get pickOneNow => _('Pick one to breathe with now', 'เลือกตัวที่จะฝึกด้วยตอนนี้');
   String get selectedLabel => _('selected', 'เลือกอยู่');
 }

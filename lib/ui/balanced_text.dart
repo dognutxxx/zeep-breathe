@@ -1,11 +1,23 @@
 // Text that wraps into lines of about equal length (like CSS text-wrap:
 // balance), so a wide font or large text never leaves one word alone on the
 // last line. Used for the short centred texts on cards and dialogs.
+//
+// A word wider than the whole line (e.g. "Wongwong" in bold at 2x text on a
+// 320 px screen) is never broken inside: the text is drawn a little smaller
+// instead, down to [minFit] (QA 1.9.0 #7). Screen readers get the text
+// without the invisible word joiners that keep Thai words whole (QA 1.9.0 #8).
 
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+
+import '../l10n/strings.dart' show plainText;
+
+/// The smallest a text is drawn to keep its widest word on one line, for
+/// [scaler]: down to the user's normal (x1.0) text size with large text (a
+/// 2x name never ends up smaller than at 1x), and to 0.8 at most settings.
+double minFit(TextScaler scaler) => math.min(0.8, 16 / scaler.scale(16));
 
 class BalancedText extends StatelessWidget {
   final String text;
@@ -27,7 +39,12 @@ class BalancedText extends StatelessWidget {
       scaler: MediaQuery.textScalerOf(context),
       direction: Directionality.of(context),
       hug: hug,
-      child: Text(text, style: style, textAlign: textAlign),
+      child: Text(
+        text,
+        style: style,
+        textAlign: textAlign,
+        semanticsLabel: text.contains('\u2060') || text.contains('\u200B') ? plainText(text) : null,
+      ),
     );
   }
 }
@@ -73,22 +90,36 @@ class _RenderBalanced extends RenderShiftedBox {
   bool hug;
   _RenderBalanced(this.text, this.style, this.scaler, this.direction, this.hug) : super(null);
 
-  double _width(double max) => balancedWidth(text, style, max, scaler, direction, hug: hug);
+  /// How much smaller the text is drawn at [max] width: 1, or less when its
+  /// widest word does not fit (never below [minFit]).
+  double _fit(double max) => max.isFinite ? fitScale(text, style, max, scaler, direction) : 1;
+
+  /// The layout width for the child (before the [_fit] scale).
+  double _width(double max) {
+    final f = _fit(max);
+    return balancedWidth(text, style, max / f, scaler, direction, hug: hug);
+  }
 
   BoxConstraints _childConstraints(BoxConstraints c) {
     if (!c.maxWidth.isFinite) return c.loosen();
-    return BoxConstraints.tightFor(width: _width(c.maxWidth)).enforce(c.loosen());
+    final f = _fit(c.maxWidth);
+    final loose = c.loosen();
+    return BoxConstraints.tightFor(width: _width(c.maxWidth))
+        .enforce(BoxConstraints(maxWidth: loose.maxWidth / f, maxHeight: loose.maxHeight / f));
   }
 
-  // like Align(widthFactor: 1): as wide as the text, as tall as allowed
-  Size _sizeFor(BoxConstraints c, Size child) =>
-      c.constrain(Size(child.width, c.maxHeight.isFinite ? double.infinity : child.height));
+  // like Align(widthFactor: 1): as wide as the (scaled) text, as tall as allowed
+  Size _sizeFor(BoxConstraints c, Size child, double f) =>
+      c.constrain(Size(child.width * f, c.maxHeight.isFinite ? double.infinity : child.height * f));
+
+  double _scale = 1;
 
   @override
   Size computeDryLayout(covariant BoxConstraints constraints) {
     final c = child;
     if (c == null) return constraints.smallest;
-    return _sizeFor(constraints, c.getDryLayout(_childConstraints(constraints)));
+    final f = constraints.maxWidth.isFinite ? _fit(constraints.maxWidth) : 1.0;
+    return _sizeFor(constraints, c.getDryLayout(_childConstraints(constraints)), f);
   }
 
   @override
@@ -98,22 +129,132 @@ class _RenderBalanced extends RenderShiftedBox {
       size = constraints.smallest;
       return;
     }
+    _scale = constraints.maxWidth.isFinite ? _fit(constraints.maxWidth) : 1.0;
     c.layout(_childConstraints(constraints), parentUsesSize: true);
-    size = _sizeFor(constraints, c.size);
+    size = _sizeFor(constraints, c.size, _scale);
     (c.parentData! as BoxParentData).offset = Offset(
-      (size.width - c.size.width) / 2,
-      (size.height - c.size.height) / 2,
+      (size.width - c.size.width * _scale) / 2,
+      (size.height - c.size.height * _scale) / 2,
     );
   }
 
   @override
-  double computeMinIntrinsicHeight(double width) =>
-      child?.getMinIntrinsicHeight(width.isFinite ? _width(width) : width) ?? 0;
+  void paint(PaintingContext context, Offset offset) {
+    final c = child;
+    if (c == null) return;
+    if (_scale == 1) return super.paint(context, offset);
+    final at = offset + (c.parentData! as BoxParentData).offset;
+    context.pushTransform(
+      needsCompositing,
+      at,
+      Matrix4.diagonal3Values(_scale, _scale, 1),
+      (context, o) => context.paintChild(c, o),
+    );
+  }
 
   @override
-  double computeMaxIntrinsicHeight(double width) =>
-      child?.getMaxIntrinsicHeight(width.isFinite ? _width(width) : width) ?? 0;
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    super.applyPaintTransform(child, transform);
+    if (_scale != 1) transform.scaleByDouble(_scale, _scale, 1, 1);
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    final c = child;
+    if (c == null) return false;
+    final at = (c.parentData! as BoxParentData).offset;
+    return result.addWithPaintTransform(
+      transform: Matrix4.translationValues(at.dx, at.dy, 0)..scaleByDouble(_scale, _scale, 1, 1),
+      position: position,
+      hitTest: (result, p) => c.hitTest(result, position: p),
+    );
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) => width.isFinite
+      ? (child?.getMinIntrinsicHeight(_width(width)) ?? 0) * _fit(width)
+      : child?.getMinIntrinsicHeight(width) ?? 0;
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => width.isFinite
+      ? (child?.getMaxIntrinsicHeight(_width(width)) ?? 0) * _fit(width)
+      : child?.getMaxIntrinsicHeight(width) ?? 0;
 }
+
+/// Whether [tp] (laid out from [text]) breaks a line inside a word: between
+/// two Latin letters ("Wongwon / g"), or next to a word joiner (U+2060) that
+/// holds Thai words together. The engine does that only when a word is wider
+/// than the line.
+bool splitsWord(TextPainter tp, String text) => lineStarts(tp, text).any((k) => !breakAllowed(tp, text, k));
+
+/// Where the lines of [tp] (laid out from [text]) start, after the first.
+Iterable<int> lineStarts(TextPainter tp, String text) {
+  if (tp.computeLineMetrics().length < 2) return const [];
+  final starts = <int>{};
+  for (var i = 0; i < text.length; i++) {
+    final s = tp.getLineBoundary(TextPosition(offset: i)).start;
+    if (s > 0 && s < text.length) starts.add(s);
+  }
+  return starts;
+}
+
+/// Whether a line may start at [k] of [text]: only between two words (ICU's
+/// word boundaries, the same Thai dictionary as the line breaker), never
+/// next to a word joiner (U+2060, it holds Thai words together, so a joined
+/// run like "เพื่อน⁠ใหม่" never breaks anywhere inside) and never between two
+/// Latin letters. An emergency break inside a word or a letter cluster
+/// ("เพื่อนให / ม่", "Wongwon / g") is not a word boundary.
+bool breakAllowed(TextPainter tp, String text, int k) {
+  final a = text.codeUnitAt(k - 1), b = text.codeUnitAt(k);
+  if (a == 0x2060 || b == 0x2060) return false;
+  if (_latin(a) && _latin(b)) return false;
+  return tp.getWordBoundary(TextPosition(offset: k)).start == k;
+}
+
+bool _latin(int c) => (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
+
+/// How much smaller [text] must be drawn so no word is broken inside at
+/// [maxWidth]: 1 when nothing breaks, never below [minFit]. Cached like
+/// [balancedWidth].
+double fitScale(String text, TextStyle style, double maxWidth, TextScaler scaler, TextDirection dir) {
+  if (!maxWidth.isFinite || maxWidth <= 0) return 1;
+  final key = (text, style, maxWidth, scaler, dir);
+  final hit = _fitCache[key];
+  if (hit != null) return hit;
+  if (_fitCache.length >= _cacheMax) _fitCache.clear();
+  final tp = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: dir,
+    textScaler: scaler,
+  );
+  bool splitsAt(double f) {
+    tp.layout(maxWidth: maxWidth / f);
+    return splitsWord(tp, text);
+  }
+
+  var f = 1.0;
+  if (splitsAt(1)) {
+    // the largest scale that keeps every word whole (a few steps are enough)
+    var lo = minFit(scaler), hi = 1.0;
+    if (splitsAt(lo)) {
+      f = lo;
+    } else {
+      for (var i = 0; i < 8; i++) {
+        final mid = (lo + hi) / 2;
+        if (splitsAt(mid)) {
+          hi = mid;
+        } else {
+          lo = mid;
+        }
+      }
+      f = lo;
+    }
+  }
+  tp.dispose();
+  return _fitCache[key] = f;
+}
+
+final _fitCache = <(String, TextStyle, double, TextScaler, TextDirection), double>{};
 
 /// Widths already worked out, by (text, style, maxWidth, scaler, direction,
 /// hug). BalancedText is often rebuilt every frame (T1, the garden tab and
@@ -164,10 +305,17 @@ double _balancedWidth(String text, TextStyle style, double maxWidth, TextScaler 
     // the same hair of slack as below, so the line never wraps
     return hug ? math.min(one + 1, maxWidth) : maxWidth;
   }
+  // never so narrow that a word is broken inside (a long word, or Thai words
+  // held together by word joiners): the engine does that without adding a
+  // line (QA 1.9.0 #4, #7)
+  if (splitsWord(tp, text)) {
+    tp.dispose();
+    return maxWidth;
+  }
   var lo = maxWidth / lines * 0.5, hi = maxWidth;
   for (var i = 0; i < 14 && hi - lo > 0.5; i++) {
     final mid = (lo + hi) / 2;
-    if (linesAt(mid) > lines) {
+    if (linesAt(mid) > lines || splitsWord(tp, text)) {
       lo = mid;
     } else {
       hi = mid;

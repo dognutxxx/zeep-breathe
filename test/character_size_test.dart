@@ -1,5 +1,5 @@
 // Every friend (Miu and Lumi since 1.7.1, QA #4; Mun, Tuntun and Nuan since
-// 1.8.0) looks as tall as Zeep in every slot where it stands in for Zeep: the Breathe tab (T1) and the session on phones and
+// 1.8.0; Saisai and Wongwong since 1.9.0) looks as tall as Zeep in every slot where it stands in for Zeep: the Breathe tab (T1) and the session on phones and
 // iPads, the share cards, the picker rows, and the cards' friend tiles.
 // Heights are measured from the painted (opaque) pixels, not the box.
 // Zeep itself is drawn by the unchanged ZeepPainter / ZeepAvatar.
@@ -18,16 +18,16 @@ import 'package:zeep_breathe/ui/friends/character_view.dart';
 import 'package:zeep_breathe/ui/friends/friend_painter.dart';
 import 'package:zeep_breathe/ui/zeep_character.dart';
 
-import 'friends_ui_test.dart' show makeApp, frames, openPicker;
+import 'friends_ui_test.dart' show makeApp, frames, openPicker, s;
 
 /// Opaque pixels only: the body, not shadows, glows or halos.
 const _opaque = 230;
 
-Rect? _bounds(ByteData d, int w, int h) {
+Rect? _bounds(ByteData d, int w, int h, [int minAlpha = _opaque]) {
   var minX = w, minY = h, maxX = -1, maxY = -1;
   for (var y = 0; y < h; y++) {
     for (var x = 0; x < w; x++) {
-      if (d.getUint8((y * w + x) * 4 + 3) > _opaque) {
+      if (d.getUint8((y * w + x) * 4 + 3) > minAlpha) {
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
         if (y < minY) minY = y;
@@ -40,7 +40,7 @@ Rect? _bounds(ByteData d, int w, int h) {
 }
 
 /// Painted bounds of [p] in a [size] box (box coordinates).
-Future<Rect> paintedBy(CustomPainter p, Size size) async {
+Future<Rect> paintedBy(CustomPainter p, Size size, {int minAlpha = _opaque}) async {
   const m = 40.0;
   final w = (size.width + 2 * m).ceil(), h = (size.height + 2 * m).ceil();
   final rec = ui.PictureRecorder();
@@ -49,7 +49,7 @@ Future<Rect> paintedBy(CustomPainter p, Size size) async {
   final img = await rec.endRecording().toImage(w, h);
   final d = (await img.toByteData())!;
   img.dispose();
-  return _bounds(d, w, h)!.shift(const Offset(-m, -m));
+  return _bounds(d, w, h, minAlpha)!.shift(const Offset(-m, -m));
 }
 
 /// Painted bounds of a widget laid out in a [size] box (with room around it
@@ -88,7 +88,11 @@ Future<Rect> paintedWidget(WidgetTester t, Widget child, Size size) async {
 Pose _pose(double b) =>
     Pose(breath: b, armLift: b, cheekPuff: 0.3, eyeSqueeze: 0.1, mouthOpen: 0, hold: 0, tint: tintInhale);
 
-const _friends = [Character.miu, Character.lumi, Character.mun, Character.tuntun, Character.nuan];
+const _friends = [Character.miu, Character.lumi, ...laterFriends];
+
+/// Saisai floats: its tentacles shorten and it rises 8 units, so its lowest
+/// point moves more than the others' (on Zeep's feet line mid breath).
+double _feetSlack(Character c) => c == Character.saisai ? 0.1 : 0.06;
 
 /// Mun's rotor angles to check (its height changes a little as it turns).
 List<double?> _spins(Character c) => c == Character.mun ? const [null, 0, 20, 45, 70] : const [null];
@@ -141,7 +145,8 @@ void main() {
                 final f = await paintedBy(FriendPainter(character: c, lv: b, fit: FriendFit.stage, spin: spin), box);
                 _sameHeight(f, zeep, why);
                 // standing on Zeep's feet line, in the middle (Miu's tail makes her a little wider on one side)
-                expect(f.bottom, closeTo(zeep.bottom, zeep.height * 0.06), reason: why);
+                expect(f.bottom, closeTo(zeep.bottom, zeep.height * _feetSlack(c)), reason: why);
+                if (b == 0.55) expect(f.bottom, closeTo(zeep.bottom, zeep.height * 0.06), reason: why);
                 expect(f.center.dx, closeTo(zeep.center.dx, zeep.width * 0.1), reason: why);
                 // whole body (and the hold glow, the rotor and the haptic rings) inside the box
                 final held = await paintedBy(
@@ -150,6 +155,14 @@ void main() {
                 );
                 expect(held.top >= 0 && held.bottom <= box.height, isTrue, reason: '$why: $held');
                 expect(held.left >= 0 && held.right <= box.width, isTrue, reason: '$why: $held');
+                // the self-glow of Saisai and Wongwong too, where it shows at all
+                final glow = await paintedBy(
+                  FriendPainter(character: c, lv: b, hold: 1, fit: FriendFit.stage, spin: spin),
+                  box,
+                  minAlpha: 12,
+                );
+                expect(glow.top >= 0 && glow.bottom <= box.height, isTrue, reason: '$why glow: $glow');
+                expect(glow.left >= 0 && glow.right <= box.width, isTrue, reason: '$why glow: $glow');
               }
             }
           }
@@ -166,7 +179,7 @@ void main() {
     for (final c in _friends) {
       final f = await paintedWidget(t, avatar(c), size);
       _sameHeight(f, zeep, 'share ${c.name}');
-      expect(f.bottom, closeTo(zeep.bottom, zeep.height * 0.06), reason: c.name);
+      expect(f.bottom, closeTo(zeep.bottom, zeep.height * _feetSlack(c)), reason: c.name);
     }
   });
 
@@ -213,14 +226,23 @@ void main() {
           .toList();
       expect(painters.map((p) => p.character).toSet(), {Character.miu, Character.lumi});
       // the silhouettes of the friends still to come are placed the same way
-      final shadows = t
-          .widgetList<CustomPaint>(
-            find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FriendSilhouettePainter),
-          )
-          .map((w) => w.painter! as FriendSilhouettePainter)
-          .toList();
-      expect(shadows.map((p) => p.character), laterFriends);
-      for (final p in shadows) {
+      // (the list is lazy: scroll to its end for the last rows)
+      final shadows = <Character, FriendSilhouettePainter>{};
+      void collect() {
+        for (final w in t.widgetList<CustomPaint>(
+          find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FriendSilhouettePainter),
+        )) {
+          final p = w.painter! as FriendSilhouettePainter;
+          shadows[p.character] = p;
+        }
+      }
+
+      collect();
+      await t.drag(find.text(s.friendsTitle), const Offset(0, -2000));
+      await frames(t, app);
+      collect();
+      expect(shadows.keys, unorderedEquals(laterFriends));
+      for (final p in shadows.values) {
         expect(p.fit, flower ? FriendFit.roomyAvatar : FriendFit.avatar);
       }
       final dressed = !app.wardrobe.outfit.isEmpty || !app.wardrobe.growth.isNone;
@@ -229,6 +251,28 @@ void main() {
         expect(p.fit, flower ? FriendFit.roomyAvatar : FriendFit.avatar);
       }
       await t.pumpWidget(const SizedBox());
+    }
+  });
+
+  testWidgets('Wongwong in the small square slots: the ring reaches only a little past the sides (1.9.0)', (t) async {
+    // as tall as Zeep, its 168-unit ring is wider than a 160-unit avatar box:
+    // the tips reach into the picker row's padding (10 px left, 12 px gap)
+    // and the share card's margin, never more than 13% of the box per side
+    for (final (fit, size, side) in const [
+      (FriendFit.avatar, 60.0, 0.13),
+      (FriendFit.avatar, 150.0, 0.13),
+      (FriendFit.roomyAvatar, 60.0, 0.01),
+      (FriendFit.roomyAvatar, 130.0, 0.01),
+    ]) {
+      for (final lv in const [0.0, 0.55, 1.0]) {
+        final f = await t.runAsync(
+          () => paintedBy(FriendPainter(character: Character.wongwong, lv: lv, hold: 1, fit: fit), Size(size, size)),
+        );
+        final why = '$fit $size lv $lv: $f';
+        expect(f!.left, greaterThanOrEqualTo(-size * side - 1), reason: why);
+        expect(f.right, lessThanOrEqualTo(size * (1 + side) + 1), reason: why);
+        expect(f.top >= -1 && f.bottom <= size + 1, isTrue, reason: why);
+      }
     }
   });
 
@@ -250,6 +294,8 @@ void main() {
         heights.add(f.height);
         _sameHeight(f, zeep, 'tile ${c.name} $s');
         expect(f.top >= -1 && f.bottom <= s + 1, isTrue, reason: 'tile ${c.name} $s: $f');
+        // Wongwong's ring too (1.9.0): its tips stay inside the tile
+        expect(f.left >= -1 && f.right <= s + 1, isTrue, reason: 'tile ${c.name} $s: $f');
       }
       for (final h in heights) {
         expect(h / heights[0], inInclusiveRange(0.85, 1.15), reason: 'tile $s: $heights');

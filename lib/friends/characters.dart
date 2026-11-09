@@ -5,6 +5,8 @@
 //
 // 1.7.0 drew Miu and Lumi (day 3 pick, day 10 the other one). 1.8.0 draws the
 // day-30/60/100 friends: Mun (pinwheel), Tuntun (tortoise) and Nuan (moon).
+// 1.9.0 adds the glowing day-150/200 friends: Saisai (sky jellyfish) and
+// Wongwong (tiny ringed planet).
 
 enum Character {
   zeep(0),
@@ -12,7 +14,9 @@ enum Character {
   lumi(3),
   mun(30),
   tuntun(60),
-  nuan(100);
+  nuan(100),
+  saisai(150),
+  wongwong(200);
 
   /// Practice days before this character can come (Miu and Lumi: one at day
   /// 3, the other at day 10).
@@ -22,8 +26,9 @@ enum Character {
   /// One of the two day-3 friends.
   bool get isDay3Friend => this == miu || this == lumi;
 
-  /// One of the friends that simply come at their day (30 / 60 / 100).
-  bool get isLaterFriend => this == mun || this == tuntun || this == nuan;
+  /// One of the friends that simply come at their day (30 / 60 / 100 /
+  /// 150 / 200).
+  bool get isLaterFriend => laterFriends.contains(this);
 
   /// The other day-3 friend (Miu <-> Lumi).
   Character get other => this == miu ? lumi : miu;
@@ -36,9 +41,9 @@ enum Character {
   }
 }
 
-/// The friends that come at 30, 60 and 100 practice days, in order. Before
-/// their day they show as a dark silhouette of their own shape.
-const laterFriends = [Character.mun, Character.tuntun, Character.nuan];
+/// The friends that come at 30, 60, 100, 150 and 200 practice days, in
+/// order. Before their day they show as a dark silhouette of their own shape.
+const laterFriends = [Character.mun, Character.tuntun, Character.nuan, Character.saisai, Character.wongwong];
 
 /// Day 3: the user picks Miu or Lumi; day 10: the other one comes too.
 const firstFriendDays = 3;
@@ -54,8 +59,8 @@ bool isUnlocked(Character c, int days, Character? choice) {
 
 /// Characters the user can breathe with after [days] practice days, given
 /// the day-3 [choice] (null = not chosen yet). Zeep always; days 3-9 the
-/// chosen one; 10 and up both Miu and Lumi; Mun, Tuntun and Nuan at 30, 60
-/// and 100 days.
+/// chosen one; 10 and up both Miu and Lumi; Mun, Tuntun, Nuan, Saisai and
+/// Wongwong at 30, 60, 100, 150 and 200 days.
 Set<Character> unlockedCharacters(int days, Character? choice) => {
   for (final c in Character.values)
     if (isUnlocked(c, days, choice)) c,
@@ -76,12 +81,12 @@ enum FriendCard {
   /// Day 10 without a day-3 pick: both come at once.
   both,
 
-  /// Day 30 / 60 / 100: the friends in [dueLaterFriends] are here (one card,
+  /// Day 30 / 60 / 100 / 150 / 200: the friends in [dueLaterFriends] are here (one card,
   /// even when several came at once).
   later,
 }
 
-/// The day-30/60/100 friends whose day has come and whose card has not been
+/// The day-30/60/100/150/200 friends whose day has come and whose card has not been
 /// shown yet ([seen]), in order.
 List<Character> dueLaterFriends(int days, Set<Character> seen) => [
   for (final c in laterFriends)
@@ -90,7 +95,7 @@ List<Character> dueLaterFriends(int days, Set<Character> seen) => [
 
 /// Which friend card is due (pure rule, see WardrobeController). The Miu and
 /// Lumi cards keep their 1.7.0 rules and come first (they are due earlier);
-/// the 30/60/100 card waits for a later session end, and shows every friend
+/// the later friends' card waits for a later session end, and shows every friend
 /// due at that time.
 FriendCard? dueFriendCard({
   required int days,

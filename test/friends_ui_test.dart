@@ -1,9 +1,11 @@
 // "My friends" picker (C), the new-friend cards (D) and where the active
-// character shows (E), 1.7.0; the day-30/60/100 friends, 1.8.0.
+// character shows (E), 1.7.0; the day-30/60/100 friends, 1.8.0; the
+// day-150/200 friends (Saisai, Wongwong), 1.9.0.
 
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zeep_breathe/app_controller.dart';
@@ -68,6 +70,14 @@ Finder row(String start) => find.byWidgetPredicate(
 
 String? label(WidgetTester t, String start) => t.widget<Semantics>(row(start).first).properties.label;
 
+/// The friends drawn as silhouettes in the picker (every built row).
+List<Character> _shadows(WidgetTester t) => t
+    .widgetList<CustomPaint>(
+      find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FriendSilhouettePainter, skipOffstage: false),
+    )
+    .map((w) => (w.painter! as FriendSilhouettePainter).character)
+    .toList();
+
 Future<void> finishSession(WidgetTester t, AppController app) async {
   app.startSession();
   await frames(t, app, 3);
@@ -96,7 +106,7 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('picker with Zeep only: Miu or Lumi in 3 days, three mystery friends (C2)', (t) async {
+  testWidgets('picker with Zeep only: Miu or Lumi in 3 days, five mystery friends (C2, 1.9.0 #4)', (t) async {
     final app = await makeApp();
     await launch(t, app);
     await openPicker(t, app);
@@ -104,10 +114,10 @@ void main() {
     // the wait, no "choose" wording on a row that cannot be tapped (QA #3)
     expect(label(t, s.miuOrLumi), '${s.miuOrLumi}, ${s.firstFriendWhen(3, 3)}');
     expect(find.text(s.chooseNewFriend), findsNothing);
-    for (final n in [30, 60, 100]) {
-      expect(find.text(s.mysteryWhen(n)), findsOneWidget);
+    for (final n in [30, 60, 100, 150, 200]) {
+      expect(find.text(s.mysteryWhen(n), skipOffstage: false), findsOneWidget);
     }
-    expect(find.text(s.mysteryFriend), findsNWidgets(3));
+    expect(find.text(s.mysteryFriend, skipOffstage: false), findsNWidgets(5));
     expect(find.text(s.practiceDays(0)), findsOneWidget);
     // no level or bond bar anywhere
     expect(find.byType(LinearProgressIndicator), findsNothing);
@@ -173,14 +183,14 @@ void main() {
     expect(find.text(s.mysteryWhen(30)), findsNothing);
     expect(find.text(s.mysteryWhen(60)), findsOneWidget);
     expect(find.text(s.mysteryWhen(100)), findsOneWidget);
-    expect(find.text(s.mysteryFriend), findsNWidgets(2));
+    expect(find.text(s.mysteryFriend, skipOffstage: false), findsNWidgets(4));
     // the silhouettes are the friends' own shapes, not their names
-    final shadows = t
-        .widgetList<CustomPaint>(
-          find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FriendSilhouettePainter),
-        )
-        .map((w) => (w.painter! as FriendSilhouettePainter).character);
-    expect(shadows, [Character.tuntun, Character.nuan]);
+    final shadows = _shadows(t);
+    await t.drag(find.text(s.friendsTitle), const Offset(0, -2000));
+    await frames(t, app);
+    expect({...shadows, ..._shadows(t)}, {Character.tuntun, Character.nuan, Character.saisai, Character.wongwong});
+    await t.drag(find.text(s.friendsTitle, skipOffstage: false), const Offset(0, 2000), warnIfMissed: false);
+    await frames(t, app);
     expect(find.text('Tuntun'), findsNothing);
     await t.tap(row('Mun').first);
     await frames(t, app);
@@ -189,18 +199,67 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('day 100: all six can be picked, no rows beyond (1.8.0 #4)', (t) async {
+  testWidgets('day 120: the first six can be picked; Saisai and Wongwong are silhouettes (1.8.0 #4, 1.9.0 #4)', (
+    t,
+  ) async {
     final app = await makeApp(days: 120);
     await launch(t, app);
     await openPicker(t, app);
     for (final n in ['Miu', 'Lumi', 'Mun', 'Tuntun', 'Nuan']) {
       expect(label(t, n), endsWith(s.tapToSwitch), reason: n);
     }
-    expect(find.text(s.mysteryFriend), findsNothing);
-    expect(find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FriendSilhouettePainter), findsNothing);
+    expect(find.text(s.mysteryFriend, skipOffstage: false), findsNWidgets(2));
+    expect(find.text(s.mysteryWhen(150), skipOffstage: false), findsOneWidget);
+    expect(find.text(s.mysteryWhen(200), skipOffstage: false), findsOneWidget);
+    expect(_shadows(t), [Character.saisai, Character.wongwong]);
+    expect(find.text('Saisai', skipOffstage: false), findsNothing);
     await t.tap(row('Nuan').first);
     await frames(t, app);
     expect(app.wardrobe.activeCharacter, Character.nuan);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('day 160: Saisai is here and can be picked; Wongwong is a silhouette (1.9.0 #4)', (t) async {
+    final app = await makeApp(days: 160);
+    await launch(t, app);
+    await openPicker(t, app);
+    await t.drag(find.text(s.friendsTitle), const Offset(0, -2000));
+    await frames(t, app);
+    expect(label(t, 'Saisai'), 'Saisai, ${s.characterTagline(Character.saisai)}, ${s.tapToSwitch}');
+    expect(find.text(s.mysteryWhen(150), skipOffstage: false), findsNothing);
+    expect(find.text(s.mysteryWhen(200), skipOffstage: false), findsOneWidget);
+    expect(find.text(s.mysteryFriend, skipOffstage: false), findsOneWidget);
+    expect(_shadows(t), [Character.wongwong]);
+    expect(find.text('Wongwong', skipOffstage: false), findsNothing);
+    await t.tap(row('Saisai').first);
+    await frames(t, app);
+    expect(app.wardrobe.activeCharacter, Character.saisai);
+    expect(find.text(s.greetingOf(Character.saisai)), findsOneWidget);
+    // T1 draws Saisai, as tall as Zeep (stage fit)
+    final p = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is FriendPainter);
+    final fp = t.widget<CustomPaint>(p.first).painter! as FriendPainter;
+    expect(fp.character, Character.saisai);
+    expect(fp.fit, FriendFit.stage);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('day 210: all eight can be picked, no mystery rows (1.9.0 #4)', (t) async {
+    final app = await makeApp(days: 210);
+    await launch(t, app);
+    await openPicker(t, app);
+    await t.drag(find.text(s.friendsTitle), const Offset(0, -2000));
+    await frames(t, app);
+    for (final n in ['Nuan', 'Saisai', 'Wongwong']) {
+      expect(label(t, n), endsWith(s.tapToSwitch), reason: n);
+    }
+    expect(find.text(s.mysteryFriend, skipOffstage: false), findsNothing);
+    expect(_shadows(t), isEmpty);
+    await t.tap(row('Wongwong').first);
+    await frames(t, app);
+    expect(app.wardrobe.activeCharacter, Character.wongwong);
+    expect(find.text(s.greetingOf(Character.wongwong)), findsOneWidget);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('zeep.wardrobe'), contains('"character":"wongwong"'));
     await t.pumpWidget(const SizedBox());
   });
 
@@ -321,6 +380,79 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
+  testWidgets('reaching day 150: "Saisai is here", once; then Wongwong at day 200 (1.9.0 #5)', (t) async {
+    final app = await makeApp(days: 149);
+    app.wardrobe.chooseFirstFriend(Character.miu);
+    app.wardrobe.markFriendCardShown(FriendCard.day10);
+    app.wardrobe.markFriendCardShown(FriendCard.later, shown: const [Character.mun, Character.tuntun, Character.nuan]);
+    await launch(t, app);
+    await finishSession(t, app);
+    expect(app.wardrobe.practiceDays, 150);
+    while (find.text(s.newItemTitle).evaluate().isNotEmpty) {
+      await tapText(t, app, s.later);
+    }
+    expect(find.text(s.friendArrived('Saisai')), findsOneWidget);
+    expect(find.text(s.characterTagline(Character.saisai)), findsWidgets);
+    expect(find.byType(LiveFriend), findsOneWidget);
+    await tapText(t, app, s.breatheWith('Saisai'));
+    expect(app.wardrobe.activeCharacter, Character.saisai);
+    expect(app.wardrobe.dueFriendCard, isNull);
+    await finishSession(t, app);
+    expect(find.byType(FriendCardDialog), findsNothing);
+    // day 200: Wongwong's own card; "Later" keeps Saisai
+    app.wardrobe.setForTest(practiceDays: 200);
+    await finishSession(t, app);
+    while (find.text(s.newItemTitle).evaluate().isNotEmpty) {
+      await tapText(t, app, s.later);
+    }
+    expect(find.text(s.friendArrived('Wongwong')), findsOneWidget);
+    await tapText(t, app, s.later);
+    expect(app.wardrobe.activeCharacter, Character.saisai);
+    expect(app.wardrobe.dueFriendCard, isNull);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('210 days after updating from 1.8.0: one card with Saisai and Wongwong; pick one (1.9.0 #5)', (t) async {
+    final app = await makeApp(days: 210);
+    app.wardrobe.markFriendCardShown(FriendCard.both);
+    app.wardrobe.markFriendCardShown(FriendCard.later, shown: const [Character.mun, Character.tuntun, Character.nuan]);
+    await launch(t, app);
+    await finishSession(t, app);
+    while (find.text(s.newItemTitle).evaluate().isNotEmpty) {
+      await tapText(t, app, s.later);
+    }
+    expect(find.text(s.moreFriendsTitle(2)), findsOneWidget);
+    expect(find.text(s.pickOneNow), findsOneWidget);
+    expect(find.byType(LiveFriend), findsNWidgets(2));
+    expect(find.text(s.breatheWith('Saisai')), findsOneWidget);
+    await t.tap(find.bySemanticsLabel('Wongwong, ${s.characterTagline(Character.wongwong)}'));
+    await frames(t, app);
+    await tapText(t, app, s.breatheWith('Wongwong'));
+    expect(app.wardrobe.activeCharacter, Character.wongwong);
+    expect(app.wardrobe.dueFriendCard, isNull);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('210 days after updating from 1.7: one card with all five, in rows of three (1.9.0 #5)', (t) async {
+    final app = await makeApp(days: 210);
+    app.wardrobe.markFriendCardShown(FriendCard.both);
+    await launch(t, app);
+    await finishSession(t, app);
+    while (find.text(s.newItemTitle).evaluate().isNotEmpty) {
+      await tapText(t, app, s.later);
+    }
+    expect(find.text(s.moreFriendsTitle(5)), findsOneWidget);
+    expect(s.moreFriendsTitle(5), 'Five more friends have arrived');
+    expect(S.thai.moreFriendsTitle(5), 'เพื่อน\u2060ใหม่มา\u2060เพิ่มอีก 5\u00A0ตัว');
+    final tiles = find.byType(LiveFriend);
+    expect(tiles, findsNWidgets(5));
+    final tops = {for (final e in tiles.evaluate()) t.getTopLeft(find.byWidget(e.widget)).dy.round()};
+    expect(tops, hasLength(2)); // two rows
+    await tapText(t, app, s.later);
+    expect(app.wardrobe.dueFriendCard, isNull);
+    await t.pumpWidget(const SizedBox());
+  });
+
   testWidgets('65 days after updating: one card with Mun and Tuntun; pick one (1.8.0 #5)', (t) async {
     final app = await makeApp(days: 65);
     app.wardrobe.chooseFirstFriend(Character.lumi); // too late for a pick: ignored
@@ -378,6 +510,106 @@ void main() {
     expect((t.widget<CustomPaint>(p).painter! as FriendPainter).character, Character.miu);
     expect(find.byWidgetPredicate((w) => w is CustomPaint && w.painter is ZeepPainter), findsNothing);
     app.stopSession();
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Thai screen readers never get word joiners: T1, cards, picker (QA 1.9.0 #8)', (t) async {
+    final semantics = t.ensureSemantics();
+    final app = await makeApp(days: 210);
+    app.wardrobe.markFriendCardShown(FriendCard.both);
+    app.wardrobe.markFriendCardShown(FriendCard.later, shown: const [Character.mun, Character.tuntun, Character.nuan]);
+    t.platformDispatcher.localesTestValue = const [Locale('th', 'TH')];
+    t.platformDispatcher.localeTestValue = const Locale('th', 'TH');
+    addTearDown(t.platformDispatcher.clearAllTestValues);
+    // a wide screen: the test font draws Thai wider than real fonts
+    t.view.physicalSize = const Size(2048, 2732);
+    t.view.devicePixelRatio = 2;
+    addTearDown(t.view.reset);
+    const th = S.thai;
+
+    /// Every label, value, hint and tooltip in the semantics tree.
+    List<String> spoken() {
+      final out = <String>[];
+      void visit(SemanticsNode n) {
+        final d = n.getSemanticsData();
+        out.addAll([d.label, d.value, d.hint, d.tooltip].whereType<String>().where((x) => x.isNotEmpty));
+        n.visitChildren((c) {
+          visit(c);
+          return true;
+        });
+      }
+
+      for (final v in t.binding.renderViews) {
+        final root = v.owner?.semanticsOwner?.rootSemanticsNode;
+        if (root != null) visit(root);
+      }
+      return out;
+    }
+
+    void plain(String where, {required String has}) {
+      final all = spoken();
+      expect(all.any((l) => l.contains(has)), isTrue, reason: '$where: "$has" in $all');
+      for (final l in all) {
+        expect(l.contains('\u2060') || l.contains('\u200B'), isFalse, reason: '$where: $l');
+      }
+    }
+
+    // T1 with each new friend: the greeting
+    for (final c in const [Character.saisai, Character.wongwong]) {
+      app.wardrobe.selectCharacter(c);
+      await t.pumpWidget(ZeepBreatheApp(controller: app));
+      await frames(t, app, 5);
+      plain('T1 ${c.name}', has: plainText(th.greetingOf(c)));
+    }
+    // the combined card: title, tiles, "ฝึกกับใสใส"
+    showFriendCard(t.element(find.byType(Scaffold).first), app);
+    await frames(t, app);
+    plain('two-friends card', has: 'ฝึกกับใสใส');
+    plain('two-friends card', has: plainText(th.moreFriendsTitle(2)));
+    await tapText(t, app, th.later);
+    // a single card: "<name> มาหาแล้ว", the tagline
+    showDialog<Character>(
+      context: t.element(find.byType(Scaffold).first),
+      builder: (_) => const FriendCardDialog(card: FriendCard.later, later: [Character.wongwong]),
+    );
+    await frames(t, app);
+    plain('Wongwong card', has: 'วงวง มาหาแล้ว');
+    plain('Wongwong card', has: 'วงแหวนกางตามลมหายใจ');
+    await tapText(t, app, th.later);
+    // the picker
+    await t.tap(find.text(th.friendsChip));
+    await frames(t, app);
+    await t.drag(find.text(th.friendsTitle), const Offset(0, -2000));
+    await frames(t, app);
+    plain('picker', has: 'ใสใส, ลอยฟูตามลมหายใจ');
+    await t.pumpWidget(const SizedBox());
+    semantics.dispose();
+  });
+
+  testWidgets('Thai screen-reader labels have no word joiners (Pim r3)', (t) async {
+    final app = await makeApp(days: 210);
+    t.platformDispatcher.localesTestValue = const [Locale('th', 'TH')];
+    t.platformDispatcher.localeTestValue = const Locale('th', 'TH');
+    addTearDown(t.platformDispatcher.clearAllTestValues);
+    // a wide screen: the test font draws Thai wider than real fonts (Thai
+    // layout on phones is checked with a real font in card_text_test)
+    t.view.physicalSize = const Size(2048, 2732);
+    t.view.devicePixelRatio = 2;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(ZeepBreatheApp(controller: app));
+    await frames(t, app, 5);
+    await t.tap(find.text(S.thai.friendsChip));
+    await frames(t, app);
+    await t.drag(find.text(S.thai.friendsTitle), const Offset(0, -2000));
+    await frames(t, app);
+    final labels = [
+      for (final w in t.widgetList<Semantics>(find.byType(Semantics, skipOffstage: false)))
+        if (w.properties.label != null) w.properties.label!,
+    ];
+    expect(labels.where((l) => l.startsWith('ใสใส')), isNotEmpty);
+    for (final l in labels) {
+      expect(l.contains('\u2060') || l.contains('\u200B'), isFalse, reason: l);
+    }
     await t.pumpWidget(const SizedBox());
   });
 

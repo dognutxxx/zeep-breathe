@@ -116,6 +116,15 @@ void main() {
           'greetNuan',
           'pickerDay0',
           'pickerDay5',
+          // 1.9.0: Saisai and Wongwong
+          'friendLater2',
+          'pickerDay160',
+          'pickerDay210',
+          'greetSaisai',
+          'greetWongwong',
+          // round 3: the single cards of the 1.9.0 friends
+          'friendSaisai',
+          'friendWongwong',
         ]) {
           testWidgets('$card card, $lang, ${size.width.toInt()} px, text x$scale', (t) async {
             t.view.physicalSize = size * 3;
@@ -135,6 +144,8 @@ void main() {
               'pickerDay0' => 0,
               'pickerDay5' => 5,
               'pickerDay100' || 'greetMun' || 'greetTuntun' || 'greetNuan' => 120,
+              'pickerDay160' => 160,
+              'pickerDay210' || 'greetSaisai' || 'greetWongwong' => 210,
               _ => 30,
             };
             app.wardrobe.setForTest(steps: 4 * 4 + 3, practiceDays: days);
@@ -147,11 +158,13 @@ void main() {
                 showSummaryCard(ctx, app);
               case 'newItem':
                 showNewItemCards(ctx, app, [OutfitItem.sleepCap]);
-              case 'greetMun' || 'greetTuntun' || 'greetNuan':
+              case 'greetMun' || 'greetTuntun' || 'greetNuan' || 'greetSaisai' || 'greetWongwong':
                 // the T1 greeting bubble of each new friend (QA r2 #2)
                 app.wardrobe.selectCharacter(switch (card) {
                   'greetMun' => Character.mun,
                   'greetTuntun' => Character.tuntun,
+                  'greetSaisai' => Character.saisai,
+                  'greetWongwong' => Character.wongwong,
                   _ => Character.nuan,
                 });
               case 'garden':
@@ -160,16 +173,21 @@ void main() {
               case 'pickerDay0' || 'pickerDay5':
                 expect(app.wardrobe.friendChoicePending, card == 'pickerDay5');
                 openFriends(ctx, app);
-              case 'picker' || 'pickerDay100':
+              case 'picker' || 'pickerDay100' || 'pickerDay160' || 'pickerDay210':
                 app.wardrobe.chooseFirstFriend(Character.lumi);
                 openFriends(ctx, app);
               default:
                 // the friend cards (1.7.0): day 3, day 10, both at once;
-                // 1.8.0: day 30/60/100, one friend or three at once
+                // 1.8.0: day 30/60/100, one friend or several at once (all
+                // five later friends: rows of three); 1.9.0: Saisai and Wongwong
                 final kind = switch (card) {
                   'friend3' => FriendCard.day3,
                   'friend10' => FriendCard.day10,
-                  'friendLater1' || 'friendLater3' => FriendCard.later,
+                  'friendLater1' ||
+                  'friendLater2' ||
+                  'friendLater3' ||
+                  'friendSaisai' ||
+                  'friendWongwong' => FriendCard.later,
                   _ => FriendCard.both,
                 };
                 showDialog<Character>(
@@ -177,7 +195,13 @@ void main() {
                   builder: (_) => FriendCardDialog(
                     card: kind,
                     chosen: Character.miu,
-                    later: card == 'friendLater1' ? const [Character.tuntun] : laterFriends,
+                    later: switch (card) {
+                      'friendLater1' => const [Character.tuntun],
+                      'friendLater2' => const [Character.saisai, Character.wongwong],
+                      'friendSaisai' => const [Character.saisai],
+                      'friendWongwong' => const [Character.wongwong],
+                      _ => laterFriends,
+                    },
                   ),
                 );
             }
@@ -186,6 +210,19 @@ void main() {
             }
             expect(t.takeException(), isNull, reason: 'overflow');
             final l = lang == 'th' ? S.thai : S.en;
+            if (card == 'pickerDay160' || card == 'pickerDay210') {
+              // the end of the list: the rows of the 1.9.0 friends
+              final last = card == 'pickerDay210' ? Character.wongwong : Character.saisai;
+              await t.scrollUntilVisible(
+                find.text(l.characterName(last)),
+                200,
+                scrollable: find.byType(Scrollable).last,
+              );
+              for (var i = 0; i < 20; i++) {
+                await t.pump(const Duration(milliseconds: 20));
+              }
+              expect(find.text(l.characterName(last)), findsOneWidget);
+            }
             if (card.startsWith('greet')) {
               final c = app.wardrobe.activeCharacter;
               expect(c, isNot(Character.zeep));
@@ -208,7 +245,7 @@ void main() {
               // the number in the title stays with its word ("3 ตัว", "3 more")
               final title = find.descendant(of: dialog, matching: find.byType(BalancedText)).first;
               final text = find.descendant(of: title, matching: find.byType(Text));
-              final para = t.renderObject<RenderParagraph>(text);
+              final para = t.renderObject<RenderParagraph>(find.descendant(of: text, matching: find.byType(RichText)));
               final str = (t.widget<Text>(text)).data!;
               final digit = str.indexOf(RegExp(r'[0-9]'));
               if (digit >= 0) {
@@ -236,6 +273,40 @@ void main() {
               expect(find.text(l.chooseNewFriend), findsNothing);
             }
 
+            // no Thai word splits across lines: a word joiner (U+2060) holds the
+            // letters on both sides on one line ("ลอย⁠ขึ้น", "กาง⁠ออก", "มา⁠หา⁠แล้ว",
+            // QA 1.9.0 #4). Every text on screen: greetings, card titles,
+            // taglines, names
+            for (final e in find.byType(RichText).evaluate()) {
+              final para = e.renderObject! as RenderParagraph;
+              final str = para.text.toPlainText();
+              // the same layout as on screen
+              final tp = TextPainter(
+                text: para.text,
+                textDirection: para.textDirection,
+                textAlign: para.textAlign,
+                textScaler: para.textScaler,
+                maxLines: para.maxLines,
+              )..layout(maxWidth: para.softWrap ? para.constraints.maxWidth : double.infinity);
+              // where each line starts (after the first)
+              final starts = <int>{
+                for (var i = 0; i < str.length; i++) tp.getLineBoundary(TextPosition(offset: i)).start,
+              }..removeWhere((k) => k <= 0 || k >= str.length);
+              bool latin(int c) => (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
+              for (final k in starts) {
+                final why = '"$str" breaks at $k: "${str.substring(0, k)} / ${str.substring(k)}"';
+                // no Thai word held by a word joiner split, next to the joiner
+                // or anywhere inside the joined run (QA 1.9.0 #4, #9)
+                expect(str.codeUnitAt(k - 1) != 0x2060 && str.codeUnitAt(k) != 0x2060, isTrue, reason: why);
+                // no Latin word broken inside ("Wongwon / g", QA 1.9.0 #7)
+                expect(latin(str.codeUnitAt(k - 1)) && latin(str.codeUnitAt(k)), isFalse, reason: why);
+                // only between words: never inside a word or a letter cluster
+                // ("เพื่อนให / ม่มาเพิ่ม", QA 1.9.0 #9)
+                expect(tp.getWordBoundary(TextPosition(offset: k)).start, k, reason: why);
+              }
+              tp.dispose();
+            }
+
             // every balanced text: no paragraph ends with a lone short line
             for (final e in find.byType(BalancedText).evaluate()) {
               final bt = e.widget as BalancedText;
@@ -253,7 +324,9 @@ void main() {
             for (final short in [l.inUse, l.tapToSwitch]) {
               for (final e in find.widgetWithText(BalancedText, short).evaluate()) {
                 final text = find.descendant(of: find.byWidget(e.widget), matching: find.byType(Text));
-                final para = t.renderObject<RenderParagraph>(text);
+                final para = t.renderObject<RenderParagraph>(
+                  find.descendant(of: text, matching: find.byType(RichText)),
+                );
                 // room the badge has: the row's text column less its padding
                 final room = t.getSize(find.ancestor(of: text, matching: find.byType(Column)).first).width - 18;
                 final style = DefaultTextStyle.of(t.element(text)).style.merge((e.widget as BalancedText).style);
