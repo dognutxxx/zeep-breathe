@@ -5,7 +5,9 @@
 // Lumi, the picker at day 5 with no pick and at day 1; 1.8.0: the picker at
 // day 35, 65 and 120, Mun, Tuntun and Nuan on T1 and in a session (inhale and
 // hold), the "Mun is here" card, the three-friends card and a share card with
-// Nuan. Uses Windows' Leelawadee UI font
+// Nuan; 1.9.0: the picker at day 160 and 210, Saisai and Wongwong on T1 and
+// in a session (inhale and hold), the "Saisai is here" card, the two-friends
+// card and a share card with Wongwong. Uses Windows' Leelawadee UI font
 // for both languages (Roboto has no Thai glyphs).
 //   flutter test tool/friends_screens_test.dart --update-goldens
 
@@ -49,12 +51,18 @@ Future<AppController> _app(WidgetTester t, int days) async {
   return app;
 }
 
-Future<void> _picker(WidgetTester t, String p, S s, String name, AppController app) async {
+Future<void> _picker(WidgetTester t, String p, S s, String name, AppController app, {String? end}) async {
   await t.pumpWidget(ZeepBreatheApp(controller: app));
   await advance(t, 0.6);
   await t.tap(find.text(s.friendsChip));
   await advance(t, 0.8);
   await shot('screens/$p$name.png');
+  if (end != null) {
+    // the end of the list (1.9.0: the 150 / 200 rows are below the fold)
+    await t.drag(find.text(s.friendsTitle), const Offset(0, -2000));
+    await advance(t, 0.8);
+    await shot('screens/$p$end.png');
+  }
   await t.pumpWidget(const SizedBox());
   await t.pump(const Duration(seconds: 1));
 }
@@ -96,12 +104,40 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
   await _card(t, p, '45_friend_card_both', await _app(t, 12));
 
   // 1.8.0: the picker with Mun (day 35), Mun and Tuntun (day 65), everyone (day 120)
-  for (final (days, name) in const [(35, '54_friends_day35'), (65, '55_friends_day65'), (120, '56_friends_day120')]) {
+  // (1.9.0: and the end of the list at day 120, with the 150 / 200 silhouettes)
+  for (final (days, name, end) in const [
+    (35, '54_friends_day35', null),
+    (65, '55_friends_day65', null),
+    (120, '56_friends_day120', '80_friends_day120_end'),
+  ]) {
     final app = await _app(t, days);
     app.wardrobe.chooseFirstFriend(Character.miu);
     app.wardrobe.markFriendCardShown(FriendCard.day10);
-    await _picker(t, p, s, name, app);
+    await _picker(t, p, s, name, app, end: end);
   }
+
+  // 1.9.0: the picker with Saisai (day 160) and everyone (day 210)
+  for (final (days, name, end) in const [
+    (160, '69_friends_day160', '81_friends_day160_end'),
+    (210, '70_friends_day210', '82_friends_day210_end'),
+  ]) {
+    final app = await _app(t, days);
+    app.wardrobe.chooseFirstFriend(Character.miu);
+    app.wardrobe.markFriendCardShown(FriendCard.day10);
+    await _picker(t, p, s, name, app, end: end);
+  }
+
+  // 1.9.0: "Saisai is here" at day 150, and Saisai + Wongwong at once (day 210
+  // after updating from 1.8.0)
+  const firstThree = [Character.mun, Character.tuntun, Character.nuan];
+  final day150 = await _app(t, 150);
+  day150.wardrobe.markFriendCardShown(FriendCard.both);
+  day150.wardrobe.markFriendCardShown(FriendCard.later, shown: firstThree);
+  await _card(t, p, '77_friend_card_saisai', day150);
+  final day210 = await _app(t, 210);
+  day210.wardrobe.markFriendCardShown(FriendCard.both);
+  day210.wardrobe.markFriendCardShown(FriendCard.later, shown: firstThree);
+  await _card(t, p, '78_friend_card_two', day210);
 
   // 1.8.0: "Mun is here" at day 30, and three friends at once (day 120 after an update)
   final day30 = await _app(t, 30);
@@ -112,12 +148,16 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
   await _card(t, p, '67_friend_card_three', day120);
 
   // 1.8.0: T1 and the session (mid-inhale, hold) with each new friend
+  // 1.9.0: Saisai (71, 73, 75) and Wongwong (72, 74, 76) the same way
   for (final (c, n, name) in [
     (Character.mun, 57, 'mun'),
     (Character.tuntun, 58, 'tuntun'),
     (Character.nuan, 59, 'nuan'),
+    (Character.saisai, 71, 'saisai'),
+    (Character.wongwong, 72, 'wongwong'),
   ]) {
-    final app = await _app(t, 120);
+    final app = await _app(t, c.days < 120 ? 120 : 210);
+    final step = n >= 71 ? 2 : 3;
     app.wardrobe.markFriendCardShown(FriendCard.both);
     app.wardrobe.markFriendCardShown(FriendCard.later, shown: laterFriends);
     app.wardrobe.selectCharacter(c);
@@ -126,9 +166,9 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
     await shot('screens/$p${n}_breathe_$name.png');
     app.startSession();
     await advance(t, 2.0);
-    await shot('screens/$p${n + 3}_session_${name}_inhale.png');
+    await shot('screens/$p${n + step}_session_${name}_inhale.png');
     await advance(t, 2.8);
-    await shot('screens/$p${n + 6}_session_${name}_hold.png');
+    await shot('screens/$p${n + 2 * step}_session_${name}_hold.png');
     app.stopSession();
     await t.pumpWidget(const SizedBox());
     await t.pump(const Duration(seconds: 1));
@@ -169,6 +209,13 @@ Future<void> _flow(WidgetTester t, String p, S s) async {
       '68_share_nuan',
       SessionAchievement(fixedNow, exerciseName: exercises[1].name(s), minutes: 15, breaths: 47),
       ShareCardColor.mint,
+    ),
+    // 1.9.0: Wongwong on a streak card
+    (
+      Character.wongwong,
+      '79_share_wongwong',
+      StreakAchievement(fixedNow, days: 30, totalMinutes: 410),
+      ShareCardColor.sky,
     ),
   ]) {
     phone(t);

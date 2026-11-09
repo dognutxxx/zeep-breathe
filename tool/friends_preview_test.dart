@@ -1,7 +1,8 @@
 // Preview sheets for Zeep's friends (1.7.0). Regenerate with
 //   flutter test tool/friends_preview_test.dart --update-goldens
 //
-// friends/poses.png   - every friend (Miu, Lumi, Mun, Tuntun, Nuan) at rest
+// friends/poses.png   - every friend (Miu, Lumi, Mun, Tuntun, Nuan; Saisai and
+//                        Wongwong since 1.9.0) at rest
 //                        (lv 0), mid-inhale (0.4, 0.65), full (1) and hold
 //                        (lv 1, hold 1), then Reduce Motion (0.6). Mun's rotor
 //                        follows the demo breath's spin at the same moment.
@@ -17,7 +18,7 @@ import 'package:zeep_breathe/wardrobe/flowers.dart';
 
 typedef _Cell = (Character, double, double, SproutGrowth);
 
-const _all = [Character.miu, Character.lumi, Character.mun, Character.tuntun, Character.nuan];
+const _all = [Character.miu, Character.lumi, ...laterFriends];
 
 /// Mun's rotor at the moment of the demo breath with this [lv] and [hold].
 double? _spin(Character c, double lv, double hold) {
