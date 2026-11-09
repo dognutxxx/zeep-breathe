@@ -1,4 +1,5 @@
-// Draws Zeep's friends (Miu, Lumi; Mun, Tuntun, Nuan since 1.8.0) inside a box, with the user's garden
+// Draws Zeep's friends (Miu, Lumi; Mun, Tuntun, Nuan since 1.8.0; Saisai,
+// Wongwong since 1.9.0) inside a box, with the user's garden
 // flower at each friend's anchor point. Zeep itself is never drawn here: it
 // keeps its own painter (drawZeep / ZeepPainter / ZeepAvatar).
 
@@ -18,7 +19,9 @@ import 'lumi_painter.dart';
 import 'miu_painter.dart';
 import 'mun_painter.dart';
 import 'nuan_painter.dart';
+import 'saisai_painter.dart';
 import 'tuntun_painter.dart';
+import 'wongwong_painter.dart';
 
 /// The SVG art is 200 x 200 units; a margin around it leaves room for the
 /// flower on Lumi's ring and Lumi's halo at a full breath.
@@ -73,12 +76,22 @@ enum FriendFit {
 /// (test/character_size_test): Miu is about 156 SVG units tall, Lumi 174,
 /// Mun 171 (rotor tip to the foot of the stem), Tuntun 131 (shell top to the
 /// feet, mid breath) and Nuan 156 (pompom to the bottom of the moon).
+/// The 1.9.0 friends were drawn smaller than Zeep on their concept page, so
+/// they are fitted up: Saisai is 113 units tall mid breath (bell top to the
+/// tentacle tips; it floats, so 118 at rest and 110 at a full breath) and
+/// Wongwong 106 (planet top to bottom; 102 to 110 as it swells). Wongwong's
+/// ring makes it 168 units wide, so it is matched a little under Zeep's
+/// height (about 0.93) to keep the ring inside the cards' tiles; in the
+/// small square avatar slots (picker rows, share card) the ring's tips reach
+/// a little past the box's sides, into the row's padding.
 const _zeepFeet = 54.0;
 double friendMatch(Character c) => switch (c) {
   Character.lumi => 0.779,
   Character.mun => 0.81,
   Character.tuntun => 1.03,
   Character.nuan => 0.87,
+  Character.saisai => 1.18,
+  Character.wongwong => 1.19,
   _ => 0.869,
 };
 
@@ -88,13 +101,16 @@ double _friendFeet(Character c) => switch (c) {
   Character.mun => 192,
   Character.tuntun => 177,
   Character.nuan => 165,
+  Character.saisai => 175,
+  Character.wongwong => 158.5,
   _ => 191,
 };
 
 /// Paints [character] (any friend) at lung level [lv] and [hold], wearing
 /// [growth]'s flower, with haptic [ripples] (ages in seconds), placed by
 /// [fit]. [spin] is Mun's rotor angle in degrees (null: still, at lv x 45).
-/// Draws nothing for Zeep.
+/// [glow] false leaves out the self-glow of Saisai and Wongwong
+/// (silhouettes). Draws nothing for Zeep.
 void drawFriend(
   Canvas canvas,
   Size size,
@@ -105,6 +121,7 @@ void drawFriend(
   List<double> ripples = const [],
   FriendFit fit = FriendFit.box,
   double? spin,
+  bool glow = true,
 }) {
   if (character == Character.zeep) return;
   final double k;
@@ -129,6 +146,8 @@ void drawFriend(
   canvas.save();
   canvas.translate(origin.dx, origin.dy);
   canvas.scale(k);
+  // the box in SVG units (the self-glows stay inside it)
+  final room = Rect.fromLTWH(-origin.dx / k, -origin.dy / k, size.width / k, size.height / k);
   final f = growth.flower;
   void flower(Canvas p, Offset at) {
     if (f == null) return;
@@ -153,6 +172,10 @@ void drawFriend(
       drawTuntun(canvas, lv, hold, flower: flower);
     case Character.nuan:
       drawNuan(canvas, lv, hold, flower: flower);
+    case Character.saisai:
+      drawSaisai(canvas, lv, hold, flower: flower, glow: glow, room: room);
+    case Character.wongwong:
+      drawWongwong(canvas, lv, hold, flower: flower, glow: glow, room: room);
     case Character.zeep:
       break;
   }
@@ -308,7 +331,8 @@ class FriendSilhouettePainter extends CustomPainter {
       Offset.zero & size,
       Paint()..colorFilter = const ColorFilter.mode(Color(0xD94A4250), BlendMode.srcIn),
     );
-    drawFriend(canvas, size, character, 0.55, 0, SproutGrowth.none, fit: fit);
+    // no self-glow: only the body's own shape
+    drawFriend(canvas, size, character, 0.55, 0, SproutGrowth.none, fit: fit, glow: false);
     canvas.restore();
   }
 

@@ -435,6 +435,8 @@ class S {
     Character.mun => _('Mun', 'หมุนหมุน'),
     Character.tuntun => _('Tuntun', 'ตุ่นตุ่น'),
     Character.nuan => _('Nuan', 'นวล'),
+    Character.saisai => _('Saisai', 'ใสใส'),
+    Character.wongwong => _('Wongwong', 'วงวง'),
   };
   String characterTagline(Character c) => switch (c) {
     Character.zeep => _('Fills with water as you breathe', 'เติมน้ำตามลมหายใจ'),
@@ -443,6 +445,8 @@ class S {
     Character.mun => _('Spins with your breath', 'ใบพัดหมุนตามลมหายใจ'),
     Character.tuntun => _('Peeks out as you breathe in', 'โผล่หัวออกมาตามลมหายใจ'),
     Character.nuan => _('Grows full as you breathe in', 'เต็มดวงตามลมหายใจ'),
+    Character.saisai => _('Floats up as you breathe in', 'ลอยฟูตามลมหายใจ'),
+    Character.wongwong => _('Its ring opens as you breathe in', 'วงแหวนกางตามลมหายใจ'),
   };
 
   /// The speech bubble on the Breathe tab, in the active character's voice.
@@ -466,6 +470,14 @@ class S {
     Character.nuan => _(
       "Hi, I'm Nuan. Breathe in and I grow full, breathe out and I become a soft crescent again.",
       'สวัสดี ฉันชื่อนวล หายใจเข้าแล้วฉันจะค่อยๆ เต็มดวง หายใจออกแล้วกลับเป็นเสี้ยวบางๆ นะ',
+    ),
+    Character.saisai => _(
+      "Hi, I'm Saisai. Breathe in and I float up soft and round, breathe out and I drift slowly down with you.",
+      'สวัสดี ฉันชื่อใสใส หายใจเข้าแล้วฉันจะพองฟูลอยขึ้น หายใจออกแล้วค่อยๆ ลอยลงช้าๆ ไปด้วยกันนะ',
+    ),
+    Character.wongwong => _(
+      "Hi, I'm Wongwong. Breathe in and my ring opens wide, breathe out and it settles flat again.",
+      'สวัสดี ฉันชื่อวงวง หายใจเข้าแล้ววงแหวนจะกางออก หายใจออกแล้วค่อยๆ แบนลงเหมือนเดิมนะ',
     ),
     Character.zeep => greeting,
   };
@@ -491,22 +503,26 @@ class S {
   String breatheWith(String name) => _('Breathe with $name', 'ฝึกกับ$name');
 
   /// Several friends at once: "Two new friends are here" (day 10 without a
-  /// pick), or the day-30/60/100 friends after a long break or an update.
+  /// pick), or the later friends (30 to 200 days) after a long break or an update.
   String newFriendsTitle(int n) => _(
     switch (n) {
       2 => 'Two new friends are here',
       3 => 'Three new friends are here',
+      4 => 'Four new friends are here',
+      5 => 'Five new friends are here',
       _ => '$n\u00A0new friends are here',
     },
     // a no-break space and a word joiner keep "3 ตัว" together (QA r2 #1)
     'เพื่อนใหม่ $n\u00A0ตัว\u2060มาหาแล้ว',
   );
 
-  /// The day-30/60/100 card with several friends: Miu and Lumi came before,
+  /// The later friends' card (30 to 200 days) with several friends: Miu and Lumi came before,
   /// so these are "more" (QA r2 #3).
   String moreFriendsTitle(int n) => _(switch (n) {
     2 => 'Two more friends have arrived',
     3 => 'Three more friends have arrived',
+    4 => 'Four more friends have arrived',
+    5 => 'Five more friends have arrived',
     _ => '$n\u00A0more friends have arrived',
   }, 'เพื่อนใหม่มาเพิ่มอีก $n\u00A0ตัว');
   String get pickOneNow => _('Pick one to breathe with now', 'เลือกตัวที่จะฝึกด้วยตอนนี้');

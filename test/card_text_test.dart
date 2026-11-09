@@ -116,6 +116,12 @@ void main() {
           'greetNuan',
           'pickerDay0',
           'pickerDay5',
+          // 1.9.0: Saisai and Wongwong
+          'friendLater2',
+          'pickerDay160',
+          'pickerDay210',
+          'greetSaisai',
+          'greetWongwong',
         ]) {
           testWidgets('$card card, $lang, ${size.width.toInt()} px, text x$scale', (t) async {
             t.view.physicalSize = size * 3;
@@ -135,6 +141,8 @@ void main() {
               'pickerDay0' => 0,
               'pickerDay5' => 5,
               'pickerDay100' || 'greetMun' || 'greetTuntun' || 'greetNuan' => 120,
+              'pickerDay160' => 160,
+              'pickerDay210' || 'greetSaisai' || 'greetWongwong' => 210,
               _ => 30,
             };
             app.wardrobe.setForTest(steps: 4 * 4 + 3, practiceDays: days);
@@ -147,11 +155,13 @@ void main() {
                 showSummaryCard(ctx, app);
               case 'newItem':
                 showNewItemCards(ctx, app, [OutfitItem.sleepCap]);
-              case 'greetMun' || 'greetTuntun' || 'greetNuan':
+              case 'greetMun' || 'greetTuntun' || 'greetNuan' || 'greetSaisai' || 'greetWongwong':
                 // the T1 greeting bubble of each new friend (QA r2 #2)
                 app.wardrobe.selectCharacter(switch (card) {
                   'greetMun' => Character.mun,
                   'greetTuntun' => Character.tuntun,
+                  'greetSaisai' => Character.saisai,
+                  'greetWongwong' => Character.wongwong,
                   _ => Character.nuan,
                 });
               case 'garden':
@@ -160,16 +170,17 @@ void main() {
               case 'pickerDay0' || 'pickerDay5':
                 expect(app.wardrobe.friendChoicePending, card == 'pickerDay5');
                 openFriends(ctx, app);
-              case 'picker' || 'pickerDay100':
+              case 'picker' || 'pickerDay100' || 'pickerDay160' || 'pickerDay210':
                 app.wardrobe.chooseFirstFriend(Character.lumi);
                 openFriends(ctx, app);
               default:
                 // the friend cards (1.7.0): day 3, day 10, both at once;
-                // 1.8.0: day 30/60/100, one friend or three at once
+                // 1.8.0: day 30/60/100, one friend or several at once (all
+                // five later friends: rows of three); 1.9.0: Saisai and Wongwong
                 final kind = switch (card) {
                   'friend3' => FriendCard.day3,
                   'friend10' => FriendCard.day10,
-                  'friendLater1' || 'friendLater3' => FriendCard.later,
+                  'friendLater1' || 'friendLater2' || 'friendLater3' => FriendCard.later,
                   _ => FriendCard.both,
                 };
                 showDialog<Character>(
@@ -177,7 +188,11 @@ void main() {
                   builder: (_) => FriendCardDialog(
                     card: kind,
                     chosen: Character.miu,
-                    later: card == 'friendLater1' ? const [Character.tuntun] : laterFriends,
+                    later: switch (card) {
+                      'friendLater1' => const [Character.tuntun],
+                      'friendLater2' => const [Character.saisai, Character.wongwong],
+                      _ => laterFriends,
+                    },
                   ),
                 );
             }

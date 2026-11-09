@@ -93,7 +93,7 @@ class FriendsSheet extends StatelessWidget {
         // the chosen one first, then the other one
         for (final c in [w.day3Choice ?? Character.miu, (w.day3Choice ?? Character.miu).other]) friendRow(c),
       ],
-      // 30 / 60 / 100 days: the friend itself once its day has come; before
+      // 30 / 60 / 100 / 150 / 200 days: the friend itself once its day has come; before
       // that a dark silhouette of its own shape (keeps the surprise)
       for (final c in laterFriends)
         if (unlocked.contains(c))

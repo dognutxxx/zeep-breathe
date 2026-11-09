@@ -96,7 +96,8 @@ class WardrobeController extends ChangeNotifier {
   Character? _day3Choice;
   bool _day3CardShown = false, _day10CardSeen = false;
 
-  /// Day-30/60/100 friends whose "here" card was shown (1.8.0).
+  /// Later friends (30 to 200 days) whose "here" card was shown (1.8.0;
+  /// Saisai and Wongwong since 1.9.0).
   final Set<Character> _laterCardsSeen = {};
 
   int get steps => _steps;
@@ -168,7 +169,7 @@ class WardrobeController extends ChangeNotifier {
     laterSeen: _laterCardsSeen,
   );
 
-  /// The day-30/60/100 friends for the [FriendCard.later] card, in order.
+  /// The later friends (30 to 200 days) for the [FriendCard.later] card, in order.
   List<Character> get dueLaterFriends => friends.dueLaterFriends(practiceDays, _laterCardsSeen);
 
   /// Switch to [c] (free, at once). Ignored if [c] is not unlocked.
@@ -365,7 +366,8 @@ class WardrobeController extends ChangeNotifier {
     if (_day3Choice != null) 'day3Choice': _day3Choice!.name,
     'day3CardShown': _day3CardShown,
     'day10CardSeen': _day10CardSeen,
-    // 1.8.0: the day-30/60/100 cards shown; a 1.7.x save has none
+    // 1.8.0: the later friends' cards shown (1.9.0 adds saisai and
+    // wongwong); a 1.7.x save has none
     'laterCardsSeen': [
       for (final c in laterFriends)
         if (_laterCardsSeen.contains(c)) c.name,

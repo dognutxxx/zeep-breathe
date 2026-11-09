@@ -1,10 +1,12 @@
-// Friend painters (Miu and Lumi 1.7.0; Mun, Tuntun and Nuan 1.8.0): they stay
+// Friend painters (Miu and Lumi 1.7.0; Mun, Tuntun and Nuan 1.8.0; Saisai and
+// Wongwong 1.9.0): they stay
 // inside their box at every lung level with every flower, breathe the way the
 // doc says, wear the flower at their anchor, and the Breathe tab / session
 // still draw Zeep with ZeepPainter.
 
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -22,13 +24,15 @@ import 'package:zeep_breathe/ui/friends/lumi_painter.dart';
 import 'package:zeep_breathe/ui/friends/miu_painter.dart';
 import 'package:zeep_breathe/ui/friends/mun_painter.dart';
 import 'package:zeep_breathe/ui/friends/nuan_painter.dart';
+import 'package:zeep_breathe/ui/friends/saisai_painter.dart';
 import 'package:zeep_breathe/ui/friends/tuntun_painter.dart';
+import 'package:zeep_breathe/ui/friends/wongwong_painter.dart';
 import 'package:zeep_breathe/ui/zeep_character.dart';
 import 'package:zeep_breathe/wardrobe/flowers.dart';
 
 const _margin = 30;
 
-const _all = [Character.miu, Character.lumi, Character.mun, Character.tuntun, Character.nuan];
+const _all = [Character.miu, Character.lumi, ...laterFriends];
 
 /// Paints into a [size] box with a margin around it; returns the RGBA bytes
 /// of the whole picture (box at [_margin], [_margin]).
@@ -262,6 +266,8 @@ void main() {
       (Character.mun, munAnchorAt),
       (Character.tuntun, tuntunAnchorAt),
       (Character.nuan, nuanAnchorAt),
+      (Character.saisai, saisaiAnchorAt),
+      (Character.wongwong, wongwongAnchorAt),
     ]) {
       for (final lv in const [0.0, 1.0]) {
         final bare = await render(FriendPainter(character: c, lv: lv), size);
@@ -290,6 +296,11 @@ void main() {
     expect(tuntunAnchorAt(1), const Offset(100, 43));
     expect(nuanAnchorAt(0), const Offset(64, 76));
     expect(nuanAnchorAt(1), const Offset(64, 72));
+    // 1.9.0: the left top of Saisai's bell (floats 8) and of Wongwong (floats 5)
+    expect(saisaiAnchorAt(0), const Offset(86, 60));
+    expect(saisaiAnchorAt(1), const Offset(86, 52));
+    expect(wongwongAnchorAt(0), const Offset(76, 64));
+    expect(wongwongAnchorAt(1), const Offset(76, 59));
   });
 
   int alphaAt((ByteData, int, int) r, Offset p) =>
@@ -400,10 +411,159 @@ void main() {
       final (r, g, bl) = rgbAt(shadow, toBox(const Offset(100, 100), size));
       expect(r + g + bl, lessThan(3 * 100), reason: c.name);
     }
-    // the three shapes differ
+    // the shapes differ
     final m = await render(const FriendSilhouettePainter(Character.mun, fit: FriendFit.box), size);
     final n = await render(const FriendSilhouettePainter(Character.nuan, fit: FriendFit.box), size);
     expect(diffBounds(m, n), isNotNull);
+  });
+
+  test('Saisai: the bell swells and rises, the tentacles shorten, the centre brightens (1.9.0 #1)', () async {
+    const size = Size(224, 224); // 1 px per SVG unit
+    final rest = await render(FriendPainter(character: Character.saisai, lv: 0), size);
+    final full = await render(FriendPainter(character: Character.saisai, lv: 1), size);
+    final a = inkBounds(rest.$1, rest.$2, rest.$3, minAlpha: 200)!;
+    final b = inkBounds(full.$1, full.$2, full.$3, minAlpha: 200)!;
+    // the bell top: up 8 (float) and 3.8 more (it swells by 0.1 from y 106)
+    expect(a.top - b.top, closeTo(8 + 0.1 * (106 - 68), 1.5));
+    // the bell is wider (x 1.06)
+    expect(b.width, greaterThan(a.width + 4));
+    // the tentacle tips: 74 x 1.06 below y 104 at rest, 74 x 0.90 (and 8 up) at a full breath
+    expect(a.bottom - b.bottom, closeTo(74 * 0.16 + 8, 2.5));
+    expect(saisaiTentacleScale(0), closeTo(1.06, 1e-9));
+    expect(saisaiTentacleScale(1), closeTo(0.90, 1e-9));
+    // the light in the middle of the bell: warmer (less blue) at a full breath
+    int blueAt((ByteData, int, int) r, Offset p) => rgbAt(r, toBox(p, size)).$3;
+    expect(blueAt(full, const Offset(100, 74)), lessThan(blueAt(rest, const Offset(100, 82)) - 8));
+    // the self-glow: much wider than the body at a full breath
+    final ha = inkBounds(rest.$1, rest.$2, rest.$3, minAlpha: 2)!;
+    final hb = inkBounds(full.$1, full.$2, full.$3, minAlpha: 2)!;
+    expect(hb.width, greaterThan(ha.width + 25));
+    expect(hb.width, greaterThan(b.width + 40));
+  });
+
+  test('Saisai on hold: the tentacle tips glow and three sparkles show (1.9.0 #1)', () async {
+    const size = Size(224, 224);
+    final full = await render(FriendPainter(character: Character.saisai, lv: 1), size);
+    final held = await render(FriendPainter(character: Character.saisai, lv: 1, hold: 1), size);
+    final d = diffBounds(full, held)!;
+    // sparkles left (x 29) and right (x 173) of the bell; the tips below it
+    expect(d.left, lessThan(toBox(const Offset(32, 0), size).dx));
+    expect(d.right, greaterThan(toBox(const Offset(170, 0), size).dx));
+    expect(d.bottom, greaterThan(toBox(const Offset(0, 150), size).dy));
+    // a tip (x 88, y 104 + 74 x 0.90 - 8) is brighter
+    final tip = toBox(Offset(88, 104 + 74 * saisaiTentacleScale(1) - 8), size);
+    expect(alphaAt(held, tip), greaterThan(alphaAt(full, tip)));
+    // the sparkle at (36, 67) only on hold (without it, only the faint halo)
+    expect(alphaAt(full, toBox(const Offset(36, 67), size)), lessThan(60));
+    expect(alphaAt(held, toBox(const Offset(36, 67), size)), greaterThan(200));
+  });
+
+  test(
+    'Wongwong: swells, the ring opens, the moon rises; the moon glows and sparkles show on hold (1.9.0 #1)',
+    () async {
+      const size = Size(224, 224);
+      final rest = await render(FriendPainter(character: Character.wongwong, lv: 0), size);
+      final full = await render(FriendPainter(character: Character.wongwong, lv: 1), size);
+      final a = inkBounds(rest.$1, rest.$2, rest.$3, minAlpha: 200)!;
+      final b = inkBounds(full.$1, full.$2, full.$3, minAlpha: 200)!;
+      // the planet top: up 5 (float) and 3.5 (x 1.07 of radius 50)
+      expect(a.top - b.top, closeTo(5 + 0.07 * 50, 1.5));
+      expect(wongwongRingOpen(0), closeTo(0.2, 1e-9));
+      expect(wongwongRingOpen(1), closeTo(0.36, 1e-9));
+      // the ring opens: below the planet's bottom-right, the front of the ring
+      // is lower at a full breath. On the ring's axis 70 units right of the
+      // centre (tilted -14 degrees), the white ring is at 74 x open below it
+      Offset onRing(double lv, double along, double out) {
+        final c = wongwongCentre.translate(0, -wongwongFloat * lv);
+        final cs = math.cos(wongwongTilt), sn = math.sin(wongwongTilt);
+        return c + Offset(along * cs - out * sn, along * sn + out * cs);
+      }
+
+      double ringY(double lv) {
+        final o = wongwongRingOpen(lv);
+        // the lowest point of the inner ring ellipse near x = 30 along the axis
+        return 74 * o * math.sqrt(1 - (30 / 74) * (30 / 74));
+      }
+
+      for (final lv in const [0.0, 1.0]) {
+        final r = lv == 0 ? rest : full;
+        final p = toBox(onRing(lv, 30, ringY(lv)), size);
+        final (red, green, blue) = rgbAt(r, p);
+        // white (the front ring passes over the body)
+        expect(red + green + blue, greaterThan(3 * 225), reason: 'lv $lv at $p');
+      }
+      // where the open ring is, the flat one is not
+      final openSpot = toBox(onRing(1, 30, ringY(1)), size);
+      final (r0, g0, b0) = rgbAt(rest, openSpot);
+      expect(r0 + g0 + b0, lessThan(3 * 225));
+      // the moon rises 14 (and 5 with the body) and moves 10 right
+      expect(wongwongMoonAt(1) - wongwongMoonAt(0), const Offset(10, -14));
+      expect(alphaAt(rest, toBox(const Offset(30, 132), size)), 255);
+      expect(alphaAt(full, toBox(const Offset(40, 113), size)), 255);
+      expect(alphaAt(full, toBox(const Offset(24, 140), size)), lessThan(150));
+      // hold: the moon's glow and the sparkles (left x 34, right x 177, low y 172)
+      final held = await render(FriendPainter(character: Character.wongwong, lv: 1, hold: 1), size);
+      final d = diffBounds(full, held)!;
+      expect(d.left, lessThan(toBox(const Offset(36, 0), size).dx));
+      expect(d.right, greaterThan(toBox(const Offset(174, 0), size).dx));
+      expect(d.bottom, greaterThan(toBox(const Offset(0, 168), size).dy));
+      final glow = toBox(const Offset(40 - 12, 113), size); // inside the moon's glow, outside the moon
+      expect(alphaAt(held, glow), greaterThan(alphaAt(full, glow)));
+    },
+  );
+
+  test("Wongwong's ring: the back half behind the body, the front half over it, even strokes (1.9.0 #1)", () async {
+    const size = Size(224, 224);
+    final r = await render(FriendPainter(character: Character.wongwong, lv: 0.5), size);
+    final open = wongwongRingOpen(0.5);
+    final c = wongwongCentre.translate(0, -wongwongFloat * 0.5);
+    Offset at(double along, double out) {
+      final cs = math.cos(wongwongTilt), sn = math.sin(wongwongTilt);
+      return c + Offset(along * cs - out * sn, along * sn + out * cs);
+    }
+
+    // the inner ring's top and bottom 40 units right of the middle, above and
+    // below the axis. The top is behind the body (lilac planet, no white
+    // ring); the bottom passes over it (white)
+    final y40 = 74 * open * math.sqrt(1 - (40 / 74) * (40 / 74));
+    final top = rgbAt(r, toBox(at(40, -y40), size));
+    final bottom = rgbAt(r, toBox(at(40, y40), size));
+    expect(bottom.$1 + bottom.$2 + bottom.$3, greaterThan(3 * 235));
+    expect(top.$1 + top.$2 + top.$3, lessThan(bottom.$1 + bottom.$2 + bottom.$3 - 20));
+    // outside the body, the back half shows (the ring's tips)
+    final tip = rgbAt(r, toBox(at(-74, 0), size));
+    expect(tip.$1 + tip.$2 + tip.$3, greaterThan(3 * 220));
+    // the stroke keeps its 7 units where the ring is flattest (a scaled
+    // circle would be 7 x open = 2 units there): the white run across the
+    // bottom of the ring
+    int run(Offset from, Offset dir) {
+      var n = 0;
+      for (var i = -8; i <= 8; i++) {
+        final (red, green, blue) = rgbAt(r, toBox(from + dir * i.toDouble(), size));
+        if (red > 240 && green > 238 && blue > 232 && (red - blue).abs() < 12) n++;
+      }
+      return n;
+    }
+
+    final cs = math.cos(wongwongTilt), sn = math.sin(wongwongTilt);
+    final across = run(at(0, 74 * open), Offset(-sn, cs));
+    expect(across, inInclusiveRange(6, 8));
+  });
+
+  test('Saisai and Wongwong: Reduce Motion is the lv 0.6 pose; a silhouette has no glow (1.9.0 #1, #4)', () async {
+    const size = Size(224, 224);
+    for (final c in const [Character.saisai, Character.wongwong]) {
+      final still = await render(FriendPainter(character: c, lv: reducedLv), size);
+      final b = inkBounds(still.$1, still.$2, still.$3)!;
+      expect(b.left >= 0 && b.top >= 0 && b.right <= size.width && b.bottom <= size.height, isTrue);
+      // the silhouette: the body's shape, without the wide halo
+      final shadow = await render(FriendSilhouettePainter(c, fit: FriendFit.box), size);
+      final sb = inkBounds(shadow.$1, shadow.$2, shadow.$3, minAlpha: 2)!;
+      final body = await render(FriendPainter(character: c, lv: 0.55), size);
+      final halo = inkBounds(body.$1, body.$2, body.$3, minAlpha: 2)!;
+      expect(sb.top, greaterThan(halo.top + 10), reason: c.name);
+      expect(reducedLv, 0.6);
+    }
   });
 
   test('the demo breath on cards: inhale 0 -> 1, hold at 1, exhale 1 -> 0', () {
