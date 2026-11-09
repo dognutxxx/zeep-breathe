@@ -2,6 +2,8 @@
 // balance), so a wide font or large text never leaves one word alone on the
 // last line. Used for the short centred texts on cards and dialogs.
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 class BalancedText extends StatelessWidget {
@@ -64,7 +66,8 @@ double balancedWidth(
   if (lines <= 1) {
     final one = tp.width;
     tp.dispose();
-    return hug ? one : maxWidth;
+    // the same hair of slack as below, so the line never wraps
+    return hug ? math.min(one + 1, maxWidth) : maxWidth;
   }
   var lo = maxWidth / lines * 0.5, hi = maxWidth;
   for (var i = 0; i < 14 && hi - lo > 0.5; i++) {

@@ -7,6 +7,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -147,6 +148,8 @@ void main() {
             if (card == 'pickerDay0') {
               // the grey row shows the wait, not "choose" (QA #3)
               expect(find.text(l.firstFriendWhen(3, 3)), findsOneWidget);
+              // balanced, so the loop below checks it for a lone word (QA r2 #1)
+              expect(find.widgetWithText(BalancedText, l.firstFriendWhen(3, 3)), findsOneWidget);
               expect(find.text(l.chooseNewFriend), findsNothing);
             }
 
@@ -160,6 +163,27 @@ void main() {
                 if (lines.length < 2) continue;
                 final widest = lines.reduce((a, b) => a > b ? a : b);
                 expect(lines.last, greaterThan(widest * 0.4), reason: '"${bt.text}" lines $lines');
+              }
+            }
+            // short badges that fit stay on one line (the hug width is never
+            // a hair too narrow, Pim r2 #1)
+            for (final short in [l.inUse, l.tapToSwitch]) {
+              for (final e in find.widgetWithText(BalancedText, short).evaluate()) {
+                final text = find.descendant(of: find.byWidget(e.widget), matching: find.byType(Text));
+                final para = t.renderObject<RenderParagraph>(text);
+                // room the badge has: the row's text column less its padding
+                final room = t.getSize(find.ancestor(of: text, matching: find.byType(Column)).first).width - 18;
+                final style = DefaultTextStyle.of(t.element(text)).style.merge((e.widget as BalancedText).style);
+                if (lineWidths(short, style, room, TextScaler.linear(scale)).first.length > 1) continue;
+                expect(
+                  para
+                      .getBoxesForSelection(TextSelection(baseOffset: 0, extentOffset: short.length))
+                      .map((b) => b.top)
+                      .toSet()
+                      .length,
+                  1,
+                  reason: '"$short" wraps',
+                );
               }
             }
             await t.pumpWidget(const SizedBox());

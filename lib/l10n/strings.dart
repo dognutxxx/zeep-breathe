@@ -387,8 +387,8 @@ class S {
       ? _('One more session and it blooms', 'ฝึกอีก 1 ครั้ง ดอกจะบาน')
       : _('$n more sessions to bloom', 'ฝึกอีก $n ครั้ง ดอกจะบาน');
   String get gardenHint => _(
-    'Each finished session grows a leaf (up to 3 a day). Tap a flower for Zeep to wear.',
-    'ฝึกจนจบ 1 ครั้ง ใบงอก 1 ใบ (วันละไม่เกิน 3) แตะดอกที่บานแล้วเพื่อให้ Zeep ใส่',
+    'Each finished session grows a leaf (up to 3 a day). Tap a flower for your friend to wear.',
+    'ฝึกจนจบ 1 ครั้ง ใบงอก 1 ใบ (วันละไม่เกิน 3) แตะดอกที่บานแล้วเพื่อให้ตัวละครใส่',
   );
   String levelN(int n) => _('Level $n', 'เลเวล $n');
   String bloomCount(int n) => '×$n';

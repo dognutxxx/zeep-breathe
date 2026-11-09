@@ -275,8 +275,12 @@ class _Row extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
+                      // balanced: "มาหาเมื่อฝึกครบ 3 วัน · อีก 2 วัน" never leaves a
+                      // lone word on a small screen or with large text (QA r2 #1)
+                      BalancedText(
                         subtitle,
+                        textAlign: TextAlign.start,
+                        hug: true,
                         style: TextStyle(fontSize: 13, color: dim ? ZeepColors.textFaint : ZeepColors.textSoft),
                       ),
                       if (st != null) ...[
