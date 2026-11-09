@@ -61,6 +61,20 @@ void main() {
     if (hasFont) await loadFonts();
   });
 
+  test('a hugging balanced text (picker badge) is as wide as its one line', () {
+    const style = TextStyle(fontSize: 12.5);
+    const scaler = TextScaler.noScaling;
+    final one = balancedWidth('In use', style, 300, scaler, TextDirection.ltr, hug: true);
+    expect(one, lessThan(100));
+    expect(balancedWidth('In use', style, 300, scaler, TextDirection.ltr), 300);
+    // two lines: the same balanced width with or without hug
+    const long = 'A new friend is here, come and say hello to them!';
+    expect(
+      balancedWidth(long, style, 150, scaler, TextDirection.ltr, hug: true),
+      balancedWidth(long, style, 150, scaler, TextDirection.ltr),
+    );
+  });
+
   for (final (lang, _, locale) in [('en', S.en, const Locale('en', 'US')), ('th', S.thai, const Locale('th', 'TH'))]) {
     for (final size in const [Size(393, 852), Size(375, 667), Size(320, 568)]) {
       for (final scale in const [1.0, 1.3, 2.0]) {
@@ -125,6 +139,16 @@ void main() {
               await t.pump(const Duration(milliseconds: 20));
             }
             expect(t.takeException(), isNull, reason: 'overflow');
+            final l = lang == 'th' ? S.thai : S.en;
+            if (card == 'pickerDay5') {
+              // the badge "มีเพื่อนใหม่มาหาแล้ว!" is balanced, checked below (QA #2)
+              expect(find.widgetWithText(BalancedText, l.newFriendTitle), findsOneWidget);
+            }
+            if (card == 'pickerDay0') {
+              // the grey row shows the wait, not "choose" (QA #3)
+              expect(find.text(l.firstFriendWhen(3, 3)), findsOneWidget);
+              expect(find.text(l.chooseNewFriend), findsNothing);
+            }
 
             // every balanced text: no paragraph ends with a lone short line
             for (final e in find.byType(BalancedText).evaluate()) {

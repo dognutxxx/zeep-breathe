@@ -8,7 +8,11 @@ class BalancedText extends StatelessWidget {
   final String text;
   final TextStyle? style;
   final TextAlign textAlign;
-  const BalancedText(this.text, {super.key, this.style, this.textAlign = TextAlign.center});
+
+  /// Shrink to the text on one line too (a badge), instead of taking the
+  /// full width.
+  final bool hug;
+  const BalancedText(this.text, {super.key, this.style, this.textAlign = TextAlign.center, this.hug = false});
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +24,7 @@ class BalancedText extends StatelessWidget {
           box.maxWidth,
           MediaQuery.textScalerOf(context),
           Directionality.of(context),
+          hug: hug,
         );
         return Align(
           widthFactor: 1,
@@ -34,8 +39,16 @@ class BalancedText extends StatelessWidget {
 }
 
 /// The narrowest width (up to [maxWidth]) that keeps the same number of lines
-/// as at [maxWidth]: the lines then share the words evenly.
-double balancedWidth(String text, TextStyle style, double maxWidth, TextScaler scaler, TextDirection dir) {
+/// as at [maxWidth]: the lines then share the words evenly. With [hug], one
+/// line is as wide as its text rather than [maxWidth].
+double balancedWidth(
+  String text,
+  TextStyle style,
+  double maxWidth,
+  TextScaler scaler,
+  TextDirection dir, {
+  bool hug = false,
+}) {
   if (!maxWidth.isFinite || maxWidth <= 0) return maxWidth;
   final tp = TextPainter(
     text: TextSpan(text: text, style: style),
@@ -49,8 +62,9 @@ double balancedWidth(String text, TextStyle style, double maxWidth, TextScaler s
 
   final lines = linesAt(maxWidth);
   if (lines <= 1) {
+    final one = tp.width;
     tp.dispose();
-    return maxWidth;
+    return hug ? one : maxWidth;
   }
   var lo = maxWidth / lines * 0.5, hi = maxWidth;
   for (var i = 0; i < 14 && hi - lo > 0.5; i++) {
