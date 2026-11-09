@@ -314,9 +314,13 @@ class _ExerciseChip extends StatelessWidget {
               children: [
                 const Icon(Icons.air_rounded, size: 16, color: fg),
                 const SizedBox(width: 6),
-                Text(
-                  '$name · $pattern',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: fg),
+                // wraps instead of overflowing on narrow screens or large text
+                Flexible(
+                  child: Text(
+                    '$name · $pattern',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: fg),
+                  ),
                 ),
                 const SizedBox(width: 2),
                 const Icon(Icons.chevron_right_rounded, size: 18, color: fg),
@@ -353,9 +357,12 @@ class _TrackChip extends StatelessWidget {
           children: [
             const Icon(Icons.music_note_rounded, size: 16, color: fg),
             const SizedBox(width: 6),
-            Text(
-              l.tracks[s.track],
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: fg),
+            Flexible(
+              child: Text(
+                l.tracks[s.track],
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: fg),
+              ),
             ),
             const SizedBox(width: 4),
             const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: fg),
