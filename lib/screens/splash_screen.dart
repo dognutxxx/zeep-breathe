@@ -1,20 +1,19 @@
-// Launch splash (1.9.0): "Zeep breathes under the night sky" (design A,
-// `specs/splash-dark-1.9.0.md`, deck https://claude.ai/artifact/YZvhgx4DFhADag26PcU5cz).
+// Launch splash (1.9.1): only the zeep wordmark, centred (`specs/splash-logo-1.9.1.md`).
 //
 // Always dark, whatever the system light/dark mode. The first frame matches
-// the native launch screen: the Soft Paper zeep logo (180 x 58) centred on the
-// whole window, on Midnight. Then one breath, about 3.9 s in real time:
-//   0-400 ms     faint Lavender stars fade in
-//   400-1600     inhale: Zeep fades in and rises (0.96 -> 1.04), a Rest Violet
-//                glow grows behind him (0.8 -> 1.0, 60 % at most), the logo
-//                slides down below him
-//   1600-2400    hold: the glow at its brightest. Not loaded yet: stay here and
-//                breathe slowly, 4 s a cycle, until the app is ready
-//   2400-3400    exhale: the glow dims, Zeep 1.04 -> 0.98
-//   3400-3900    fade out into the Breathe tab
-// Zeep is drawn by `drawZeep`, unchanged. Tap to skip once loaded (300 ms
-// fade). No sound, no haptics. Reduce Motion: nothing moves; fade in 300 ms,
-// hold, fade out 300 ms.
+// the native launch screen: the Soft Paper zeep wordmark (180 x 58) at the
+// exact centre of the whole window, on Midnight. Then one gentle breath, about
+// 2.9 s in real time:
+//   0-200 ms     static, as the native launch screen
+//   200-1200     inhale: the wordmark 1.00 -> 1.06 (easeInOutSine), a Rest
+//                Violet glow behind it grows to 45 %
+//   1200-1600    hold at the peak. Not loaded yet: stay here and breathe
+//                slowly, 4 s a cycle, until the app is ready
+//   1600-2400    exhale: back to 1.00, the glow fades (easeInOutCubic)
+//   2400-2900    fade out into the Breathe tab (easeOutCubic)
+// No character, no stars. Tap to skip once loaded (300 ms fade). No sound, no
+// haptics. Reduce Motion: no scale and no glow; the still wordmark for 0.9 s
+// (300 ms in and the hold), then a 300 ms fade out.
 
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -24,13 +23,12 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../ui/brand_colors.dart';
-import '../ui/zeep_character.dart';
 
 /// Launch background, the same colour as the native launch screens
 /// (android res/values/colors.xml, iOS LaunchScreen.storyboard).
 const splashBackground = BrandColors.background;
 
-/// The logo's size on screen; the native launch images are made at this size.
+/// The wordmark's size on screen; the native launch images are made at this size.
 const splashLogoSize = Size(180, 58);
 
 /// Light status / navigation bar icons on the dark splash. `main()` sets it
@@ -43,15 +41,15 @@ const splashBarsStyle = SystemUiOverlayStyle(
   systemNavigationBarIconBrightness: Brightness.light,
 );
 
-/// Where Zeep and the glow sit, as a fraction of the screen height.
-const splashZeepY = 0.42;
+/// The wordmark's size at the inhale peak.
+const splashPeakScale = 1.06;
 
-/// How far the logo slides down on a 393 x 852 phone (scaled to the screen).
-const splashLogoDrop = 120.0;
+/// The glow's opacity at the inhale peak.
+const splashPeakGlow = 0.45;
 
-/// Decodes the logo before the first frame, so the splash's first frame shows
-/// it (an asset image would appear a frame or two late: a flicker right after
-/// the native launch screen). Null if it can't be loaded. The asset is the
+/// Decodes the wordmark before the first frame, so the splash's first frame
+/// shows it (an asset image would appear a frame or two late: a flicker right
+/// after the native launch screen). Null if it can't be loaded. The asset is the
 /// blue brand logo; the splash tints it Soft Paper.
 Future<ui.Image?> loadSplashLogo() async {
   try {
@@ -105,16 +103,17 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   // timeline in real ms (at speed 1)
-  static const _inhaleStart = 400.0, _holdStart = 1600.0, _holdEnd = 2400.0;
-  static const _fadeStart = 3400.0, _end = 3900.0;
+  static const _inhaleStart = 200.0, _holdStart = 1200.0, _holdEnd = 1600.0;
+  static const _fadeStart = 2400.0, _end = 2900.0;
   static const _skipFade = 300.0; // real ms
-  // Reduce Motion: fade in, hold, fade out
-  static const _rmIn = 300.0, _rmHoldEnd = 900.0, _rmEnd = 1200.0;
+  // Reduce Motion: the first 300 ms (the "fade in") and the hold are the
+  // still wordmark, which is already on screen (no flash after the native
+  // launch screen); then a 300 ms fade out
+  static const _rmHoldEnd = 900.0, _rmEnd = 1200.0;
 
   late final Ticker _ticker;
   Duration _last = Duration.zero;
   double _t = 0; // timeline ms
-  double _clock = 0; // real seconds since the splash appeared (Zeep's float)
   double _waited = 0; // real ms spent breathing at the hold
   bool _ready = false, _revealed = false, _done = false, _skip = false;
   double _skipT = 0; // real ms into the skip fade
@@ -143,7 +142,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final dt = (elapsed - _last).inMicroseconds / 1000.0;
     _last = elapsed;
     if (_done) return;
-    _clock += dt / 1000;
     if (_skip) {
       _skipT += dt;
       if (_skipT >= _skipFade) _finish();
@@ -205,57 +203,18 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     return o;
   }
 
-  /// Zeep's pose along the breath (the same shapes the Breathe tab uses).
-  Pose _pose(double t, double w) {
-    final kIn = _seg(t, _inhaleStart, _holdStart, Curves.easeInOutSine);
-    Pose inhale(double level) => Pose(
-      breath: level,
-      armLift: level,
-      cheekPuff: 0.15 + 0.3 * level,
-      eyeSqueeze: 0.25 * level,
-      mouthOpen: 0,
-      hold: 0,
-      tint: tintInhale,
-    );
-    if (t < _holdStart) return inhale(kIn);
-    // waiting for the app: the hold breathes out a little and back, 4 s a cycle
-    final hold = Pose(
-      breath: 1 - 0.3 * w,
-      armLift: 1 - 0.3 * w,
-      cheekPuff: 0.7 - 0.3 * w,
-      eyeSqueeze: 0.45,
-      mouthOpen: 0,
-      hold: 1 - 0.4 * w,
-      tint: tintHold,
-    );
-    if (t <= _holdEnd) return Pose.lerp(inhale(1), hold, _seg(t, _holdStart, _holdStart + 350, Curves.easeInOutSine));
-    final pt = ((t - _holdEnd) / (_fadeStart - _holdEnd)).clamp(0.0, 1.0);
-    final level = 1 - Curves.easeInOutCubic.transform(pt);
-    final exhale = Pose(
-      breath: level,
-      armLift: level,
-      cheekPuff: 0.1 * level,
-      eyeSqueeze: 0,
-      mouthOpen: (math.pow(math.sin(pt * math.pi), 0.5) * (1 - pt * 0.35)).toDouble(),
-      hold: 0,
-      tint: tintExhale,
-    );
-    return Pose.lerp(hold, exhale, _seg(t, _holdEnd, _holdEnd + 350, Curves.easeInOutSine));
+  /// How far into the breath (0 = rest, 1 = inhale peak) at timeline [t];
+  /// [w] is the slow waiting breath at the hold.
+  static double _level(double t, double w) {
+    if (t <= _holdEnd) return _seg(t, _inhaleStart, _holdStart, Curves.easeInOutSine) * (1 - 0.5 * w);
+    return 1 - _seg(t, _holdEnd, _fadeStart, Curves.easeInOutCubic);
   }
-
-  static const _restPose = Pose(
-    breath: 0.3,
-    armLift: 0.15,
-    cheekPuff: 0.12,
-    eyeSqueeze: 0,
-    mouthOpen: 0,
-    hold: 0,
-    tint: tintInhale,
-  );
 
   @override
   Widget build(BuildContext context) {
-    final t = _t, w = _wobble, reduce = _reduce;
+    // Reduce Motion: nothing moves and no glow; only the fades
+    final level = _reduce ? 0.0 : _level(_t, _wobble);
+    final scale = _lerp(1, splashPeakScale, level);
     return AnnotatedRegion<SystemUiOverlayStyle>(
       // light status / navigation icons on the dark splash
       value: splashBarsStyle,
@@ -270,73 +229,37 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             child: LayoutBuilder(
               builder: (context, box) {
                 final size = Size(box.maxWidth, box.maxHeight);
-                final k = splashScale(size);
-                final cx = size.width / 2, cy = size.height / 2;
-                final SplashPainter painter;
-                double logoDy, logoOpacity = 1, lowLogoOpacity = 0;
-                if (reduce) {
-                  // nothing moves: the centred logo hands over to the lower one
-                  final f = _seg(t, 0, _rmIn, Curves.easeOut);
-                  painter = SplashPainter(
-                    stars: f,
-                    glowOpacity: 0.6 * f,
-                    glowScale: 1,
-                    zeepOpacity: f,
-                    zeepScale: 1,
-                    zeepRise: 0,
-                    pose: _restPose,
-                    time: 0,
-                    reduceMotion: true,
-                  );
-                  logoDy = 0;
-                  logoOpacity = 1 - f;
-                  lowLogoOpacity = f;
-                } else {
-                  final kIn = _seg(t, _inhaleStart, _holdStart, Curves.easeInOutSine);
-                  final kEx = _seg(t, _holdEnd, _fadeStart, Curves.easeInOutCubic);
-                  final scale = t <= _holdEnd ? _lerp(0.96, 1.04, kIn) - 0.03 * w : _lerp(1.04, 0.98, kEx);
-                  painter = SplashPainter(
-                    stars: _seg(t, 0, _inhaleStart, Curves.easeInOutSine),
-                    glowOpacity: 0.6 * kIn * (1 - 0.7 * kEx) * (1 - 0.3 * w),
-                    glowScale: _lerp(0.8, 1, kIn),
-                    zeepOpacity: _seg(t, _inhaleStart, _inhaleStart + 600, Curves.easeOut),
-                    zeepScale: scale,
-                    zeepRise: 1 - kIn,
-                    pose: _pose(t, w),
-                    time: _clock,
-                  );
-                  logoDy = splashLogoDrop * k * kIn;
-                }
-                Widget logo(double dy, double opacity) => Positioned(
-                  left: cx - splashLogoSize.width / 2,
-                  top: cy + dy - splashLogoSize.height / 2,
-                  width: splashLogoSize.width,
-                  height: splashLogoSize.height,
-                  child: widget.logo != null
-                      ? RawImage(
-                          image: widget.logo,
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.medium,
-                          color: BrandColors.onDark,
-                          colorBlendMode: BlendMode.srcIn,
-                          opacity: AlwaysStoppedAnimation(opacity),
-                        )
-                      : Image.asset(
-                          'assets/splash/logo.png',
-                          fit: BoxFit.contain,
-                          gaplessPlayback: true,
-                          color: BrandColors.onDark,
-                          colorBlendMode: BlendMode.srcIn,
-                          opacity: AlwaysStoppedAnimation(opacity),
-                        ),
-                );
                 return Stack(
                   clipBehavior: Clip.hardEdge,
                   children: [
-                    Positioned.fill(child: CustomPaint(painter: painter)),
-                    // the logo: same size and place as the native launch screen
-                    if (logoOpacity > 0) logo(logoDy, logoOpacity),
-                    if (lowLogoOpacity > 0) logo(splashLogoDrop * k, lowLogoOpacity),
+                    Positioned.fill(
+                      child: CustomPaint(painter: SplashPainter(glowOpacity: splashPeakGlow * level)),
+                    ),
+                    // the wordmark: same size and place as the native launch screen
+                    Positioned(
+                      left: size.width / 2 - splashLogoSize.width / 2,
+                      top: size.height / 2 - splashLogoSize.height / 2,
+                      width: splashLogoSize.width,
+                      height: splashLogoSize.height,
+                      child: Transform.scale(
+                        scale: scale,
+                        child: widget.logo != null
+                            ? RawImage(
+                                image: widget.logo,
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.medium,
+                                color: BrandColors.onDark,
+                                colorBlendMode: BlendMode.srcIn,
+                              )
+                            : Image.asset(
+                                'assets/splash/logo.png',
+                                fit: BoxFit.contain,
+                                gaplessPlayback: true,
+                                color: BrandColors.onDark,
+                                colorBlendMode: BlendMode.srcIn,
+                              ),
+                      ),
+                    ),
                   ],
                 );
               },
@@ -348,114 +271,33 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 }
 
-/// A faint star: its place as a fraction of the screen, radius and opacity.
-class _Star {
-  final double x, y, r, a;
-  const _Star(this.x, this.y, this.r, this.a);
-}
-
-// kept clear of Zeep, the glow's bright middle and the logo
-const _stars = [
-  _Star(0.12, 0.08, 1.2, 0.45),
-  _Star(0.31, 0.15, 0.9, 0.3),
-  _Star(0.58, 0.06, 1.0, 0.35),
-  _Star(0.86, 0.13, 1.4, 0.4),
-  _Star(0.07, 0.29, 0.9, 0.25),
-  _Star(0.93, 0.33, 1.0, 0.3),
-  _Star(0.18, 0.62, 1.1, 0.3),
-  _Star(0.84, 0.70, 0.9, 0.25),
-  _Star(0.10, 0.80, 1.3, 0.35),
-  _Star(0.62, 0.86, 1.0, 0.3),
-  _Star(0.90, 0.92, 1.2, 0.35),
-  _Star(0.36, 0.94, 0.9, 0.25),
-];
-
-// the two four-point sparkles
-const _sparkles = [_Star(0.78, 0.21, 7, 0.4), _Star(0.20, 0.47, 5, 0.3)];
-
-/// Draws the night sky, the glow and Zeep; public for tests.
+/// Draws the Midnight background and the glow behind the wordmark; public for
+/// tests.
 class SplashPainter extends CustomPainter {
-  /// Stars' fade (0..1).
-  final double stars;
-  final double glowOpacity, glowScale;
-  final double zeepOpacity, zeepScale;
+  /// 0 = no glow; [splashPeakGlow] at the inhale peak.
+  final double glowOpacity;
 
-  /// 1 = Zeep still low (before the inhale), 0 = risen.
-  final double zeepRise;
-  final Pose pose;
-  final double time;
-  final bool reduceMotion;
+  const SplashPainter({required this.glowOpacity});
 
-  const SplashPainter({
-    required this.stars,
-    required this.glowOpacity,
-    required this.glowScale,
-    required this.zeepOpacity,
-    required this.zeepScale,
-    required this.zeepRise,
-    required this.pose,
-    required this.time,
-    this.reduceMotion = false,
-  });
-
-  /// Zeep's resting centre on a screen of [size].
-  static Offset zeepCentre(Size size, double rise) =>
-      Offset(size.width / 2, size.height * splashZeepY + 18 * splashScale(size) * rise);
+  /// The glow's radius on a screen of [size].
+  static double glowRadius(Size size) => 180 * splashScale(size);
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
-    final k = splashScale(size);
     canvas.drawRect(Offset.zero & size, Paint()..color = BrandColors.background);
-    if (stars > 0) {
-      final dot = Paint()..isAntiAlias = true;
-      for (final s in _stars) {
-        dot.color = BrandColors.accent.withValues(alpha: s.a * stars);
-        canvas.drawCircle(Offset(s.x * size.width, s.y * size.height), s.r * k, dot);
-      }
-      for (final s in _sparkles) {
-        dot.color = BrandColors.accent.withValues(alpha: s.a * stars);
-        _sparkle(canvas, Offset(s.x * size.width, s.y * size.height), s.r * k, dot);
-      }
-    }
-    final glowCentre = Offset(size.width / 2, size.height * splashZeepY);
-    if (glowOpacity > 0) {
-      final r = 180 * k * glowScale;
-      final paint = Paint()
-        ..shader = RadialGradient(
-          colors: BrandColors.glow,
-          stops: const [0, 0.35, 0.7, 1],
-        ).createShader(Rect.fromCircle(center: glowCentre, radius: r))
-        ..color = Color.fromRGBO(0, 0, 0, glowOpacity.clamp(0.0, 1.0));
-      canvas.drawCircle(glowCentre, r, paint);
-    }
-    if (zeepOpacity > 0) {
-      final c = zeepCentre(size, zeepRise);
-      final s = k * zeepScale;
-      final fading = zeepOpacity < 1;
-      if (fading) {
-        canvas.saveLayer(
-          Rect.fromCircle(center: c, radius: 160 * s),
-          Paint()..color = Color.fromRGBO(0, 0, 0, zeepOpacity),
-        );
-      }
-      drawZeep(canvas, c, s, pose, time, c.dy + 64 * s, const [], reduceMotion: reduceMotion);
-      if (fading) canvas.restore();
-    }
-  }
-
-  static void _sparkle(Canvas canvas, Offset c, double r, Paint paint) {
-    final n = r * 0.22;
-    final path = Path()
-      ..moveTo(c.dx, c.dy - r)
-      ..quadraticBezierTo(c.dx + n, c.dy - n, c.dx + r, c.dy)
-      ..quadraticBezierTo(c.dx + n, c.dy + n, c.dx, c.dy + r)
-      ..quadraticBezierTo(c.dx - n, c.dy + n, c.dx - r, c.dy)
-      ..quadraticBezierTo(c.dx - n, c.dy - n, c.dx, c.dy - r)
-      ..close();
-    canvas.drawPath(path, paint);
+    if (glowOpacity <= 0) return;
+    final centre = size.center(Offset.zero);
+    final r = glowRadius(size);
+    final paint = Paint()
+      ..shader = RadialGradient(
+        colors: BrandColors.glow,
+        stops: const [0, 0.35, 0.7, 1],
+      ).createShader(Rect.fromCircle(center: centre, radius: r))
+      ..color = Color.fromRGBO(0, 0, 0, glowOpacity.clamp(0.0, 1.0));
+    canvas.drawCircle(centre, r, paint);
   }
 
   @override
-  bool shouldRepaint(SplashPainter old) => true;
+  bool shouldRepaint(SplashPainter old) => old.glowOpacity != glowOpacity;
 }

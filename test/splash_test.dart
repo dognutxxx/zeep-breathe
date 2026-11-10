@@ -1,5 +1,6 @@
-// Launch splash (1.9.0, dark, Zeep only): first frame matches the native launch
-// screen, one real-time breath, waits while loading, tap to skip, Reduce Motion.
+// Launch splash (1.9.1, dark, the zeep wordmark only): first frame matches the
+// native launch screen, one gentle real-time breath, waits while loading, tap to
+// skip, Reduce Motion, no character drawn.
 
 import 'dart:async';
 
@@ -48,11 +49,27 @@ SplashPainter painter(WidgetTester t) =>
     t.widget<CustomPaint>(find.byWidgetPredicate((w) => w is CustomPaint && w.painter is SplashPainter)).painter
         as SplashPainter;
 
-/// The logo's rect(s) on screen.
-List<Rect> logoRects(WidgetTester t) => [
-  for (final e in find.byType(RawImage).evaluate())
-    t.getRect(find.ancestor(of: find.byWidget(e.widget), matching: find.byType(Positioned)).first),
-];
+Finder get wordmark => find.descendant(of: find.byType(SplashScreen), matching: find.byType(RawImage));
+
+/// The wordmark's rect on screen, its breathing scale included.
+Rect wordmarkRect(WidgetTester t) => t.getRect(wordmark);
+
+/// The wordmark's breathing scale.
+double wordmarkScale(WidgetTester t) => wordmarkRect(t).width / splashLogoSize.width;
+
+const centre = Offset(393 / 2, 852 / 2);
+
+void expectCentred(WidgetTester t) {
+  final r = wordmarkRect(t);
+  expect(r.center.dx, closeTo(centre.dx, 0.01));
+  expect(r.center.dy, closeTo(centre.dy, 0.01));
+}
+
+/// Starts the app with the splash, the wordmark decoded first as `main()` does.
+Future<void> launch(WidgetTester t, Future<AppController> boot) async {
+  final logo = await t.runAsync(loadSplashLogo);
+  await t.pumpWidget(ZeepBreatheApp(boot: boot, splashLogo: logo));
+}
 
 Widget reduced(Widget home) => MaterialApp(
   supportedLocales: S.supportedLocales,
@@ -62,8 +79,23 @@ Widget reduced(Widget home) => MaterialApp(
   home: home,
 );
 
+/// Only the background, at most one glow circle and the wordmark image: no
+/// character (drawZeep draws paths, ovals and more circles).
+void expectNoCharacter(WidgetTester t, {required int circles}) {
+  final splash = t.renderObject(find.byType(SplashScreen));
+  expect(splash, paintsExactlyCountTimes(#drawPath, 0));
+  expect(splash, paintsExactlyCountTimes(#drawOval, 0));
+  expect(splash, paintsExactlyCountTimes(#drawRRect, 0));
+  expect(splash, paintsExactlyCountTimes(#drawDRRect, 0));
+  expect(splash, paintsExactlyCountTimes(#drawArc, 0));
+  expect(splash, paintsExactlyCountTimes(#drawLine, 0));
+  expect(splash, paintsExactlyCountTimes(#drawCircle, circles));
+  expect(splash, paintsExactlyCountTimes(#drawRect, 1));
+  expect(splash, paintsExactlyCountTimes(#drawImageRect, 1));
+}
+
 void main() {
-  testWidgets('first frame: the Soft Paper logo 180 x 58 centred on Midnight; no Zeep, glow or stars yet', (t) async {
+  testWidgets('first frame: the Soft Paper wordmark 180 x 58 at the exact centre on Midnight; no glow', (t) async {
     phone(t);
     final boot = Completer<AppController>();
     final image = await t.runAsync(loadSplashLogo);
@@ -76,15 +108,12 @@ void main() {
     final img = t.widget<RawImage>(raw);
     expect(img.color, BrandColors.onDark);
     expect(img.colorBlendMode, BlendMode.srcIn);
-    final r = t.getRect(find.ancestor(of: raw, matching: find.byType(Positioned)).first);
-    expect(r.size, splashLogoSize);
-    expect(r.center, const Offset(393 / 2, 852 / 2));
+    expect(wordmarkRect(t).size, splashLogoSize);
+    expectCentred(t);
     expect(splashBackground, const Color(0xFF14213D));
-    final p = painter(t);
-    expect(p.stars, 0);
-    expect(p.glowOpacity, 0);
-    expect(p.zeepOpacity, 0);
-    // only Zeep: no friend images anywhere
+    expect(painter(t).glowOpacity, 0);
+    expectNoCharacter(t, circles: 0);
+    // the wordmark only: no other images
     expect(find.byType(Image), findsNothing);
     // light bar icons on the dark splash
     final region = t.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
@@ -96,97 +125,123 @@ void main() {
     expect(SystemChrome.latestStyle?.statusBarIconBrightness, Brightness.light);
     expect(find.bySemanticsLabel('ZEEP Breathe'), findsOneWidget);
     boot.complete(await makeApp());
-    await frames(t, 4.5);
+    await frames(t, 3.5);
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('one breath in real time: stars, inhale, hold, exhale', (t) async {
+  testWidgets('one gentle breath in real time: static, inhale, hold, exhale; always centred', (t) async {
     phone(t);
-    final app = await makeApp();
-    await t.pumpWidget(ZeepBreatheApp(boot: Future.value(app)));
-    final logo0 = logoRects(t).single;
-    // 0.2 s: stars coming in, Zeep not yet
-    await frames(t, 0.2);
-    var p = painter(t);
-    expect(p.stars, inInclusiveRange(0.2, 0.8));
-    expect(p.zeepOpacity, 0);
-    expect(logoRects(t).single, logo0);
-    // 0.8 s: mid-inhale, Zeep fading in and rising, the glow growing
-    await frames(t, 0.6);
-    p = painter(t);
-    expect(p.stars, 1);
-    expect(p.zeepOpacity, inExclusiveRange(0.5, 1));
-    expect(p.zeepScale, inExclusiveRange(0.96, 1.04));
-    expect(p.glowOpacity, inExclusiveRange(0.1, 0.6));
-    expect(p.zeepRise, inExclusiveRange(0, 1));
-    // 1.6 s: inhale peak, the logo 120 px lower
-    await frames(t, 0.8);
-    p = painter(t);
-    expect(p.zeepOpacity, 1);
-    expect(p.zeepScale, closeTo(1.04, 0.002));
-    expect(p.glowScale, closeTo(1, 0.002));
-    expect(p.glowOpacity, closeTo(0.6, 0.01));
-    expect(p.zeepRise, closeTo(0, 0.002));
-    expect(logoRects(t).single.center.dy - logo0.center.dy, closeTo(splashLogoDrop, 0.5));
-    // 2.0 s: hold, the glow at its brightest; Zeep holds his breath
+    await launch(t, makeApp());
+    // 0.15 s: still static, as the native launch screen
+    await frames(t, 0.15);
+    expect(wordmarkScale(t), closeTo(1, 1e-9));
+    expect(painter(t).glowOpacity, 0);
+    expectCentred(t);
+    // 0.7 s: mid-inhale (easeInOutSine half way), the glow growing
+    await frames(t, 0.55);
+    expect(wordmarkScale(t), closeTo(1.03, 0.003));
+    expect(painter(t).glowOpacity, closeTo(splashPeakGlow / 2, 0.02));
+    expectCentred(t);
+    // 1.2 s: inhale peak
+    await frames(t, 0.5);
+    expect(wordmarkScale(t), closeTo(splashPeakScale, 0.001));
+    expect(splashPeakScale, 1.06);
+    expect(painter(t).glowOpacity, closeTo(0.45, 0.005));
+    expectCentred(t);
+    expectNoCharacter(t, circles: 1);
+    // 1.5 s: hold, at the peak
+    await frames(t, 0.3);
+    expect(wordmarkScale(t), closeTo(1.06, 1e-6));
+    expect(painter(t).glowOpacity, closeTo(0.45, 1e-6));
+    // 2.0 s: mid-exhale (easeInOutCubic half way)
+    await frames(t, 0.5);
+    expect(wordmarkScale(t), closeTo(1.03, 0.003));
+    expect(painter(t).glowOpacity, closeTo(splashPeakGlow / 2, 0.02));
+    expectCentred(t);
+    // 2.4 s: breathed out, the fade begins
     await frames(t, 0.4);
-    p = painter(t);
-    expect(p.glowOpacity, closeTo(0.6, 0.01));
-    expect(p.pose.hold, greaterThan(0.9));
-    // 3.4 s: breathed out, the glow dimmed, Zeep 0.98
-    await frames(t, 1.4);
-    p = painter(t);
-    expect(p.zeepScale, closeTo(0.98, 0.003));
-    expect(p.glowOpacity, lessThan(0.25));
-    expect(p.pose.breath, lessThan(0.05));
+    expect(wordmarkScale(t), closeTo(1, 0.001));
+    expect(painter(t).glowOpacity, closeTo(0, 0.005));
     expect(find.byType(SplashScreen), findsOneWidget);
     await frames(t, 1);
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('loaded early: one breath (about 3.9 s), then the Breathe tab', (t) async {
+  testWidgets('loaded early: one breath (about 2.9 s), then the Breathe tab', (t) async {
     phone(t);
-    final app = await makeApp();
-    await t.pumpWidget(ZeepBreatheApp(boot: Future.value(app)));
-    await frames(t, 3.3);
+    await launch(t, makeApp());
+    await frames(t, 2.3);
     expect(find.byType(SplashScreen), findsOneWidget);
     expect(find.byType(HomePage), findsNothing);
-    await frames(t, 0.7);
+    // fading out: the app goes underneath
+    await frames(t, 0.3);
+    expect(find.byType(HomePage), findsOneWidget);
+    final fading = t.widget<Opacity>(
+      find.descendant(of: find.byType(SplashScreen), matching: find.byType(Opacity)).first,
+    );
+    expect(fading.opacity, inExclusiveRange(0, 1));
+    await frames(t, 0.4);
     expect(find.byType(SplashScreen), findsNothing);
     expect(find.byType(HomePage), findsOneWidget);
     expect(find.text(S.en.start), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('still loading: keeps breathing at the hold, no app yet; continues once loaded', (t) async {
+  testWidgets('still loading: keeps breathing slowly at the hold, no app yet; continues once loaded', (t) async {
     phone(t);
     final boot = Completer<AppController>();
-    await t.pumpWidget(ZeepBreatheApp(boot: boot.future));
+    await launch(t, boot.future);
     await frames(t, 10);
     expect(find.byType(SplashScreen), findsOneWidget);
     expect(find.byType(HomePage), findsNothing);
-    // the slow waiting breath: Zeep changes size at the hold
-    final a = painter(t).zeepScale;
+    // the slow waiting breath: the wordmark and the glow change at the hold
+    final a = wordmarkScale(t), ga = painter(t).glowOpacity;
     await frames(t, 1.5);
-    final b = painter(t).zeepScale;
+    final b = wordmarkScale(t), gb = painter(t).glowOpacity;
     expect((a - b).abs(), greaterThan(0.005));
-    expect(b, inInclusiveRange(1.01, 1.04));
+    expect((ga - gb).abs(), greaterThan(0.02));
+    expect(b, inInclusiveRange(1.029, 1.06));
+    expectCentred(t);
     // tapping does nothing while there is nothing to show
     await t.tap(find.byType(SplashScreen));
     await frames(t, 1);
     expect(find.byType(SplashScreen), findsOneWidget);
     boot.complete(await makeApp());
     // finishes the slow waiting breath (at most 4 s), then the exhale and fade
-    await frames(t, 6);
+    await frames(t, 5.5);
     expect(find.byType(SplashScreen), findsNothing);
     expect(find.byType(HomePage), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
 
+  testWidgets('loaded while waiting: leaves the hold only at the top of the slow breath (no jump)', (t) async {
+    phone(t);
+    final boot = Completer<AppController>();
+    await launch(t, boot.future);
+    await frames(t, 3.6); // 2 s into the wait: the slow breath at its lowest
+    expect(wordmarkScale(t), closeTo(1.03, 0.002));
+    boot.complete(await makeApp());
+    await t.pump();
+    var last = wordmarkScale(t);
+    var peak = last;
+    // the wordmark goes back up to 1.06 before the exhale begins, smoothly
+    for (var i = 0; i < 60 * 3; i++) {
+      await t.pump(const Duration(microseconds: 16667));
+      if (find.byType(SplashScreen).evaluate().isEmpty) break;
+      final s = wordmarkScale(t);
+      expect((s - last).abs(), lessThan(0.004));
+      peak = s > peak ? s : peak;
+      last = s;
+    }
+    expect(peak, greaterThan(1.059));
+    await frames(t, 3);
+    expect(find.byType(SplashScreen), findsNothing);
+    await t.pumpWidget(const SizedBox());
+  });
+
   testWidgets('tap to skip once loaded: the app at once, the splash gone in 0.3 s', (t) async {
     phone(t);
-    final app = await makeApp();
-    await t.pumpWidget(ZeepBreatheApp(boot: Future.value(app)));
+    await launch(t, makeApp());
     await frames(t, 1);
     await t.tap(find.byType(SplashScreen));
     await t.pump();
@@ -204,55 +259,47 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('Reduce Motion: nothing moves; fade in 0.3 s, hold, fade out 0.3 s', (t) async {
+  testWidgets('Reduce Motion: no scale, no glow; still for 0.9 s, fade out 0.3 s', (t) async {
     phone(t);
     final app = await makeApp();
-    await t.pumpWidget(reduced(LaunchGate(boot: Future.value(app))));
+    final logo = await t.runAsync(loadSplashLogo);
+    await t.pumpWidget(reduced(LaunchGate(boot: Future.value(app), logo: logo)));
     // first frame still matches the native launch screen
-    expect(logoRects(t).single.center, const Offset(393 / 2, 852 / 2));
-    await frames(t, 0.15);
-    var p = painter(t);
-    expect(p.zeepOpacity, inExclusiveRange(0, 1));
-    expect(p.reduceMotion, isTrue);
-    // the centred logo hands over to the lower one in place (no sliding)
-    final rects = logoRects(t);
-    expect(rects, hasLength(2));
-    expect(rects.map((r) => r.center.dy), containsAll([852 / 2, 852 / 2 + splashLogoDrop]));
-    await frames(t, 0.25);
-    p = painter(t);
-    expect(p.zeepOpacity, 1);
-    expect(p.zeepScale, 1);
-    expect(p.zeepRise, 0);
-    expect(p.glowScale, 1);
-    final pose = p.pose;
-    expect(logoRects(t).single.center.dy, closeTo(852 / 2 + splashLogoDrop, 0.5));
-    await frames(t, 0.3);
-    expect(painter(t).pose, same(pose));
-    expect(painter(t).zeepScale, 1);
-    await frames(t, 0.6);
+    expectCentred(t);
+    for (final step in [0.15, 0.25, 0.3, 0.15]) {
+      await frames(t, step);
+      expect(wordmarkScale(t), 1);
+      expect(painter(t).glowOpacity, 0);
+      expectCentred(t);
+      expectNoCharacter(t, circles: 0);
+    }
+    // 0.85 s: not fading yet; 1.05 s: fading, the app underneath
+    expect(find.byType(HomePage), findsNothing);
+    await frames(t, 0.2);
+    expect(find.byType(HomePage), findsOneWidget);
+    await frames(t, 0.2);
     expect(find.byType(SplashScreen), findsNothing);
     expect(find.byType(HomePage), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('Zeep, the glow and the logo fit: 320 px phone and iPad landscape', (t) async {
+  testWidgets('the wordmark and the glow fit: 320 px phone and iPad landscape, centred', (t) async {
     addTearDown(t.view.reset);
     for (final (size, dpr) in [(const Size(640, 1136), 2.0), (const Size(2732, 2048), 2.0)]) {
       t.view.physicalSize = size;
       t.view.devicePixelRatio = dpr;
       final screen = size / dpr;
       final boot = Completer<AppController>();
-      await t.pumpWidget(ZeepBreatheApp(boot: boot.future));
-      await frames(t, 2);
-      final k = splashScale(screen);
-      final c = SplashPainter.zeepCentre(screen, 0);
-      final logo = logoRects(t).single;
-      // the logo is below Zeep's floor shadow and on screen
-      expect(logo.top, greaterThan(c.dy + 64 * k * 1.04), reason: '$screen');
-      expect(logo.bottom, lessThan(screen.height), reason: '$screen');
-      expect(logo.left, greaterThanOrEqualTo(0), reason: '$screen');
-      // Zeep (about 75 px above his centre at the inhale peak) is on screen
-      expect(c.dy - 90 * k, greaterThan(0), reason: '$screen');
+      await launch(t, boot.future);
+      await frames(t, 1.3);
+      final r = wordmarkRect(t);
+      expect(r.center.dx, closeTo(screen.width / 2, 0.01), reason: '$screen');
+      expect(r.center.dy, closeTo(screen.height / 2, 0.01), reason: '$screen');
+      expect(r.width, closeTo(180 * 1.06, 0.2), reason: '$screen');
+      // the glow is on screen and wider than the breathing wordmark
+      final g = SplashPainter.glowRadius(screen);
+      expect(g * 2, lessThanOrEqualTo(screen.width), reason: '$screen');
+      expect(g, greaterThan(r.width / 2), reason: '$screen');
       await t.pumpWidget(const SizedBox());
     }
   });
@@ -261,8 +308,8 @@ void main() {
     phone(t);
     final app = await makeApp();
     app.wardrobe.summaryPending = true;
-    await t.pumpWidget(ZeepBreatheApp(boot: Future.value(app)));
-    await frames(t, 3.6); // fading: the app is underneath now
+    await launch(t, Future.value(app));
+    await frames(t, 2.6); // fading: the app is underneath now
     expect(find.byType(HomePage), findsOneWidget);
     expect(find.text(S.en.summaryTitle), findsNothing);
     await frames(t, 0.6);
