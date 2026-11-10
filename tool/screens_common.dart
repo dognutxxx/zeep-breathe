@@ -330,7 +330,8 @@ Future<void> splashFlow(WidgetTester t, String p) async {
   }
 
   phone(t);
-  await run([('36_splash_start', 0.2), ('37_splash_inhale', 1.4), ('38_splash_hold', 0.4), ('39_splash_exhale', 0.9)]);
+  // 0.1 s static, 1.2 s inhale peak, 1.4 s hold, 2.0 s mid-exhale
+  await run([('36_splash_start', 0.1), ('37_splash_inhale', 1.1), ('38_splash_hold', 0.2), ('39_splash_exhale', 0.6)]);
   t.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(disableAnimations: true);
   await run([('splash_reduce_motion', 0.6)]);
   t.platformDispatcher.clearAccessibilityFeaturesTestValue();
@@ -338,10 +339,10 @@ Future<void> splashFlow(WidgetTester t, String p) async {
   t.view.devicePixelRatio = 2;
   t.view.padding = const FakeViewPadding(top: 20 * 2);
   t.view.viewPadding = const FakeViewPadding(top: 20 * 2);
-  await run([('splash_320_inhale', 1.6)]);
+  await run([('splash_320_inhale', 1.2)]);
   t.view.physicalSize = const Size(2732, 2048);
   t.view.padding = const FakeViewPadding(top: 24 * 2, bottom: 20 * 2);
   t.view.viewPadding = const FakeViewPadding(top: 24 * 2, bottom: 20 * 2);
-  await run([('splash_ipad_landscape_inhale', 1.6)]);
+  await run([('splash_ipad_landscape_inhale', 1.2)]);
   t.view.reset();
 }
