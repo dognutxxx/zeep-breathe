@@ -313,9 +313,9 @@ Future<void> shareFlow(WidgetTester t, String p, S s) async {
   await t.pumpWidget(const SizedBox());
 }
 
-/// Launch splash (1.9.0, dark, Zeep only): 0.2 s, the inhale peak (1.6 s),
-/// the hold (2.0 s) and the exhale (2.9 s); Reduce Motion at its hold; the
-/// inhale peak on a 320 px phone and an iPad in landscape.
+/// Launch splash (1.9.1, dark, zeep wordmark only): 0.1 s static, the inhale
+/// peak (1.2 s), the hold (1.4 s) and mid-exhale (2.0 s); Reduce Motion while
+/// still; the inhale peak on a 320 px phone and an iPad in landscape.
 Future<void> splashFlow(WidgetTester t, String p) async {
   Future<void> run(List<(String, double)> stops) async {
     final app = await makeApp();
